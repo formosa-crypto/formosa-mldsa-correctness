@@ -1,6 +1,6 @@
 [submodule "formosa-mldsa"]
 	path = formosa-mldsa
-	url = https://github.com/formosa-crypto/formosa-mldsa
+	url = git@github.com:formosa-crypto/formosa-mldsa.git
 [submodule "proofs/x86-64/ref/ml_dsa_65/jasmin"]
 	path = jasmin
 	url = git@github.com:jasmin-lang/jasmin.git

@@ -27,9 +27,9 @@ proc change ^while.2 : (W32_sub t0 (polynomial.[2 * i + 0])); 1: by auto.
 proc change ^while.4 : (W32_sub t1 (polynomial.[2 * i + 1])); 1: by auto.
 proc change ^while.8 : (srl_32 encoded_bytes (W32.of_int 8)); 1: by auto.
 proc change ^while.11 : (srl_32 encoded_bytes (W32.of_int 16)); 1: by auto.
-proc change ^while.15 : (sll_32 encoded_bytes (W32.of_int 4)); 1: by auto.
-proc change ^while.19 : (srl_32 encoded_bytes (W32.of_int 4)); 1: by auto.
-proc change ^while.22 : (srl_32 encoded_bytes (W32.of_int 12)); 1: by auto.
+proc change ^while.14 : (sll_32 encoded_bytes (W32.of_int 4)); 1: by auto.
+proc change ^while.18 : (srl_32 encoded_bytes (W32.of_int 4)); 1: by auto.
+proc change ^while.21 : (srl_32 encoded_bytes (W32.of_int 12)); 1: by auto.
 unroll for ^while.
 cfold 1.
 wp -2. 

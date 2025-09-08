@@ -280,46 +280,39 @@ module M = {
   }
   proc gamma1____encode_polynomial (encoded:W8.t Array640.t,
                                     polynomial:W32.t Array256.t) : W8.t Array640.t = {
-    var output_offset:W64.t;
-    var i:W64.t;
+    var output_offset:int;
+    var i:int;
     var t0:W32.t;
     var t1:W32.t;
     var encoded_bytes:W32.t;
     var byte:W8.t;
-    output_offset <- (W64.of_int 0);
-    i <- (W64.of_int 0);
-    while ((i \ult (W64.of_int (256 %/ 2)))) {
+    output_offset <- 0;
+    i <- 0;
+    while ((i < (256 %/ 2))) {
       t0 <- (W32.of_int (1 `<<` 19));
-      t0 <-
-      (t0 -
-      polynomial.[(W64.to_uint (((W64.of_int 2) * i) + (W64.of_int 0)))]);
+      t0 <- (t0 - polynomial.[((2 * i) + 0)]);
       t1 <- (W32.of_int (1 `<<` 19));
-      t1 <-
-      (t1 -
-      polynomial.[(W64.to_uint (((W64.of_int 2) * i) + (W64.of_int 1)))]);
+      t1 <- (t1 - polynomial.[((2 * i) + 1)]);
       encoded_bytes <- t0;
-      encoded.[(W64.to_uint output_offset)] <- (truncateu8 encoded_bytes);
+      encoded.[output_offset] <- (truncateu8 encoded_bytes);
       encoded_bytes <- t0;
       encoded_bytes <- (encoded_bytes `>>` (W8.of_int 8));
-      encoded.[(W64.to_uint (output_offset + (W64.of_int 1)))] <-
-      (truncateu8 encoded_bytes);
+      encoded.[(output_offset + 1)] <- (truncateu8 encoded_bytes);
       encoded_bytes <- t0;
       encoded_bytes <- (encoded_bytes `>>` (W8.of_int 16));
       byte <- (truncateu8 encoded_bytes);
       encoded_bytes <- t1;
       encoded_bytes <- (encoded_bytes `<<` (W8.of_int 4));
       byte <- (byte `|` (truncateu8 encoded_bytes));
-      encoded.[(W64.to_uint (output_offset + (W64.of_int 2)))] <- byte;
+      encoded.[(output_offset + 2)] <- byte;
       encoded_bytes <- t1;
       encoded_bytes <- (encoded_bytes `>>` (W8.of_int 4));
-      encoded.[(W64.to_uint (output_offset + (W64.of_int 3)))] <-
-      (truncateu8 encoded_bytes);
+      encoded.[(output_offset + 3)] <- (truncateu8 encoded_bytes);
       encoded_bytes <- t1;
       encoded_bytes <- (encoded_bytes `>>` (W8.of_int 12));
-      encoded.[(W64.to_uint (output_offset + (W64.of_int 4)))] <-
-      (truncateu8 encoded_bytes);
-      output_offset <- (output_offset + (W64.of_int 5));
-      i <- (i + (W64.of_int 1));
+      encoded.[(output_offset + 4)] <- (truncateu8 encoded_bytes);
+      output_offset <- (output_offset + 5);
+      i <- (i + 1);
     }
     return encoded;
   }

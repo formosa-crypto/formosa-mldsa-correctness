@@ -1,0 +1,11 @@
+[general]
+timeout = 30
+
+provers = Alt-Ergo@2.4
+provers = CVC5@1.2
+provers = Z3@4.8
+
+rdirs = proof
+rdirs = Jasmin:jasmin/eclib
+rdirs = proofs/eclib
+idirs = JazzEC:proofs/x86-64/ref/ml_dsa_65/

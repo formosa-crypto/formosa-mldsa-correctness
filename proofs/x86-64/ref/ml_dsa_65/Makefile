@@ -1,6 +1,8 @@
-JASMIN2EC = ../../../../jasmin/compiler/jasmin2ec
 SOURCE = ../../../../formosa-mldsa/x86-64/ref/ml_dsa_65/
 COMMON = ../../../../formosa-mldsa/x86-64/ref/common
+OARRAYS = ../../../arrays
+JASMIN2EC = ../../../../jasmin/compiler/jasmin2ec --output-array=$(OARRAYS)
+
 
 # --------------------------------------------------------------------
 all: ec

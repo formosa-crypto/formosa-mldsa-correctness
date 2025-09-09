@@ -54,4 +54,4 @@ by have  H /=:=param_sets;elim H => /=;rewrite /q /d /=;
 realize beta_gamma1_lt
 by rewrite /Beta;
  have  H /=:=param_sets;elim H => /=;rewrite /q /d /=;
-  move => [#] ->?->??? -> * /=;do 18!(rewrite expr_pred //=);rewrite expr1 => /=.
+  move => [#] ->?->??? -> * /=;do 18!(rewrite expr_pred //=);rewrite expr1 => /=. 

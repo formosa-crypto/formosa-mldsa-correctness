@@ -1,11 +1,13 @@
 require import AllCore List IntDiv RealExp.
 
 from Jasmin require import JModel_x86.
-require import Bindings.
+require import Bindings JWordList.
 
 from JazzEC require import Ml_dsa_65.
 from JazzEC require import Array256 Array640.
 from Spec require import GFq Rq Serialization Conversion.
+import BitEncoding.
+import BitChunking.
 
 import CDR Round Zq.
 
@@ -37,7 +39,7 @@ op pre_gamma1_encode_polynomial(c : W32.t) =
 
 op gamma1_encode_polynomial_lane(c : W32.t) : W20.t = 
     truncateu_32_20 (W32_sub (W32.of_int gamma1) c).
-
+(* FIXME: SPEC SHOULD USE COEFF ARRAY256 *)
 op BitPack (w : poly_t) (a b : int) : W8.t list =
   let blen_ab = ilog 2 (a + b) + 1 in
 
@@ -46,8 +48,13 @@ op BitPack (w : poly_t) (a b : int) : W8.t list =
        (map (fun (wi : coeff) => IntegerToBits (b - as_sint wi) blen_ab)
           (to_list w))).
 
-import BitEncoding.
-import BitChunking.
+op BitUnpack (v : W8.t list) (a b : int) : poly_t =
+  let c = ilog 2 (a + b) + 1 in
+  let z = BytesToBits v in
+  Array256.init
+    (fun (i : int) =>
+       nth witness (map (fun (co : bool list) => incoeff (b - BitsToInteger co)) (chunk c z)) i).
+
 
 lemma pre_lane_commute_in_aligned ['a]
     (l : 'a list)
@@ -166,8 +173,6 @@ rewrite /BitsToBytes !array256_mapE /=; do 3! congr.
 rewrite -map_comp &(eq_sym) -map_comp /(\o) /= &(eq_in_map) /=.
 move=> v vp; move: h => @/wpoly_srng /array256_allP /(_ v vp) /= ?.
 rewrite sincoeffK 1:/# /W32_sub.
-
-search Array256.to_list.
 admitted.
 
 lemma gamma1_encode_polynomial _a :
@@ -220,6 +225,7 @@ have {h}h :=
 - by rewrite !size_to_list.
 - by apply: W20.bits2wK.
 
+
 apply/(inj_map W8.w2bits)/(flatten_ctt_inj 8) => //.
 - by apply: W8.w2bits_inj.
 - by move=> ? /mapP[? ->]; apply: W8.size_w2bits.
@@ -233,9 +239,142 @@ rewrite BitPack_liftE ~-1:// h map_W8_w2bits_cancel ~-1:/# chunkK //.
 by rewrite array256_mapE.
 qed.
 
-from JazzEC require import Ml_dsa_65_barray.
+op pre_gamma1_decode_to_polynomial(c : W20.t) = true.
 
-lemma gamma1_encode_polynomial _a :
-   hoare [ M.gamma1____encode_polynomial :
-     polynomial = _a ==> true ].
-proc.
+op gamma1_decode_to_polynomial_lane(c : W20.t) : W32.t = 
+    (W32_sub (W32.of_int gamma1) (zeroextu_20_32 c)).
+
+lemma map_chunk_flatten_id ['a] 
+    (li : 'a list) 
+    (tobitsi : 'a -> bool list)
+    (ofbitsi : bool list -> 'a)
+    (ni : int) :
+  0 < ni =>  
+  (forall x, size (tobitsi x) = ni) =>
+  (forall x, ofbitsi (tobitsi x) = x) =>
+    (map ofbitsi (chunk ni (flatten (map tobitsi li)))) = li.
+proof.
+move => *.
+apply (eq_from_nth witness).
+  + rewrite size_map size_chunk 1:/# (size_flatten' ni);1: by smt(mapP).
+    rewrite size_map /#.
+  move => i; rewrite size_map size_chunk 1:/# (size_flatten' ni);1: by smt(mapP).
+  rewrite size_map => Hs.
+  rewrite (nth_map []);1: by rewrite size_chunk 1:/# (size_flatten' ni);by smt(size_map mapP).
+  rewrite JWordList.nth_chunk 1,2:/#; 1: by rewrite (size_flatten' ni);by smt(size_map mapP).
+   have -> : (take ni (drop (ni * i) (flatten (map tobitsi li))))  = tobitsi (nth witness li i).
+   + rewrite drop_flatten_ctt;1:smt(mapP).
+     have /= -> := take_flatten_ctt ni 1 (drop i (map tobitsi li));1:smt(mem_drop mapP).
+     rewrite (drop_take1_nth witness) /=;1:smt(size_map).
+     rewrite  (nth_map witness) /#.
+   by smt().
+qed.
+
+lemma post_lane_commute_out_aligned ['a 'b 'c]
+    (lic : 'a list) 
+    (lo : 'c list) 
+    (tobitsic : 'a -> bool list)
+    (ofbitsic : bool list -> 'a)
+    (tobitsi : 'b -> bool list)
+    (ofbitsi : bool list -> 'b)
+    (tobitso : 'c -> bool list)
+    (ofbitso : bool list -> 'c)
+    (f : 'b -> 'c)
+    (nic ni no  : int) :
+  0 < nic =>  0 < ni => 0 < no => 
+  ni %| nic*size lic =>
+  size lo = (nic*size lic) %/ ni =>
+  (forall x, size (tobitsic x) = nic) =>
+  (forall x, ofbitsic (tobitsic x) = x) =>
+  (forall x, size (tobitsi x) = ni) =>
+  (forall x, ofbitsi (tobitsi x) = x) =>
+  (forall x, size x = ni => tobitsi (ofbitsi x) = x) =>
+  (forall x, size (tobitso x) = no) =>
+  (forall x, ofbitso (tobitso x) = x) =>
+map f (map ofbitsi (chunk ni (flatten (map tobitsic lic)))) =
+map ofbitso (chunk no (flatten (map tobitso lo))) => 
+   lo =
+   map f (map ofbitsi (chunk ni (flatten (map tobitsic lic)))).
+move => ????????????; rewrite  map_chunk_flatten_id /#.
+qed.
+
+abbrev l640_w8_tobits (a : W8.t Array640.t) : bool list  =
+  flatten (List.map W8.w2bits (to_list a)).
+
+abbrev l256_w20_ofbits (a : bool list) :  W20.t list   =
+  List.map W20.bits2w (chunk 20 a).
+
+abbrev a256_w20_ofbits (a : bool list) :  W20.t Array256.t   =
+  Array256.of_list witness (l256_w20_ofbits a).
+
+
+lemma BitUnack_liftE (bytes : W8.t Array640.t) :
+    BitUnpack (to_list bytes) (gamma1 - 1) gamma1
+  =
+   Array256.map (fun (x : W32.t) => incoeff (to_sint x)) 
+   (Array256.map (fun w =>(W32_sub (W32.of_int gamma1) (zeroextu_20_32 w))) 
+        (a256_w20_ofbits (l640_w8_tobits bytes))).
+proof. admitted.
+(* 
+move=> h @/BitPack; (pose l := ilog 2 _) => /=.
+rewrite /BitsToBytes !array256_mapE /=; do 3! congr.
+rewrite -map_comp &(eq_sym) -map_comp /(\o) /= &(eq_in_map) /=.
+move=> v vp; move: h => @/wpoly_srng /array256_allP /(_ v vp) /= ?.
+rewrite sincoeffK 1:/# /W32_sub.
+*) 
+
+lemma gamma1_decode_to_polynomial _a :
+   hoare [ M.gamma1____decode_to_polynomial :
+       bytes = _a 
+     ==>
+       lifts_wpoly res = BitUnpack (to_list _a) (gamma1-1) gamma1
+   ].
+proc => /=. 
+(* proc change ^while.1 : (W32.of_int gamma1); 1: by auto. 
+proc change ^while.3 : (W32.of_int gamma1); 1: by auto. 
+proc change ^while.2 : (W32_sub t0 (polynomial.[2 * i + 0])); 1: by auto.
+proc change ^while.4 : (W32_sub t1 (polynomial.[2 * i + 1])); 1: by auto. *)
+proc change ^while.3 : (sll_32 temp (W32.of_int 8)); 1: by auto.
+proc change ^while.6 : (sll_32 temp (W32.of_int 16)); 1: by auto.
+proc change ^while.9 : (W32_sub W32.zero coefficient); 1: by auto.
+proc change ^while.13 : (srl_32 coefficient (W32.of_int w1_bits)); 1: by auto.
+proc change ^while.15 : (sll_32 temp (W32.of_int w1_bits)); 1: by auto.
+proc change ^while.18 : (sll_32 temp (W32.of_int 12)); 1: by auto.
+proc change ^while.20 : (W32_sub W32.zero coefficient); 1: by auto.
+proc change ^while.21 : (coefficient + W32.of_int 524288); 1: by auto.
+unroll for ^while.
+
+cfold 1.
+wp -2. 
+bdep 20 32 [_a] [bytes] [polynomial] gamma1_decode_to_polynomial_lane pre_gamma1_decode_to_polynomial.
+
+(* Part 1 *)
+by move=> &hr |>;rewrite /pre_gamma1_decode_to_polynomial /= allP /#.
+
+(* Part 2 *)
+move=> &hr |>  ae /= h.
+
+have {h}h :=
+  post_lane_commute_out_aligned<: W8.t, W20.t, W32.t>
+    (to_list bytes{hr}) (to_list ae)
+    W8.w2bits W8.bits2w
+    W20.w2bits W20.bits2w
+    W32.w2bits W32.bits2w
+    gamma1_decode_to_polynomial_lane
+    8 gamma1_bits 32 _ _ _ _ _ _ _ _ _ _ _ _ h; move=> //. (* FIXME *)
+- by rewrite Array640.size_to_list /(%|).
+- by rewrite !size_to_list //.
+- by apply: W20.bits2wK.
+
+rewrite /lifts_wpoly; apply (inj_eq Array256.to_list Array256.to_list_inj).
+
+
+rewrite BitUnack_liftE ~-1:// !array256_mapE h; do 2!congr => //.
+rewrite of_listK. 
+- rewrite size_map size_chunk // (size_flatten' 8) => *;1:smt(mapP W8.size_w2bits).
+  by rewrite size_map size_to_list /=.
+
+done.
+
+qed.
+

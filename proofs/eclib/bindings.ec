@@ -487,6 +487,14 @@ by have -> : (2 ^ (20 - i) * 2 ^ i) = 1048576;
      1,2:/# /= -!addrA /= | done ].
 qed.
 
+op zeroextu_20_32(a : W20.t) : W32.t =
+    W32.of_int (to_uint a).
+
+lemma pow2_20 : 2^20 = 1048576 by auto.
+
+bind op [W20.t & W32.t] zeroextu_20_32 "zextend".
+realize bvzextendP by  move => bv; rewrite /= of_uintK /=; smt(W20.to_uint_cmp pow2_20 pow2_32).
+
 bind op [bool & W32.t] W32.\sle "sle".
 realize bvsleP by move=> bv1 bv2; rewrite W32.sleE /#.
 

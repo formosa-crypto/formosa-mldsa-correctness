@@ -318,44 +318,37 @@ module M = {
   }
   proc gamma1____decode_to_polynomial (polynomial:W32.t Array256.t,
                                        bytes:W8.t Array640.t) : W32.t Array256.t = {
-    var input_offset:W64.t;
-    var output_offset:W64.t;
+    var output_offset:int;
+    var input_offset:int;
     var coefficient:W32.t;
     var temp:W32.t;
-    input_offset <- (W64.of_int 0);
-    output_offset <- (W64.of_int 0);
-    while ((input_offset \ult (W64.of_int ((20 * 256) %/ 8)))) {
-      coefficient <- (zeroextu32 bytes.[(W64.to_uint input_offset)]);
-      temp <-
-      (zeroextu32 bytes.[(W64.to_uint (input_offset + (W64.of_int 1)))]);
+    output_offset <- 0;
+    input_offset <- 0;
+    while ((input_offset < ((20 * 256) %/ 8))) {
+      coefficient <- (zeroextu32 bytes.[input_offset]);
+      temp <- (zeroextu32 bytes.[(input_offset + 1)]);
       temp <- (temp `<<` (W8.of_int 8));
       coefficient <- (coefficient `|` temp);
-      temp <-
-      (zeroextu32 bytes.[(W64.to_uint (input_offset + (W64.of_int 2)))]);
+      temp <- (zeroextu32 bytes.[(input_offset + 2)]);
       temp <- (temp `<<` (W8.of_int 16));
       coefficient <- (coefficient `|` temp);
       coefficient <- (coefficient `&` (W32.of_int 1048575));
       coefficient <- (- coefficient);
       coefficient <- (coefficient + (W32.of_int (1 `<<` 19)));
-      polynomial.[(W64.to_uint (output_offset + (W64.of_int 0)))] <-
-      coefficient;
-      coefficient <-
-      (zeroextu32 bytes.[(W64.to_uint (input_offset + (W64.of_int 2)))]);
+      polynomial.[(output_offset + 0)] <- coefficient;
+      coefficient <- (zeroextu32 bytes.[(input_offset + 2)]);
       coefficient <- (coefficient `>>` (W8.of_int 4));
-      temp <-
-      (zeroextu32 bytes.[(W64.to_uint (input_offset + (W64.of_int 3)))]);
+      temp <- (zeroextu32 bytes.[(input_offset + 3)]);
       temp <- (temp `<<` (W8.of_int 4));
       coefficient <- (coefficient `|` temp);
-      temp <-
-      (zeroextu32 bytes.[(W64.to_uint (input_offset + (W64.of_int 4)))]);
+      temp <- (zeroextu32 bytes.[(input_offset + 4)]);
       temp <- (temp `<<` (W8.of_int 12));
       coefficient <- (coefficient `|` temp);
       coefficient <- (- coefficient);
       coefficient <- (coefficient + (W32.of_int (1 `<<` 19)));
-      polynomial.[(W64.to_uint (output_offset + (W64.of_int 1)))] <-
-      coefficient;
-      input_offset <- (input_offset + (W64.of_int 5));
-      output_offset <- (output_offset + (W64.of_int 2));
+      polynomial.[(output_offset + 1)] <- coefficient;
+      output_offset <- (output_offset + 2);
+      input_offset <- (input_offset + 5);
     }
     return polynomial;
   }

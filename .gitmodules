@@ -4,3 +4,6 @@
 [submodule "proofs/x86-64/ref/ml_dsa_65/jasmin"]
 	path = jasmin
 	url = git@github.com:jasmin-lang/jasmin.git
+[submodule "jasmin-dilithium"]
+	path = jasmin-dilithium
+	url = ssh://git@codeberg.org/loutr/jasmin-dilithium.git

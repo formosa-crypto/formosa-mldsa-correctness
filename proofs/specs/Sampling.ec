@@ -22,7 +22,7 @@ module SampleInBall(XOF : XOF_SIB) = {
       var i,j;
       var c : poly;
       leakage <- [];
-      c <- zeror;
+      c <- poly_zero;
       s <- H_sib rho;
       h <- BytesToBits (Bytes8.to_list s);
       XOF.init(rho);

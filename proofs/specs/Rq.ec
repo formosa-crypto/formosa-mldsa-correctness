@@ -1,25 +1,37 @@
 require import AllCore IntDiv List Ring BitEncoding.
+require (****) Array.
 
-require import GFq.
+require import GFq Parameters.
 import CDR Round Zq BigZMod PolyReduceZq.
 
+from Jasmin require import JArray.
+clone export MonoArray as RqArray  with
+        op size <- n,
+        type elem <- coeff
+        proof ge0_size by auto.
+        
 (******************************************************)
 (* Representations of polynomials in Zq[X]/(X^256+1)  *)
 (******************************************************)
 
-type poly = polyXnD1.
-op (&*) = PolyReduceZq.( * ) .
-op (&+) = PolyReduceZq.( + ) .
-op (&-) = PolyReduceZq.([-]).
+type poly = RqArray.t.
+type apoly = PolyReduce.polyXnD1.
 
-op init_poly(coeffs : int -> coeff) : poly = 
-   oget (QSub.insub (oget (BasePoly.to_poly 
-      (fun i => if !(0 <= i < 256) then zero else coeffs i)))).
+op poly2alg(p : poly) : apoly = oget (PolyReduce.QSub.insub (PolyReduce.canon (oget (PolyReduce.BasePoly.to_poly (("_.[_]") p))))).
 
-op "_.[_<-_]" (p : poly, i : int, c : coeff) = 
-   init_poly (fun ii => if ii = i then c else p.[i]).
+op alg2poly(p : apoly) : poly = init (fun i => PolyReduce."_.[_]" p i).
 
-op to_list(p : poly) = mkseq (fun i => p.[i]) 256.
+lemma alg2polyK : cancel poly2alg alg2poly.
+admitted. (* FIXME : PY *)
+
+lemma poly2algK : cancel poly2alg alg2poly.
+admitted. (* FIXME : PY *)
+
+op (&*) (a b : poly) = alg2poly (PolyReduce.( * ) (poly2alg a) (poly2alg b)).
+op (&+) (a b : poly) = alg2poly (PolyReduce.( + ) (poly2alg a) (poly2alg b)).
+op (&-) (a   : poly) = alg2poly (PolyReduce.([-]) (poly2alg a)).
+op poly_zero = create zero.
+
 
 (**************************************************)
 (**************************************************)
@@ -37,20 +49,20 @@ op invntt(p : poly) : poly.
 
 (* The base multiplication in the NTT domain pointwise. *)
 
-op basemul(a b : poly) :  poly = init_poly (fun i => a.[i] * b.[i]).
+op basemul(a b : poly) :  poly = init (fun i => a.[i] * b.[i]).
 
 op poly_Power2Round(p : poly) : poly * poly = 
-     (init_poly (fun i => (Power2Round p.[i]).`1), 
-      init_poly (fun i => (Power2Round p.[i]).`2)).
+     (init (fun i => (Power2Round p.[i]).`1), 
+      init (fun i => (Power2Round p.[i]).`2)).
 
 op poly_UseHint(h : poly, r : poly) : poly = 
-     init_poly (fun ii => UseHint (!h.[ii] = Zq.zero) r.[ii]).
+     init (fun ii => UseHint (!h.[ii] = Zq.zero) r.[ii]).
 
 op poly_MakeHint(p1 : poly, p2 : poly) : poly = 
-     init_poly (fun ii => incoeff (b2i (MakeHint p1.[ii] p2.[ii]))).
+     init (fun ii => incoeff (b2i (MakeHint p1.[ii] p2.[ii]))).
 
 op poly_HighBits(p : poly) : poly = 
-     init_poly (fun ii => incoeff (HighBits p.[ii])).
+     init (fun ii => incoeff (HighBits p.[ii])).
 
 op poly_LowBits(p : poly) : poly = 
-     init_poly (fun ii => incoeff (LowBits p.[ii])).
+     init (fun ii => incoeff (LowBits p.[ii])).

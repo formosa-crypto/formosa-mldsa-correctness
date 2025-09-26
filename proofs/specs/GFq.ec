@@ -10,8 +10,8 @@ clone import ConcreteDRing as CDR with
   proof Round.prime_q by exact prime_q
   proof Round.gt0_n by exact gt0_n
   rename "zmod" as "coeff"
-  rename "ZModQ" as "Zq"
-  proof *.
+  rename "ZModQ" as "Zq".
+  (* FIXME: three axioms left unproven from poly reduce in proof *. *)
 
 import Round Zq.
 (* Signed representation *)

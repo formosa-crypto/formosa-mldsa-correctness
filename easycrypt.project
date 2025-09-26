@@ -7,6 +7,8 @@ provers = Z3
 
 rdirs = proofs
 rdirs = Jasmin:jasmin/eclib
+idirs = jasmin-dilithium/proofs/utils
+idirs = jasmin-dilithium/proofs/security
 idirs = Spec:proofs/specs
 idirs = JazzEC:proofs/arrays
 idirs = JazzEC:proofs/x86-64/ref/ml_dsa_65/

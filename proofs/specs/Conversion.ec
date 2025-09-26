@@ -41,12 +41,12 @@ op BitPack(w : poly, a b : int) : W8.t list =
 op SimpleBitUnpack(v : W8.t list, b : int) : poly =
    let c = ilog 2 b + 1 in
    let z = BytesToBits(v) in
-     init_poly (fun i => nth witness (map (fun co => Zq.incoeff (BitsToInteger co)) (BitChunking.chunk c z)) i).
+     init (fun i => nth witness (map (fun co => Zq.incoeff (BitsToInteger co)) (BitChunking.chunk c z)) i).
 
 op BitUnpack(v : W8.t list, a b : int) : poly =
    let c = ilog 2 (a + b) + 1 in
    let z = BytesToBits(v) in
-     init_poly (fun i => nth witness (map (fun co => Zq.incoeff (b - BitsToInteger co)) (BitChunking.chunk c z)) i).
+     init (fun i => nth witness (map (fun co => Zq.incoeff (b - BitsToInteger co)) (BitChunking.chunk c z)) i).
 
 module HintPackUnpack = {
    proc hintBitPack(h : polykvec) : W8.t list = {
@@ -101,4 +101,5 @@ module HintPackUnpack = {
      return if error then None else Some h;
    }
 }.
+
 

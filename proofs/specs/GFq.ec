@@ -16,11 +16,7 @@ clone import ConcreteDRing as CDR with
 import Round Zq.
 (* Signed representation *)
 
-op as_sint(x : coeff) = if (q-1) %/ 2 < asint x then asint x - q else asint x.
-
-abbrev absZq (x: coeff): int = `| as_sint x |.
-
-op smod(n d : int) : int = if (d %/2 < n %% d) then n %% d - d else n %%d.
+op smod(n d : int) : int = if (d %/2 < n %% d) then n %% d - d else n %% d.
 
 op Power2Round(x : coeff) : coeff * coeff = 
     let rplus = asint x in

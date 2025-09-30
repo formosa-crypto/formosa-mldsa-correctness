@@ -1,6 +1,7 @@
 require import AllCore List.
 require import Parameters GFq Rq.
 require DVect Subtype.
+require import Array256.
 
 import CDR Round Zq BigZMod PolyReduceZq MLDSAParams.
 
@@ -22,23 +23,20 @@ import VecMat.MatRq. (* Matrices and Vectors over Rq *)
 import VecMat.HL.    (* highBitsV and lowBitsV with HL.alpha = 2 * gamma2 and HL.d = d *)
 
 from Jasmin require import JArray. 
-clone export MonoArray as LArray  with
-        op size <- lvec,
-        type elem <- poly
+clone export PolyArray as LArray  with
+        op size <- lvec
         proof ge0_size by smt(gt0_l).
 
-clone export MonoArray as KArray  with
-        op size <- kvec,
-        type elem <- poly
+clone export PolyArray as KArray  with
+        op size <- kvec
         proof ge0_size by smt(gt0_k).
 
-clone export MonoArray as KLMatrix  with
-        op size <- kvec*lvec,
-        type elem <- poly
+clone export PolyArray as KLMatrix  with
+        op size <- kvec*lvec
         proof ge0_size by smt(gt0_l gt0_k).
 
 theory PolyLVec.
-type polylvec = LArray.t.
+type polylvec = poly LArray.t.
 type apolylvec  = vector.
 
 op polylvec2alg(v : polylvec) : apolylvec. (* Write me *)
@@ -66,7 +64,7 @@ op mods(v : polylvec, md : int) : polylvec =
  end PolyLVec.
 
 theory PolyKVec.
-type polykvec = KArray.t.
+type polykvec = poly KArray.t.
 type apolykvec  = vector.
 
 op polykvec2alg(v : polykvec) : apolykvec. (* Write me *)
@@ -115,7 +113,7 @@ op polykvec_LowBits(v : polykvec) : polykvec =
 end PolyKVec.
 
 theory PolyMat.
-type polymat = KLMatrix.t.
+type polymat = poly KLMatrix.t.
 type apolymat = matrix.
 
 op "_.[_<-_]" (m : polymat, rc : int * int, p : poly) =

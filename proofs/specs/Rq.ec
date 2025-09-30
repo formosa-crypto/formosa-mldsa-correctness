@@ -1,20 +1,15 @@
 require import AllCore IntDiv List Ring BitEncoding.
-require (****) Array.
+require import Array256.
 
 require import GFq Parameters.
 import CDR Round Zq BigZMod PolyReduceZq.
 
-from Jasmin require import JArray.
-clone export MonoArray as RqArray  with
-        op size <- n,
-        type elem <- coeff
-        proof ge0_size by auto.
-        
+
 (******************************************************)
 (* Representations of polynomials in Zq[X]/(X^256+1)  *)
 (******************************************************)
 
-type poly = RqArray.t.
+type poly = coeff Array256.t.
 type apoly = PolyReduce.polyXnD1.
 
 op poly2alg(p : poly) : apoly = oget (PolyReduce.QSub.insub (PolyReduce.canon (oget (PolyReduce.BasePoly.to_poly (("_.[_]") p))))).

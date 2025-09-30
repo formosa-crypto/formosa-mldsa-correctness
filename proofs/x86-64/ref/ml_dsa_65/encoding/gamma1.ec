@@ -11,26 +11,24 @@ import BitChunking.
 
 import CDR Round Zq.
 
-type poly_t  = coeff Array256.t.
-type polyw_t = W32.t Array256.t.
+type polyw = W32.t Array256.t.
 
-op liftu_wpoly (pw : polyw_t) : poly_t =
-  map (fun x => incoeff (W32.to_uint x)) pw.
+op liftu_wpoly (pw : polyw) : poly =
+  map (fun w => incoeff (W32.to_uint w)) pw.
 
-op lifts_wpoly (pw : polyw_t) : poly_t =
-  map (fun x => incoeff (W32.to_sint x)) pw.
+op lifts_wpoly (pw : polyw) : poly =
+  map (fun w => incoeff (W32.to_sint w)) pw.
 
-op unlift_poly (p : poly_t) : polyw_t = map (fun x => W32.of_int (asint x)) p.
+op unlift_poly (p : poly) : polyw = map (fun c => W32.of_int (asint c)) p.
 
-op poly_urng(p : poly_t, b : int) = all (fun i => 0 <= asint i < b) p.
-op poly_srng(p : poly_t, bl bh : int) = all (fun i => -bl <= as_sint i <= bh) p.
+op poly_urng(p : poly, b : int) = all (fun i => 0 <= asint i < b) p.
+op poly_srng(p : poly, bl bh : int) = all (fun i => -bl <= as_sint i <= bh) p.
 
-op wpoly_urng(pw : polyw_t, b : int) = all (fun i => 0 <= W32.to_uint i < b) pw.
-op wpoly_srng(pw : polyw_t, bl bh : int) = all (fun i => -bl <= W32.to_sint i <= bh) pw.
+op wpoly_urng(pw : polyw, b : int) = all (fun i => 0 <= W32.to_uint i < b) pw.
+op wpoly_srng(pw : polyw, bl bh : int) = all (fun i => -bl <= W32.to_sint i <= bh) pw.
 
 (* natural spec and precondition *)
-
-op gamma1 : int = 524288. (* 2**19 *)
+op gamma1 : int = 524288. (* 2**19 *) 
 
 (* Circuit spec and precondition *)
 
@@ -39,8 +37,8 @@ op pre_gamma1_encode_polynomial(c : W32.t) =
 
 op gamma1_encode_polynomial_lane(c : W32.t) : W20.t = 
     truncateu_32_20 (W32_sub (W32.of_int gamma1) c).
-(* FIXME: SPEC SHOULD USE COEFF ARRAY256 *)
-op BitPack (w : poly_t) (a b : int) : W8.t list =
+
+op BitPack (w : poly) (a b : int) : W8.t list =
   let blen_ab = ilog 2 (a + b) + 1 in
 
   BitsToBytes
@@ -48,10 +46,10 @@ op BitPack (w : poly_t) (a b : int) : W8.t list =
        (map (fun (wi : coeff) => IntegerToBits (b - as_sint wi) blen_ab)
           (to_list w))).
 
-op BitUnpack (v : W8.t list) (a b : int) : poly_t =
+op BitUnpack (v : W8.t list) (a b : int) : poly =
   let c = ilog 2 (a + b) + 1 in
   let z = BytesToBits v in
-  Array256.init
+  init
     (fun (i : int) =>
        nth witness (map (fun (co : bool list) => incoeff (b - BitsToInteger co)) (chunk c z)) i).
 
@@ -74,6 +72,33 @@ rewrite flattenK //; 1:by move => b;rewrite mapP;smt().
 rewrite -map_comp /(\o).
 have -> : (fun (x : 'a) => ofbits (tobits x))  = idfun by apply fun_ext;smt().
 by apply map_id.
+qed.
+
+
+lemma map_chunk_flatten_id ['a] 
+    (li : 'a list) 
+    (tobitsi : 'a -> bool list)
+    (ofbitsi : bool list -> 'a)
+    (ni : int) :
+  0 < ni =>  
+  (forall x, size (tobitsi x) = ni) =>
+  (forall x, ofbitsi (tobitsi x) = x) =>
+    (map ofbitsi (chunk ni (flatten (map tobitsi li)))) = li.
+proof.
+move => *.
+apply (eq_from_nth witness).
+  + rewrite size_map size_chunk 1:/# (EclibExtra.size_flatten' ni);1: by smt(mapP).
+    rewrite size_map /#.
+  move => i; rewrite size_map size_chunk 1:/# (EclibExtra.size_flatten' ni);1: by smt(mapP).
+  rewrite size_map => Hs.
+  rewrite (nth_map []);1: by rewrite size_chunk 1:/# (EclibExtra.size_flatten' ni);by smt(size_map mapP).
+  rewrite JWordList.nth_chunk 1,2:/#; 1: by rewrite (EclibExtra.size_flatten' ni);by smt(size_map mapP).
+   have -> : (take ni (drop (ni * i) (flatten (map tobitsi li))))  = tobitsi (nth witness li i).
+   + rewrite drop_flatten_ctt;1:smt(mapP).
+     have /= -> := take_flatten_ctt ni 1 (drop i (map tobitsi li));1:smt(mem_drop mapP).
+     rewrite (drop_take1_nth witness) /=;1:smt(size_map).
+     rewrite flatten1 /= (nth_map witness) /#.
+   by smt().
 qed.
 
 lemma post_lane_commute_in_aligned ['a 'b 'c]
@@ -101,38 +126,48 @@ map f (map ofbitsi (chunk ni (flatten (map tobitsi li)))) =
 map ofbitso (chunk no (flatten (map tobitsoc loc))) =>
    flatten (map tobitsoc loc) =
    flatten (map tobitso (map f li)).
-proof. admitted.
+proof.
+move => 12?.
+rewrite map_chunk_flatten_id 1..3:/#.
+move => ->.
+rewrite -map_comp /(\o) /=. 
+have [H _]:= (eq_in_map (fun (x : bool list) => tobitso (ofbitso x)) idfun (chunk no (flatten (map tobitsoc loc)))).
+rewrite H /=;1:smt(in_chunk_size).
+rewrite map_id.
+rewrite chunkK 1:/#;1: rewrite (EclibExtra.size_flatten' noc);  smt(size_map mapP).
+qed.
 
-axiom pE : p = 8380417.
 
+import Parameters.
+
+(* Move to array theory *)
 lemma all_tolist ['a] (p : 'a -> bool) (a : 'a Array256.t) :
-  (Array256.all p a) <=> (List.all p (to_list a)).
-proof. admitted.
+  (Array256.all p a) <=> (List.all p (to_list a))
+    by rewrite /all !allP /to_list /mkseq /=;split => H x Hx;smt(mapP).
 
 lemma all_imply ['a] (p q : 'a -> bool) (s : 'a Array256.t) :
-  (forall x, p x => q x) => all p s => all q s.
-proof. admitted.
+  (forall x, p x => q x) => all p s => all q s
+  by rewrite /all !allP /to_list /mkseq /= => H x Hx;smt(mapP).
 
 lemma array256_mapE ['a 'b] (f : 'a -> 'b) (a : 'a Array256.t) :
   Array256.to_list (Array256.map f a) = List.map f (Array256.to_list a).
-proof. admitted.
-
+  rewrite /all /to_list /mkseq /= -{1}map_comp /(\o) /=.
+  apply (eq_from_nth witness);1: by rewrite !size_map.
+  move => i;rewrite !size_map size_iota /max /= => ib.
+  rewrite !(nth_map witness) /=;1,2:smt(size_map size_iota).
+  by rewrite /map initiE /=;1:by rewrite nth_iota /#.
+qed.
+  
 lemma array256_map_comp ['a 'b 'c] (f : 'a -> 'b) (g : 'b -> 'c) (a : 'a Array256.t) :
-  Array256.map g ((Array256.map f a)) = Array256.map (fun x => g (f x)) a.
-proof. admitted.
+  Array256.map g ((Array256.map f a)) = Array256.map (fun x => g (f x)) a
+  by rewrite /map tP => i ib;smt(Array256.initiE).
 
-hint simplify flatten1.
+lemma array256_allP ['a] (p : 'a -> bool) (a : 'a Array256.t) :
+  Array256.all p a <=> (forall x, x \in Array256.to_list a => p x).
+proof. by rewrite all_tolist allP. qed.
+(* *)
 
-lemma sincoeffK (c : int) :
-  -((p-1) %/ 2) <= c < (p-1) %/ 2 => as_sint (incoeff c) = c.
-proof. admitted.
-
-lemma truncateu_32_20E (w : W32.t) : truncateu_32_20 w = W20.bits2w (take 20 (W32.w2bits w)).
-proof. admitted.
-
-lemma w2bitsE (w : W32.t) : w2bits w = BS2Int.int2bs 32 (W32.to_uint w).
-proof. admitted.
-
+(* move to list theory *)
 lemma in_map_id ['a] (f : 'a -> 'a) (s : 'a list) :
   (forall x, x \in s => f x = x) => map f s = s.
 proof. by move=> id_f; rewrite -{2}[s]map_id &(eq_in_map). qed.
@@ -140,6 +175,20 @@ proof. by move=> id_f; rewrite -{2}[s]map_id &(eq_in_map). qed.
 lemma in_map_cancel ['a 'b] (f : 'a -> 'b) (g : 'b -> 'a) (s : 'a list) :
   (forall x, x \in s => g (f x) = x) => map g (map f s) = s.
 proof. by move=> can_fg; rewrite -map_comp in_map_id. qed.
+
+(* *)
+
+hint simplify flatten1.
+
+lemma truncateu_32_20E (w : W32.t) : truncateu_32_20 w = W20.bits2w (take 20 (W32.w2bits w)).
+proof.
+rewrite /truncateu_32_20 W20.of_intE W32.to_uintE BS2Int.bs2int_mod //;congr.
+have {1}-> : gamma1_bits = size (take gamma1_bits (w2bits w)) by rewrite size_take //.
+by rewrite BS2Int.bs2intK.
+qed.
+
+lemma w2bitsE (w : W32.t) : w2bits w = BS2Int.int2bs 32 (W32.to_uint w).
+proof. rewrite to_uintE;smt(W32.size_w2bits BS2Int.bs2intK). qed.
 
 lemma map_W8_w2bits_cancel (s : bool list list) :
      (forall bs, bs \in s => size bs = 8)
@@ -157,23 +206,30 @@ abbrev l640_w8_ofbits (a : bool list) : W8.t list =
 abbrev a640_w8_ofbits (a : bool list) : W8.t Array640.t =
   Array640.of_list witness (l640_w8_ofbits a).
 
-lemma array256_allP ['a] (p : 'a -> bool) (a : 'a Array256.t) :
-  Array256.all p a <=> (forall x, x \in Array256.to_list a => p x).
-proof. admitted.
-
-lemma BitPack_liftE (p : polyw_t) :
+lemma ilog_gamma1 : ilog 2 (gamma1 - 1 + gamma1) = 19 by rewrite /gamma1 /=.
+  
+lemma BitPack_liftE (p : polyw) :
   wpoly_srng p (gamma1 - 1) gamma1 =>
-
     BitPack (lifts_wpoly p) (gamma1 - 1) gamma1
   = l640_w8_ofbits (a256_w20_tobits (
        Array256.map (fun w => truncateu_32_20 (W32_sub (W32.of_int gamma1) w)) p)).
 proof.
 move=> h @/BitPack; (pose l := ilog 2 _) => /=.
 rewrite /BitsToBytes !array256_mapE /=; do 3! congr.
-rewrite -map_comp &(eq_sym) -map_comp /(\o) /= &(eq_in_map) /=.
-move=> v vp; move: h => @/wpoly_srng /array256_allP /(_ v vp) /= ?.
-rewrite sincoeffK 1:/# /W32_sub.
-admitted.
+rewrite /lifts_wpoly -map_comp &(eq_sym) -map_comp /(\o) /=  &(eq_in_map) /= => v vp.
+ move: h => @/wpoly_srng /array256_allP /(_ v _) //= /= => h. 
+rewrite incoeffK_sint_small 1:/# /W32_sub truncateu_32_20E W20.bits2wK;1: by rewrite size_take //.
+rewrite /IntegerToBits /l ilog_gamma1 /= w2bitsE.
+have  -> := BS2Int.int2bs_cat 20 32 (to_uint (W32.of_int Top.gamma1 - v)) _;1:smt().
+rewrite take_catl;1: by rewrite BS2Int.size_int2bs.
+rewrite {1}(: gamma1_bits = size (BS2Int.int2bs gamma1_bits (to_uint (W32.of_int Top.gamma1 - v))) );1: by rewrite BS2Int.size_int2bs.
+rewrite take_size;congr.
+have := (W32.of_uintK (Top.gamma1 - to_sint v)).
+rewrite modz_small;1:by smt(pow2_64).
+move => <-;congr. rewrite -W32.of_intD';congr.
+rewrite W32.of_intN;congr. search W32.to_sint.
+rewrite /to_sint /smod /=;smt(W32.to_uintK pow2_32).
+qed.
 
 lemma gamma1_encode_polynomial _a :
    hoare [ M.gamma1____encode_polynomial :
@@ -244,31 +300,6 @@ op pre_gamma1_decode_to_polynomial(c : W20.t) = true.
 op gamma1_decode_to_polynomial_lane(c : W20.t) : W32.t = 
     (W32_sub (W32.of_int gamma1) (zeroextu_20_32 c)).
 
-lemma map_chunk_flatten_id ['a] 
-    (li : 'a list) 
-    (tobitsi : 'a -> bool list)
-    (ofbitsi : bool list -> 'a)
-    (ni : int) :
-  0 < ni =>  
-  (forall x, size (tobitsi x) = ni) =>
-  (forall x, ofbitsi (tobitsi x) = x) =>
-    (map ofbitsi (chunk ni (flatten (map tobitsi li)))) = li.
-proof.
-move => *.
-apply (eq_from_nth witness).
-  + rewrite size_map size_chunk 1:/# (size_flatten' ni);1: by smt(mapP).
-    rewrite size_map /#.
-  move => i; rewrite size_map size_chunk 1:/# (size_flatten' ni);1: by smt(mapP).
-  rewrite size_map => Hs.
-  rewrite (nth_map []);1: by rewrite size_chunk 1:/# (size_flatten' ni);by smt(size_map mapP).
-  rewrite JWordList.nth_chunk 1,2:/#; 1: by rewrite (size_flatten' ni);by smt(size_map mapP).
-   have -> : (take ni (drop (ni * i) (flatten (map tobitsi li))))  = tobitsi (nth witness li i).
-   + rewrite drop_flatten_ctt;1:smt(mapP).
-     have /= -> := take_flatten_ctt ni 1 (drop i (map tobitsi li));1:smt(mem_drop mapP).
-     rewrite (drop_take1_nth witness) /=;1:smt(size_map).
-     rewrite  (nth_map witness) /#.
-   by smt().
-qed.
 
 lemma post_lane_commute_out_aligned ['a 'b 'c]
     (lic : 'a list) 
@@ -311,19 +342,59 @@ abbrev a256_w20_ofbits (a : bool list) :  W20.t Array256.t   =
 lemma BitUnack_liftE (bytes : W8.t Array640.t) :
     BitUnpack (to_list bytes) (gamma1 - 1) gamma1
   =
-   Array256.map (fun (x : W32.t) => incoeff (to_sint x)) 
-   (Array256.map (fun w =>(W32_sub (W32.of_int gamma1) (zeroextu_20_32 w))) 
+  Array256.map (fun c => incoeff (to_sint c))
+    (Array256.map (fun w =>(W32_sub (W32.of_int gamma1) (zeroextu_20_32 w))) 
         (a256_w20_ofbits (l640_w8_tobits bytes))).
-proof. admitted.
-(* 
-move=> h @/BitPack; (pose l := ilog 2 _) => /=.
-rewrite /BitsToBytes !array256_mapE /=; do 3! congr.
-rewrite -map_comp &(eq_sym) -map_comp /(\o) /= &(eq_in_map) /=.
-move=> v vp; move: h => @/wpoly_srng /array256_allP /(_ v vp) /= ?.
-rewrite sincoeffK 1:/# /W32_sub.
-*) 
+proof.
+move=>  @/BitUnpack /=; rewrite tP => i ib.
+rewrite initiE 1:// get_of_list 1://. search (nth _ _ _ = nth _ _ _).
+pose l1 := List.map _ _.
+pose l2 := List.map _ _.
+have sl1 : size l1 = n.
++   rewrite /l1;rewrite !size_map size_iota ilog_gamma1 /= /BytesToBits.
+  rewrite (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
+  by rewrite size_map size_to_list /= /#.
+have sl2 : size l2 = n.
++   rewrite /l2;rewrite !size_map size_iota (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
+  by rewrite size_map size_to_list /= /#.
+suff : l1 = l2 by smt( nth_change_dfl).
+apply (eq_from_nth witness) => /=;1: by smt().
+move => k kb;rewrite !(nth_map witness).
++ rewrite ilog_gamma1 /= size_chunk 1:/# (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
+  by rewrite size_map /= size_to_list /#.
++ rewrite size_iota (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
+  rewrite size_map size_to_list /= ilog_gamma1 /#.
++ rewrite !size_map size_iota (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
+  rewrite size_map size_to_list /= /#.
++ rewrite !size_map size_iota (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
+  rewrite size_map size_to_list /= /#.
++ rewrite size_chunk 1:/# (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
+  by rewrite size_map /= size_to_list /#.
++ rewrite size_iota (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
+  rewrite size_map size_to_list /=  /#.
+simplify.
+congr; rewrite /W32_sub !nth_iota.
++ rewrite  (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
+  rewrite size_map size_to_list /= ilog_gamma1 /#.
++ rewrite  (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
+  rewrite size_map size_to_list /=  /#.
+rewrite ilog_gamma1 /= /zeroextu_20_32 /= /W20.to_uint W20.bits2wK.
++ rewrite size_take // size_drop 1:/# /max /= (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
+  rewrite !size_map !size_iota /max /= /#.
+pose i1 := BitsToInteger _.
+pose i2 := BS2Int.bs2int _.
+have -> : i1 = i2 by smt().
+rewrite of_sintK /smod /=.
+have ? : 0 <= i2 <= 2*gamma1; last by smt().
+split;1: by exact BS2Int.bs2int_ge0.
+have := BS2Int.bs2int_le2Xs ((take gamma1_bits (drop (gamma1_bits * k) (l640_w8_tobits bytes)))).
++ rewrite size_take // size_drop 1:/# /max /= (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
+  rewrite !size_map !size_iota /max /= -/i2.
+  pose ll := if _ then _ else _.
+  have -> /= : ll = 20; by smt().
+qed.
 
-lemma gamma1_decode_to_polynomial _a :
+  lemma gamma1_decode_to_polynomial _a :
    hoare [ M.gamma1____decode_to_polynomial :
        bytes = _a 
      ==>
@@ -366,7 +437,7 @@ have {h}h :=
 - by rewrite !size_to_list //.
 - by apply: W20.bits2wK.
 
-rewrite /lifts_wpoly; apply (inj_eq Array256.to_list Array256.to_list_inj).
+rewrite /lifts_wpoly /=; apply (inj_eq Array256.to_list Array256.to_list_inj).
 
 
 rewrite BitUnack_liftE ~-1:// !array256_mapE h; do 2!congr => //.

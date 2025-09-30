@@ -1,5 +1,6 @@
 require import AllCore BitEncoding List RealExp IntDiv.
 from Jasmin require import JWord.
+require import Array256.
 
 require import Parameters.
 require import GFq.

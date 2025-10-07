@@ -62,7 +62,7 @@ module S(XOFA : XOF_RejNTTPoly, XOFS : XOF_RejBPoly) : Samplers = {
 }.
 
 module MLDSA_SP(S : Samplers, RO : LeakyRO) = {
-   proc keygen(eps : Bytes32.t) : BytesSK.t * BytesPK.t= {
+   proc keygen_derand() : BytesSK.t * BytesPK.t= {
      var sk,rho,_A,s1,s2,t,t1,t0,pk,tr;
      rho <@ S.init();
      _A <@ S.sampleA();
@@ -138,3 +138,7 @@ module MLDSA_SP(S : Samplers, RO : LeakyRO) = {
     return rb;
   }
 }.
+
+require import Dilithium.
+clone import ConcreteDilithium as CD.
+print ConcreteDilithium.Dilithium.

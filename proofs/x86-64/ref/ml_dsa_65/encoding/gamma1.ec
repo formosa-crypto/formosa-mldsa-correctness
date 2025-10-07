@@ -11,21 +11,21 @@ import BitChunking.
 
 import CDR Round Zq.
 
-type polyw = W32.t Array256.t.
+type wpoly = W32.t Array256.t.
 
-op liftu_wpoly (pw : polyw) : poly =
+op liftu_wpoly (pw : wpoly) : poly =
   map (fun w => incoeff (W32.to_uint w)) pw.
 
-op lifts_wpoly (pw : polyw) : poly =
+op lifts_wpoly (pw : wpoly) : poly =
   map (fun w => incoeff (W32.to_sint w)) pw.
 
-op unlift_poly (p : poly) : polyw = map (fun c => W32.of_int (asint c)) p.
+op unlift_poly (p : poly) : wpoly = map (fun c => W32.of_int (asint c)) p.
 
-op poly_urng(p : poly, b : int) = all (fun i => 0 <= asint i < b) p.
-op poly_srng(p : poly, bl bh : int) = all (fun i => -bl <= as_sint i <= bh) p.
+op poly_urng(b : int, p : poly) = all (fun i => 0 <= asint i < b) p.
+op poly_srng(bl bh : int, p : poly) = all (fun i => -bl <= as_sint i <= bh) p.
 
-op wpoly_urng(pw : polyw, b : int) = all (fun i => 0 <= W32.to_uint i < b) pw.
-op wpoly_srng(pw : polyw, bl bh : int) = all (fun i => -bl <= W32.to_sint i <= bh) pw.
+op wpoly_urng(b : int, pw : wpoly) = all (fun i => 0 <= W32.to_uint i < b) pw.
+op wpoly_srng(bl bh : int, pw : wpoly) = all (fun i => -bl <= W32.to_sint i <= bh) pw.
 
 (* natural spec and precondition *)
 op gamma1 : int = 524288. (* 2**19 *) 
@@ -208,8 +208,8 @@ abbrev a640_w8_ofbits (a : bool list) : W8.t Array640.t =
 
 lemma ilog_gamma1 : ilog 2 (gamma1 - 1 + gamma1) = 19 by rewrite /gamma1 /=.
   
-lemma BitPack_liftE (p : polyw) :
-  wpoly_srng p (gamma1 - 1) gamma1 =>
+lemma BitPack_liftE (p : wpoly) :
+  wpoly_srng (gamma1 - 1) gamma1 p =>
     BitPack (lifts_wpoly p) (gamma1 - 1) gamma1
   = l640_w8_ofbits (a256_w20_tobits (
        Array256.map (fun w => truncateu_32_20 (W32_sub (W32.of_int gamma1) w)) p)).
@@ -227,13 +227,13 @@ rewrite take_size;congr.
 have := (W32.of_uintK (Top.gamma1 - to_sint v)).
 rewrite modz_small;1:by smt(pow2_64).
 move => <-;congr. rewrite -W32.of_intD';congr.
-rewrite W32.of_intN;congr. search W32.to_sint.
+rewrite W32.of_intN;congr. 
 rewrite /to_sint /smod /=;smt(W32.to_uintK pow2_32).
 qed.
 
 lemma gamma1_encode_polynomial _a :
    hoare [ M.gamma1____encode_polynomial :
-       polynomial = _a /\ wpoly_srng _a 524287 524288
+       polynomial = _a /\ wpoly_srng 524287 524288 _a
      ==>
        to_list res = BitPack (lifts_wpoly _a) (gamma1-1) gamma1
    ].
@@ -347,7 +347,7 @@ lemma BitUnack_liftE (bytes : W8.t Array640.t) :
         (a256_w20_ofbits (l640_w8_tobits bytes))).
 proof.
 move=>  @/BitUnpack /=; rewrite tP => i ib.
-rewrite initiE 1:// get_of_list 1://. search (nth _ _ _ = nth _ _ _).
+rewrite initiE 1:// get_of_list 1://. 
 pose l1 := List.map _ _.
 pose l2 := List.map _ _.
 have sl1 : size l1 = n.
@@ -394,7 +394,7 @@ have := BS2Int.bs2int_le2Xs ((take gamma1_bits (drop (gamma1_bits * k) (l640_w8_
   have -> /= : ll = 20; by smt().
 qed.
 
-  lemma gamma1_decode_to_polynomial _a :
+lemma gamma1_decode_to_polynomial _a :
    hoare [ M.gamma1____decode_to_polynomial :
        bytes = _a 
      ==>
@@ -449,3 +449,29 @@ done.
 
 qed.
 
+import VecMat PolyLVec.
+
+type wpolylvec = wpoly LArray.t. 
+
+op liftu_wpolylvec(wv : wpolylvec) : polylvec =
+  map liftu_wpoly wv.
+
+op lifts_wpolylvec (wv : wpolylvec) : polylvec =
+  map lifts_wpoly wv.
+
+op unlift_polylvec (v : polylvec) : wpolylvec = map unlift_poly v.
+
+op polylvec_urng(p : polylvec, b : int) = all (poly_urng b) p.
+op polylvec_srng(p : polylvec, bl bh : int) = all (poly_srng bl bh) p.
+
+op wpolylvec_urng(pw : wpolylvec, b : int) = all (wpoly_urng b) pw.
+op wpolylvec_srng(pw : wpolylvec, bl bh : int) = all (wpoly_srng bl bh) pw.
+
+
+
+lemma gamma1_decode _a :
+    hoare [ M.gamma1____decode :
+       encoded = _a 
+     ==>
+       lifts_wpolylvec res = Array1280.of_list (BitUnpack (to_list _a) (gamma1-1) gamma1)
+   ].    

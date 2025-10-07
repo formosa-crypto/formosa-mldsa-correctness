@@ -10,11 +10,11 @@ import CDR Round Zq BigZMod PolyReduceZq.
 (******************************************************)
 
 type poly = coeff Array256.t.
-type apoly = PolyReduce.polyXnD1.
+type apoly = polyXnD1.
 
-op poly2alg(p : poly) : apoly = oget (PolyReduce.QSub.insub (PolyReduce.canon (oget (PolyReduce.BasePoly.to_poly (("_.[_]") p))))).
+op poly2alg(p : poly) : apoly = oget (QSub.insub (canon (oget (BasePoly.to_poly (fun i => p.[i]))))).
 
-op alg2poly(p : apoly) : poly = init (fun i => PolyReduce."_.[_]" p i).
+op alg2poly(p : apoly) : poly = init (fun i => p.[i]).
 
 lemma alg2polyK : cancel poly2alg alg2poly.
 admitted. (* FIXME : PY *)
@@ -22,9 +22,9 @@ admitted. (* FIXME : PY *)
 lemma poly2algK : cancel poly2alg alg2poly.
 admitted. (* FIXME : PY *)
 
-op (&*) (a b : poly) = alg2poly (PolyReduce.( * ) (poly2alg a) (poly2alg b)).
-op (&+) (a b : poly) = alg2poly (PolyReduce.( + ) (poly2alg a) (poly2alg b)).
-op (&-) (a   : poly) = alg2poly (PolyReduce.([-]) (poly2alg a)).
+op (&*) (a b : poly) = alg2poly (PolyReduceZq.( * ) (poly2alg a) (poly2alg b)).
+op (&+) (a b : poly) = alg2poly (PolyReduceZq.( + ) (poly2alg a) (poly2alg b)).
+op (&-) (a   : poly) = alg2poly (PolyReduceZq.([-]) (poly2alg a)).
 op poly_zero = create zero.
 
 

@@ -467,11 +467,50 @@ op polylvec_srng(p : polylvec, bl bh : int) = all (poly_srng bl bh) p.
 op wpolylvec_urng(pw : wpolylvec, b : int) = all (wpoly_urng b) pw.
 op wpolylvec_srng(pw : wpolylvec, bl bh : int) = all (wpoly_srng bl bh) pw.
 
+require import Array1280 Array3200.
 
+op  input_unflatten(a : 'a Array3200.t) =
+     LArray.init (fun i => Array640.of_list witness (sub a (640*i) 640)).
+op  output_unflatten(a : 'a Array1280.t) =
+     LArray.init (fun i => Array256.of_list witness (sub a (256*i) 256)).
+        
 
 lemma gamma1_decode _a :
+    lvec = 5 =>
     hoare [ M.gamma1____decode :
        encoded = _a 
      ==>
-       lifts_wpolylvec res = Array1280.of_list (BitUnpack (to_list _a) (gamma1-1) gamma1)
-   ].    
+       lifts_wpolylvec (output_unflatten res) = 
+           LArray.map (fun p => BitUnpack (to_list p) (gamma1-1) gamma1) (input_unflatten _a)
+   ].
+move => Hlvec.
+proc => /=.
+while (0 <= i <= 5 /\ encoded = _a /\
+       forall k, 0 <= k < i =>
+       (lifts_wpolylvec (output_unflatten decoded)).[k] =
+       (map (fun (p : W8.t Array640.t) => Top.BitUnpack (to_list p) (Top.gamma1 - 1) Top.gamma1) (input_unflatten _a)).[k]);
+       last first.
+       + auto => /> &hr *;do split;1: smt().
+         move => r0 i0 *;rewrite tP => k kb; smt().
+wp; ecall (gamma1_decode_to_polynomial (Array640.init (fun (i_0 : int) => _a.[i * (gamma1_bits * n %/ 8) + i_0]))).
+auto => /> &hr ?? H ? rr Hrr;do split;1,2:smt().
+move => k kbl kbh.
+case(0<=k<i{hr}) => *.
++ have -> : (lifts_wpolylvec
+   (output_unflatten
+      (Array1280.init
+         (fun (i_0 : int) => if i{hr} * n <= i_0 < i{hr} * n + n then rr.[i_0 - i{hr} * n] else decoded{hr}.[i_0])))).[k] =
+    (lifts_wpolylvec (output_unflatten decoded{hr})).[k]; last by smt().
+  rewrite !mapiE 1..2:/# initiE 1:/# /= initiE 1:/# /= tP =>  ii iib.
+  rewrite mapiE 1:/# /= initiE 1:/# /= mapiE 1:/# /= initiE 1:/# /= !nth_sub 1,2:/# initiE 1:/# /= /#.
+have -> : k = i{hr} by smt().
++ have -> : (lifts_wpolylvec
+   (output_unflatten
+      (Array1280.init
+         (fun (i_0 : int) => if i{hr} * n <= i_0 < i{hr} * n + n then rr.[i_0 - i{hr} * n] else decoded{hr}.[i_0])))).[i{hr}]  =
+    (lifts_wpoly rr); last first.
+  + rewrite Hrr mapiE 1:/# /=;congr;congr;rewrite /input_unflatten initiE 1:/# /= tP => ii iib.
+    by rewrite initiE 1:/# get_of_list 1:/# /= nth_sub /#.
+rewrite mapiE 1:/# /= initiE 1:/# /= tP => ii iib.
+rewrite !mapiE 1,2:/# /= initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.
+qed.

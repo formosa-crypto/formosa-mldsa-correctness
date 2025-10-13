@@ -1,7 +1,7 @@
 require import AllCore List IntDiv QFABV.
 
 from Jasmin require import JModel_x86.
-from JazzEC require import Array256 Array640 .
+from JazzEC require import Array256 Array640 Array320.
 
 import BitEncoding BS2Int BitChunking.
 
@@ -498,6 +498,9 @@ realize bvzextendP by  move => bv; rewrite /= of_uintK /=; smt(W20.to_uint_cmp p
 bind op [bool & W32.t] W32.\sle "sle".
 realize bvsleP by move=> bv1 bv2; rewrite W32.sleE /#.
 
+bind op [bool & W32.t] W32.\ule "ule".
+realize bvuleP by move=> bv1 bv2; rewrite W32.uleE /#.
+
 bind op W32.t W32.( + ) "add".
 realize bvaddP by exact W32.to_uintD.
 
@@ -664,7 +667,6 @@ op zeroextu5_32(a : W5.t) : W32.t =
 bind op [W5.t & W32.t] zeroextu5_32 "zextend".
 realize bvzextendP by move => bv; rewrite /zeroextu5_32 /= of_uintK /=; smt(W5.to_uint_cmp pow2_5).
 
-
 op zeroextu10_32(a : W10.t) : W32.t =
   W32.of_int (to_uint a).
 
@@ -682,6 +684,51 @@ realize bvzextendP.
 have ? : 2^11 = 2048 by auto.
  by move => bv; rewrite /zeroextu32 /= of_uintK /=; smt(W11.to_uint_cmp).
 qed.
+
+op truncateu_32_11(a : W32.t) : W11.t =
+    W11.of_int (to_uint a).
+
+bind op [W32.t & W11.t] truncateu_32_11 "truncate".
+realize bvtruncateP.
+move => mv; rewrite /truncateu_32_11 /W32.w2bits take_mkseq 1:// /= /w2bits.
+apply (eq_from_nth witness);1: by smt(size_mkseq).
+move => i; rewrite size_mkseq /= /max /= => ib.
+rewrite !nth_mkseq 1..2:// /of_int /to_uint /= get_bits2w 1:// 
+        nth_mkseq 1:// /= get_to_uint 1:// /= /to_uint /=.
+have -> /=: (0 <= i && i < 32) by smt().
+pose a := bs2int (w2bits mv). 
+rewrite {1}(divz_eq a (2^(11-i)*2^i)) !mulrA divzMDl;
+   1: by smt(StdOrder.IntOrder.expr_gt0).
+rewrite dvdz_modzDl; 1: by
+ have ->  : 2^(11-i) = 2^((11-i-1)+1); [ by smt() |
+    rewrite exprS 1:/#; smt(dvdz_mull dvdz_mulr)].  
+by have -> : (2 ^ (11 - i) * 2 ^ i) = 2048; 
+  [ rewrite -StdBigop.Bigint.Num.Domain.exprD_nneg 
+     1,2:/# /= -!addrA /= | done ].
+qed.
+
+op truncateu_32_10(a : W32.t) : W10.t =
+    W10.of_int (to_uint a).
+
+bind op [W32.t & W10.t] truncateu_32_10 "truncate".
+realize bvtruncateP.
+move => mv; rewrite /truncateu_32_10 /W32.w2bits take_mkseq 1:// /= /w2bits.
+apply (eq_from_nth witness);1: by smt(size_mkseq).
+move => i; rewrite size_mkseq /= /max /= => ib.
+rewrite !nth_mkseq 1..2:// /of_int /to_uint /= get_bits2w 1:// 
+        nth_mkseq 1:// /= get_to_uint 1:// /= /to_uint /=.
+have -> /=: (0 <= i && i < 32) by smt().
+pose a := bs2int (w2bits mv). 
+rewrite {1}(divz_eq a (2^(10-i)*2^i)) !mulrA divzMDl;
+   1: by smt(StdOrder.IntOrder.expr_gt0).
+rewrite dvdz_modzDl; 1: by
+ have ->  : 2^(10-i) = 2^((10-i-1)+1); [ by smt() |
+    rewrite exprS 1:/#; smt(dvdz_mull dvdz_mulr)].  
+by have -> : (2 ^ (10 - i) * 2 ^ i) = 1024; 
+  [ rewrite -StdBigop.Bigint.Num.Domain.exprD_nneg 
+     1,2:/# /= -!addrA /= | done ].
+qed.
+
 
 bind op [W32.t & bool] W32."_.[_]" "get".
 realize bvgetP by rewrite /bool2bits.
@@ -1047,6 +1094,12 @@ realize tolistP by done.
 realize get_setP by smt(Array640.get_setE). 
 realize eqP by smt(Array640.tP).
 realize get_out by smt(Array640.get_out).
+
+bind array Array320."_.[_]" Array320."_.[_<-_]" Array320.to_list Array320.of_list Array320.t 320.
+realize tolistP by done.
+realize get_setP by smt(Array320.get_setE). 
+realize eqP by smt(Array320.tP).
+realize get_out by smt(Array320.get_out).
 
 (* 
 bind array Array384."_.[_]" Array384."_.[_<-_]" Array384.to_list Array384.of_list Array384.t 384.

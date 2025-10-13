@@ -2014,58 +2014,53 @@ module M = {
   }
   proc t1__encode_polynomial (encoded:BArray320.t, t1:BArray1024.t) : 
   BArray320.t = {
-    var input_offset:W64.t;
-    var output_offset:W64.t;
-    var i:W64.t;
+    var input_offset:int;
+    var output_offset:int;
+    var i:int;
     var encoded_bytes:W32.t;
     var encoded_byte:W32.t;
-    input_offset <- (W64.of_int 0);
-    output_offset <- (W64.of_int 0);
-    i <- (W64.of_int 0);
-    while ((i \ult (W64.of_int (256 %/ 4)))) {
-      encoded_bytes <- (BArray1024.get32 t1 (W64.to_uint input_offset));
+    input_offset <- 0;
+    output_offset <- 0;
+    i <- 0;
+    while ((i < (256 %/ 4))) {
+      encoded_bytes <- (BArray1024.get32 t1 input_offset);
       encoded <-
-      (BArray320.set8 encoded (W64.to_uint output_offset)
-      (truncateu8 encoded_bytes));
-      output_offset <- (output_offset + (W64.of_int 1));
-      encoded_bytes <- (BArray1024.get32 t1 (W64.to_uint input_offset));
+      (BArray320.set8 encoded output_offset (truncateu8 encoded_bytes));
+      output_offset <- (output_offset + 1);
+      encoded_bytes <- (BArray1024.get32 t1 input_offset);
       encoded_bytes <- (encoded_bytes `>>` (W8.of_int 8));
-      input_offset <- (input_offset + (W64.of_int 1));
-      encoded_byte <- (BArray1024.get32 t1 (W64.to_uint input_offset));
+      input_offset <- (input_offset + 1);
+      encoded_byte <- (BArray1024.get32 t1 input_offset);
       encoded_byte <- (encoded_byte `<<` (W8.of_int 2));
       encoded_bytes <- (encoded_bytes `|` encoded_byte);
       encoded <-
-      (BArray320.set8 encoded (W64.to_uint output_offset)
-      (truncateu8 encoded_bytes));
-      output_offset <- (output_offset + (W64.of_int 1));
-      encoded_bytes <- (BArray1024.get32 t1 (W64.to_uint input_offset));
+      (BArray320.set8 encoded output_offset (truncateu8 encoded_bytes));
+      output_offset <- (output_offset + 1);
+      encoded_bytes <- (BArray1024.get32 t1 input_offset);
       encoded_bytes <- (encoded_bytes `>>` (W8.of_int 6));
-      input_offset <- (input_offset + (W64.of_int 1));
-      encoded_byte <- (BArray1024.get32 t1 (W64.to_uint input_offset));
+      input_offset <- (input_offset + 1);
+      encoded_byte <- (BArray1024.get32 t1 input_offset);
       encoded_byte <- (encoded_byte `<<` (W8.of_int 4));
       encoded_bytes <- (encoded_bytes `|` encoded_byte);
       encoded <-
-      (BArray320.set8 encoded (W64.to_uint output_offset)
-      (truncateu8 encoded_bytes));
-      output_offset <- (output_offset + (W64.of_int 1));
-      encoded_bytes <- (BArray1024.get32 t1 (W64.to_uint input_offset));
+      (BArray320.set8 encoded output_offset (truncateu8 encoded_bytes));
+      output_offset <- (output_offset + 1);
+      encoded_bytes <- (BArray1024.get32 t1 input_offset);
       encoded_bytes <- (encoded_bytes `>>` (W8.of_int 4));
-      input_offset <- (input_offset + (W64.of_int 1));
-      encoded_byte <- (BArray1024.get32 t1 (W64.to_uint input_offset));
+      input_offset <- (input_offset + 1);
+      encoded_byte <- (BArray1024.get32 t1 input_offset);
       encoded_byte <- (encoded_byte `<<` (W8.of_int 6));
       encoded_bytes <- (encoded_bytes `|` encoded_byte);
       encoded <-
-      (BArray320.set8 encoded (W64.to_uint output_offset)
-      (truncateu8 encoded_bytes));
-      output_offset <- (output_offset + (W64.of_int 1));
-      encoded_bytes <- (BArray1024.get32 t1 (W64.to_uint input_offset));
+      (BArray320.set8 encoded output_offset (truncateu8 encoded_bytes));
+      output_offset <- (output_offset + 1);
+      encoded_bytes <- (BArray1024.get32 t1 input_offset);
       encoded_bytes <- (encoded_bytes `>>` (W8.of_int 2));
       encoded <-
-      (BArray320.set8 encoded (W64.to_uint output_offset)
-      (truncateu8 encoded_bytes));
-      output_offset <- (output_offset + (W64.of_int 1));
-      input_offset <- (input_offset + (W64.of_int 1));
-      i <- (i + (W64.of_int 1));
+      (BArray320.set8 encoded output_offset (truncateu8 encoded_bytes));
+      output_offset <- (output_offset + 1);
+      input_offset <- (input_offset + 1);
+      i <- (i + 1);
     }
     return encoded;
   }
@@ -2087,57 +2082,52 @@ module M = {
   }
   proc t1__decode_polynomial (t1:BArray1024.t, encoded:BArray320.t) : 
   BArray1024.t = {
-    var input_offset:W64.t;
-    var output_offset:W64.t;
-    var i:W64.t;
+    var input_offset:int;
+    var output_offset:int;
+    var i:int;
     var coefficient:W32.t;
     var temp1:W32.t;
     var temp2:W32.t;
-    input_offset <- (W64.of_int 0);
-    output_offset <- (W64.of_int 0);
-    i <- (W64.of_int 0);
-    while ((i \ult (W64.of_int (256 %/ 4)))) {
-      coefficient <-
-      (zeroextu32 (BArray320.get8 encoded (W64.to_uint input_offset)));
-      input_offset <- (input_offset + (W64.of_int 1));
-      temp1 <-
-      (zeroextu32 (BArray320.get8 encoded (W64.to_uint input_offset)));
-      input_offset <- (input_offset + (W64.of_int 1));
+    input_offset <- 0;
+    output_offset <- 0;
+    i <- 0;
+    while ((i < (256 %/ 4))) {
+      coefficient <- (zeroextu32 (BArray320.get8 encoded input_offset));
+      input_offset <- (input_offset + 1);
+      temp1 <- (zeroextu32 (BArray320.get8 encoded input_offset));
+      input_offset <- (input_offset + 1);
       temp2 <- temp1;
       temp1 <- (temp1 `<<` (W8.of_int 8));
       coefficient <- (coefficient `|` temp1);
       coefficient <- (coefficient `&` (W32.of_int ((1 `<<` 10) - 1)));
-      t1 <- (BArray1024.set32 t1 (W64.to_uint output_offset) coefficient);
-      output_offset <- (output_offset + (W64.of_int 1));
+      t1 <- (BArray1024.set32 t1 output_offset coefficient);
+      output_offset <- (output_offset + 1);
       coefficient <- (temp2 `>>` (W8.of_int 2));
-      temp1 <-
-      (zeroextu32 (BArray320.get8 encoded (W64.to_uint input_offset)));
-      input_offset <- (input_offset + (W64.of_int 1));
+      temp1 <- (zeroextu32 (BArray320.get8 encoded input_offset));
+      input_offset <- (input_offset + 1);
       temp2 <- temp1;
       temp1 <- (temp1 `<<` (W8.of_int 6));
       coefficient <- (coefficient `|` temp1);
       coefficient <- (coefficient `&` (W32.of_int ((1 `<<` 10) - 1)));
-      t1 <- (BArray1024.set32 t1 (W64.to_uint output_offset) coefficient);
-      output_offset <- (output_offset + (W64.of_int 1));
+      t1 <- (BArray1024.set32 t1 output_offset coefficient);
+      output_offset <- (output_offset + 1);
       coefficient <- (temp2 `>>` (W8.of_int 4));
-      temp1 <-
-      (zeroextu32 (BArray320.get8 encoded (W64.to_uint input_offset)));
-      input_offset <- (input_offset + (W64.of_int 1));
+      temp1 <- (zeroextu32 (BArray320.get8 encoded input_offset));
+      input_offset <- (input_offset + 1);
       temp2 <- temp1;
       temp1 <- (temp1 `<<` (W8.of_int 4));
       coefficient <- (coefficient `|` temp1);
       coefficient <- (coefficient `&` (W32.of_int ((1 `<<` 10) - 1)));
-      t1 <- (BArray1024.set32 t1 (W64.to_uint output_offset) coefficient);
-      output_offset <- (output_offset + (W64.of_int 1));
+      t1 <- (BArray1024.set32 t1 output_offset coefficient);
+      output_offset <- (output_offset + 1);
       coefficient <- (temp2 `>>` (W8.of_int 6));
-      temp1 <-
-      (zeroextu32 (BArray320.get8 encoded (W64.to_uint input_offset)));
-      input_offset <- (input_offset + (W64.of_int 1));
+      temp1 <- (zeroextu32 (BArray320.get8 encoded input_offset));
+      input_offset <- (input_offset + 1);
       temp1 <- (temp1 `<<` (W8.of_int 2));
       coefficient <- (coefficient `|` temp1);
-      t1 <- (BArray1024.set32 t1 (W64.to_uint output_offset) coefficient);
-      output_offset <- (output_offset + (W64.of_int 1));
-      i <- (i + (W64.of_int 1));
+      t1 <- (BArray1024.set32 t1 output_offset coefficient);
+      output_offset <- (output_offset + 1);
+      i <- (i + 1);
     }
     return t1;
   }

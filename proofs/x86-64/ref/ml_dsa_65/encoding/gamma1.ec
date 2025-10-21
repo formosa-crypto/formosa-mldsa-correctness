@@ -248,6 +248,7 @@ proc change ^while.14 : (sll_32 encoded_bytes (W32.of_int 4)); 1: by auto.
 proc change ^while.18 : (srl_32 encoded_bytes (W32.of_int 4)); 1: by auto.
 proc change ^while.21 : (srl_32 encoded_bytes (W32.of_int 12)); 1: by auto.
 (* FIXME: WE NEED CONTEXT FOR THIS PROC CHANGE *)
+(* cfold ^while.18.  IS THIS A CFOLD BUG? *)
 proc change ^while.15: ((byte  `&` W8.of_int 15) `|` (truncateu8 encoded_bytes));1:by admit.
 unroll for ^while.
 cfold 1.

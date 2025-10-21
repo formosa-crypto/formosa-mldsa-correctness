@@ -2381,6 +2381,50 @@ module M = {
     }
     return t1;
   }
+  proc signature____write_hint (signature:W8.t Array3309.t,
+                                hint_0:W32.t Array1536.t) : W8.t Array3309.t = {
+    var msf:W64.t;
+    var hints_written:int;
+    var i:int;
+    var condition:bool;
+    var j:int;
+    var hint_offset:int;
+    var hint_coefficient:W32.t;
+    msf <- (init_msf);
+    hints_written <- 0;
+    i <- 0;
+    condition <- (i < 6);
+    while (condition) {
+      msf <- (update_msf condition msf);
+      j <- 0;
+      condition <- (j < 256);
+      while (condition) {
+        msf <- (update_msf condition msf);
+        hint_offset <- i;
+        hint_offset <- (hint_offset `<<` 8);
+        hint_offset <- (hint_offset + j);
+        hint_coefficient <- hint_0.[hint_offset];
+        hint_coefficient <- (protect_32 hint_coefficient msf);
+        condition <- (hint_coefficient <> (W32.of_int 0));
+        if (condition) {
+          msf <- (update_msf condition msf);
+          signature.[((48 + (5 * ((20 * 256) %/ 8))) + hints_written)] <-
+          (W8.of_int j);
+          hints_written <- (hints_written + 1);
+        } else {
+          msf <- (update_msf (! condition) msf);
+        }
+        j <- (j + 1);
+        condition <- (j < 256);
+      }
+      msf <- (update_msf (! condition) msf);
+      signature.[(((48 + (5 * ((20 * 256) %/ 8))) + 55) + i)] <-
+      (W8.of_int hints_written);
+      i <- (i + 1);
+      condition <- (i < 6);
+    }
+    return signature;
+  }
   proc signature____encode (signature:W8.t Array3309.t,
                             commitment_hash:W8.t Array48.t,
                             signer_response:W32.t Array1280.t,
@@ -2389,12 +2433,6 @@ module M = {
     var k:int;
     var polynomial_encoded:W8.t Array640.t;
     var polynomial:W32.t Array256.t;
-    var msf:W64.t;
-    var hints_written:W64.t;
-    var condition:bool;
-    var j:W64.t;
-    var hint_offset:W64.t;
-    var hint_coefficient:W32.t;
     polynomial <- witness;
     polynomial_encoded <- witness;
     i <- (W64.of_int 0);
@@ -2430,42 +2468,7 @@ module M = {
       (W8.of_int 0);
       i <- (i + (W64.of_int 1));
     }
-    msf <- (init_msf);
-    hints_written <- (W64.of_int 0);
-    i <- (W64.of_int 0);
-    condition <- (i \ult (W64.of_int 6));
-    while (condition) {
-      msf <- (update_msf condition msf);
-      j <- (W64.of_int 0);
-      condition <- (j \ult (W64.of_int 256));
-      while (condition) {
-        msf <- (update_msf condition msf);
-        hint_offset <- i;
-        hint_offset <- (hint_offset `<<` (W8.of_int 8));
-        hint_offset <- (hint_offset + j);
-        hint_coefficient <- hint_0.[(W64.to_uint hint_offset)];
-        hint_coefficient <- (protect_32 hint_coefficient msf);
-        condition <- (hint_coefficient <> (W32.of_int 0));
-        if (condition) {
-          msf <- (update_msf condition msf);
-          signature.[(W64.to_uint
-                     ((W64.of_int (48 + (5 * ((20 * 256) %/ 8)))) +
-                     hints_written))] <-
-          (truncateu8 j);
-          hints_written <- (hints_written + (W64.of_int 1));
-        } else {
-          msf <- (update_msf (! condition) msf);
-        }
-        j <- (j + (W64.of_int 1));
-        condition <- (j \ult (W64.of_int 256));
-      }
-      msf <- (update_msf (! condition) msf);
-      signature.[(W64.to_uint
-                 ((W64.of_int ((48 + (5 * ((20 * 256) %/ 8))) + 55)) + i))] <-
-      (truncateu8 hints_written);
-      i <- (i + (W64.of_int 1));
-      condition <- (i \ult (W64.of_int 6));
-    }
+    signature <@ signature____write_hint (signature, hint_0);
     return signature;
   }
   proc signature____decode_hint (hints:W32.t Array1536.t,

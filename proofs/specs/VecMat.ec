@@ -49,8 +49,8 @@ lemma alg2polylvecK : cancel polylvec2alg alg2polylvec.
 admitted.
 
 op nttv v = LArray.map ntt v.
-op invnttv v = LArray.map invntt v.
-op zerov : polylvec = create poly_zero.
+op invnttv v = LArray.map invntt v. 
+op zerov : polylvec = LArray.init (fun i =>  poly_zero).
 
 op (+) (v1 v2 : polylvec) : polylvec = alg2polylvec ((polylvec2alg v1) + (polylvec2alg v2)).
 op ntt_smul(p : poly, v : polylvec) : polylvec = map (fun p' => basemul p' p) v.

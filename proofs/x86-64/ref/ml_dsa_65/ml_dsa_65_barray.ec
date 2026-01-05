@@ -5,20 +5,20 @@ from Jasmin require import JModel_x86.
 import SLH64.
 
 require import
-Array5 Array8 Array24 Array25 Array32 Array48 Array61 Array64 Array128
+Array2 Array5 Array8 Array24 Array25 Array32 Array48 Array61 Array64 Array128
 Array256 Array320 Array416 Array640 Array680 Array768 Array1280 Array1536
 Array1920 Array1952 Array2496 Array3200 Array3309 Array4032 Array7680
-WArray192 WArray1024 BArray32 BArray40 BArray48 BArray61 BArray64 BArray128
-BArray192 BArray200 BArray320 BArray416 BArray640 BArray680 BArray768
-BArray1024 BArray1920 BArray1952 BArray2496 BArray3200 BArray3309 BArray4032
-BArray5120 BArray6144 BArray30720 SBArray200_32 SBArray1952_32 SBArray4032_32
-SBArray3309_48 SBArray3309_61 SBArray200_64 SBArray4032_64 SBArray640_128
-SBArray768_128 SBArray1920_320 SBArray2496_416 SBArray680_640 SBArray3200_640
-SBArray3309_640 SBArray4032_640 SBArray4032_768 SBArray5120_1024
-SBArray6144_1024 SBArray30720_1024 SBArray1952_1920 SBArray4032_2496
-SBArray3309_3200 SBArray30720_5120.
+WArray192 WArray1024 BArray16 BArray32 BArray40 BArray48 BArray61 BArray64
+BArray128 BArray192 BArray200 BArray320 BArray416 BArray640 BArray680
+BArray768 BArray1024 BArray1920 BArray1952 BArray2496 BArray3200 BArray3309
+BArray4032 BArray5120 BArray6144 BArray30720 SBArray200_32 SBArray1952_32
+SBArray4032_32 SBArray3309_48 SBArray3309_61 SBArray200_64 SBArray4032_64
+SBArray640_128 SBArray768_128 SBArray1920_320 SBArray2496_416 SBArray680_640
+SBArray3200_640 SBArray3309_640 SBArray4032_640 SBArray4032_768
+SBArray5120_1024 SBArray6144_1024 SBArray30720_1024 SBArray1952_1920
+SBArray4032_2496 SBArray3309_3200 SBArray30720_5120.
 
-abbrev zETAS_TIMES_MONTGOMERY_R =
+abbrev  zETAS_TIMES_MONTGOMERY_R =
 (BArray1024.of_list32
 [(W32.of_int 25847); (W32.of_int (-2608894)); (W32.of_int (-518909));
 (W32.of_int 237124); (W32.of_int (-777960)); (W32.of_int (-876248));
@@ -107,7 +107,7 @@ abbrev zETAS_TIMES_MONTGOMERY_R =
 (W32.of_int 1400424); (W32.of_int (-846154)); (W32.of_int 1976782);
 (W32.of_int 0)]).
 
-abbrev kECCAK1600_RC =
+abbrev  kECCAK1600_RC =
 (BArray192.of_list64
 [(W64.of_int 1); (W64.of_int 32898); (W64.of_int (-9223372036854742902));
 (W64.of_int (-9223372034707259392)); (W64.of_int 32907);
@@ -178,7 +178,6 @@ module M = {
     var  _1:bool;
     var  _2:bool;
     var  _3:bool;
-    result <- (W8.of_int 0);
     sign_mask <- coefficient;
     sign_mask <- (sign_mask `|>>` (W8.of_int 31));
     c <- coefficient;
@@ -650,20 +649,34 @@ module M = {
     return (state, offset);
   }
   proc __derive_message_representative (hash_of_verification_key:BArray64.t,
-                                        message:W64.t, message_size:W64.t) : 
+                                        context_message_pointers:BArray16.t,
+                                        context_message_sizes:BArray16.t) : 
   BArray64.t = {
     var message_representative:BArray64.t;
     var state:BArray200.t;
     var state_offset:W64.t;
     var byte:W8.t;
+    var context:W64.t;
+    var context_size:W64.t;
+    var context_offset:W64.t;
+    var message:W64.t;
+    var message_size:W64.t;
     var message_offset:W64.t;
-    var  _0:bool;
+    var  _0:W64.t;
     var  _1:bool;
     var  _2:bool;
     var  _3:bool;
     var  _4:bool;
+    var  _5:bool;
+    var  _6:W64.t;
+    var  _7:bool;
+    var  _8:bool;
+    var  _9:bool;
+    var  _10:bool;
+    var  _11:bool;
     message_representative <- witness;
     state <- witness;
+    (* Erased call to spill *)
     state <@ __keccak_init_ref1 (state);
     state_offset <- (W64.of_int 0);
     while ((state_offset \ult (W64.of_int 64))) {
@@ -672,13 +685,45 @@ module M = {
       state <- (BArray200.set8 state (W64.to_uint state_offset) byte);
       state_offset <- (state_offset + (W64.of_int 1));
     }
+    state <-
+    (BArray200.set8d state (W64.to_uint state_offset) (W8.of_int 0));
+    state_offset <- (state_offset + (W64.of_int 1));
+     _0 <- (init_msf);
+    (* Erased call to unspill *)
+    context <- (BArray16.get64 context_message_pointers 0);
+    context_size <- (BArray16.get64 context_message_sizes 0);
+    state <-
+    (BArray200.set8d state (W64.to_uint state_offset)
+    (truncateu8 context_size));
+    state_offset <- (state_offset + (W64.of_int 1));
+    context_offset <- (W64.of_int 0);
+    while ((context_offset \ult context_size)) {
+      if (((W64.of_int 136) \ule state_offset)) {
+        (* Erased call to spill *)
+        state <@ _keccakf1600_ref1 (state);
+        (* Erased call to unspill *)
+        ( _1,  _2,  _3,  _4,  _5, state_offset) <- (set0_64);
+      } else {
+        
+      }
+      byte <- (loadW8 Glob.mem (W64.to_uint (context + context_offset)));
+      context_offset <- (context_offset + (W64.of_int 1));
+      state <-
+      (BArray200.set8 state (W64.to_uint state_offset)
+      ((BArray200.get8 state (W64.to_uint state_offset)) `^` byte));
+      state_offset <- (state_offset + (W64.of_int 1));
+    }
+     _6 <- (init_msf);
+    (* Erased call to unspill *)
+    message <- (BArray16.get64 context_message_pointers 1);
+    message_size <- (BArray16.get64 context_message_sizes 1);
     message_offset <- (W64.of_int 0);
     while ((message_offset \ult message_size)) {
       if (((W64.of_int 136) \ule state_offset)) {
         (* Erased call to spill *)
         state <@ _keccakf1600_ref1 (state);
         (* Erased call to unspill *)
-        ( _0,  _1,  _2,  _3,  _4, state_offset) <- (set0_64);
+        ( _7,  _8,  _9,  _10,  _11, state_offset) <- (set0_64);
       } else {
         
       }
@@ -1004,15 +1049,13 @@ module M = {
     var mask_encoded:BArray680.t;
     var block_being_squeezed:int;
     var  _0:W64.t;
-    var block_being_squeezed_0:int;
     mask_encoded <- witness;
     state <- witness;
     state <@ __absorb_for_shake256 (rho_prime, domain_separator);
     mask_encoded_offset <- (W64.of_int 0);
     inc <- (((((20 * 256) %/ 8) + 136) - 1) %/ 136);
-    block_being_squeezed_0 <- 0;
-    while ((block_being_squeezed_0 < inc)) {
-      block_being_squeezed <- block_being_squeezed_0;
+    block_being_squeezed <- 0;
+    while ((block_being_squeezed < inc)) {
       (* Erased call to spill *)
       state <@ _keccakf1600_ref1 (state);
       (* Erased call to unspill *)
@@ -1026,7 +1069,6 @@ module M = {
         mask_encoded_offset <- (mask_encoded_offset + (W64.of_int 1));
       }
       block_being_squeezed <- (block_being_squeezed + 1);
-      block_being_squeezed_0 <- (block_being_squeezed_0 + 1);
     }
     mask <@ gamma1____decode_to_polynomial (mask,
     (SBArray680_640.get_sub8 mask_encoded 0));
@@ -2699,7 +2741,8 @@ module M = {
     return seed_for_mask;
   }
   proc __sign_internal (signature:BArray3309.t, signing_key:BArray4032.t,
-                        pointer_to_message:W64.t, message_size:W64.t,
+                        context_message_pointers:BArray16.t,
+                        context_message_sizes:BArray16.t,
                         randomness:BArray32.t) : BArray3309.t = {
     var message_representative:BArray64.t;
     var seed_for_matrix_A:BArray32.t;
@@ -2759,7 +2802,7 @@ module M = {
                                                                SBArray4032_64.get_sub8
                                                                signing_key 64
                                                                ),
-    pointer_to_message, message_size);
+    context_message_pointers, context_message_sizes);
     (* Erased call to unspill *)
     seed_for_matrix_A <- (SBArray4032_32.get_sub8 signing_key 0);
      _0 <- (init_msf);
@@ -2931,9 +2974,10 @@ module M = {
     commitment_encoded <@ commitment____encode (commitment);
     return commitment_encoded;
   }
-  proc __verify_internal (verification_key:BArray1952.t, message:W64.t,
-                          message_size:W64.t, signature_encoded:BArray3309.t) : 
-  W64.t = {
+  proc __verify_internal (verification_key:BArray1952.t,
+                          context_message_pointers:BArray16.t,
+                          context_message_sizes:BArray16.t,
+                          signature_encoded:BArray3309.t) : W64.t = {
     var result:W64.t;
     var signer_response:BArray5120.t;
     var signer_response_outside_bounds:W8.t;
@@ -2986,7 +3030,7 @@ module M = {
         verification_key_hash);
         (* Erased call to unspill *)
         message_representative <@ __derive_message_representative (verification_key_hash,
-        message, message_size);
+        context_message_pointers, context_message_sizes);
         expected_commitment_hash <@ __derive_commitment_hash (message_representative,
         reconstructed_signer_commitment);
         (* Erased call to unspill *)
@@ -3010,22 +3054,38 @@ module M = {
     return (verification_key, signing_key);
   }
   proc ml_dsa_65_sign (signature:BArray3309.t, signing_key:BArray4032.t,
-                       message:W64.t, message_size:W64.t,
-                       randomness:BArray32.t) : BArray3309.t = {
+                       context_message_pointers:BArray16.t,
+                       context_message_sizes:BArray16.t,
+                       randomness:BArray32.t) : BArray3309.t * W64.t = {
+    var result:W64.t;
+    var context_size:W64.t;
     var  _0:W64.t;
      _0 <- (init_msf);
-    signature <@ __sign_internal (signature, signing_key, message,
-    message_size, randomness);
-    return signature;
+    context_size <- (BArray16.get64 context_message_sizes 0);
+    if ((context_size \ule (W64.of_int 255))) {
+      signature <@ __sign_internal (signature, signing_key,
+      context_message_pointers, context_message_sizes, randomness);
+      result <- (W64.of_int 0);
+    } else {
+      result <- (W64.of_int (- 1));
+    }
+    return (signature, result);
   }
-  proc ml_dsa_65_verify (verification_key:BArray1952.t, message:W64.t,
-                         message_size:W64.t, signature:BArray3309.t) : 
-  W64.t = {
+  proc ml_dsa_65_verify (verification_key:BArray1952.t,
+                         context_message_pointers:BArray16.t,
+                         context_message_sizes:BArray16.t,
+                         signature:BArray3309.t) : W64.t = {
     var verification_result:W64.t;
+    var context_size:W64.t;
     var  _0:W64.t;
      _0 <- (init_msf);
-    verification_result <@ __verify_internal (verification_key, message,
-    message_size, signature);
+    context_size <- (BArray16.get64 context_message_sizes 0);
+    if ((context_size \ule (W64.of_int 255))) {
+      verification_result <@ __verify_internal (verification_key,
+      context_message_pointers, context_message_sizes, signature);
+    } else {
+      verification_result <- (W64.of_int (- 1));
+    }
     return verification_result;
   }
 }.

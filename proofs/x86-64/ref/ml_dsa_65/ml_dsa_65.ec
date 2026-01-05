@@ -5,15 +5,15 @@ from Jasmin require import JModel_x86.
 import SLH64.
 
 require import
-Array4 Array5 Array8 Array24 Array25 Array32 Array48 Array61 Array64 Array128
-Array256 Array320 Array416 Array640 Array680 Array768 Array1280 Array1536
-Array1920 Array1952 Array2496 Array3200 Array3309 Array4032 Array7680
-WArray32 WArray40 WArray48 WArray61 WArray64 WArray128 WArray192 WArray200
-WArray320 WArray416 WArray640 WArray680 WArray768 WArray1024 WArray1920
-WArray1952 WArray2496 WArray3200 WArray3309 WArray4032 WArray5120 WArray6144
-WArray30720.
+Array2 Array4 Array5 Array8 Array24 Array25 Array32 Array48 Array61 Array64
+Array128 Array256 Array320 Array416 Array640 Array680 Array768 Array1280
+Array1536 Array1920 Array1952 Array2496 Array3200 Array3309 Array4032
+Array7680 WArray16 WArray32 WArray40 WArray48 WArray61 WArray64 WArray128
+WArray192 WArray200 WArray320 WArray416 WArray640 WArray680 WArray768
+WArray1024 WArray1920 WArray1952 WArray2496 WArray3200 WArray3309 WArray4032
+WArray5120 WArray6144 WArray30720.
 
-abbrev zETAS_TIMES_MONTGOMERY_R =
+abbrev  zETAS_TIMES_MONTGOMERY_R =
 ((Array256.of_list witness)
 [(W32.of_int 25847); (W32.of_int (-2608894)); (W32.of_int (-518909));
 (W32.of_int 237124); (W32.of_int (-777960)); (W32.of_int (-876248));
@@ -102,7 +102,7 @@ abbrev zETAS_TIMES_MONTGOMERY_R =
 (W32.of_int 1400424); (W32.of_int (-846154)); (W32.of_int 1976782);
 (W32.of_int 0)]).
 
-abbrev kECCAK1600_RC =
+abbrev  kECCAK1600_RC =
 ((Array24.of_list witness)
 [(W64.of_int 1); (W64.of_int 32898); (W64.of_int (-9223372036854742902));
 (W64.of_int (-9223372034707259392)); (W64.of_int 32907);
@@ -173,7 +173,6 @@ module M = {
     var  _1:bool;
     var  _2:bool;
     var  _3:bool;
-    result <- (W8.of_int 0);
     sign_mask <- coefficient;
     sign_mask <- (sign_mask `|>>` (W8.of_int 31));
     c <- coefficient;
@@ -655,20 +654,34 @@ module M = {
     return (state, offset);
   }
   proc __derive_message_representative (hash_of_verification_key:W8.t Array64.t,
-                                        message:W64.t, message_size:W64.t) : 
+                                        context_message_pointers:W64.t Array2.t,
+                                        context_message_sizes:W64.t Array2.t) : 
   W8.t Array64.t = {
     var message_representative:W8.t Array64.t;
     var state:W64.t Array25.t;
     var state_offset:W64.t;
     var byte:W8.t;
+    var context:W64.t;
+    var context_size:W64.t;
+    var context_offset:W64.t;
+    var message:W64.t;
+    var message_size:W64.t;
     var message_offset:W64.t;
-    var  _0:bool;
+    var  _0:W64.t;
     var  _1:bool;
     var  _2:bool;
     var  _3:bool;
     var  _4:bool;
+    var  _5:bool;
+    var  _6:W64.t;
+    var  _7:bool;
+    var  _8:bool;
+    var  _9:bool;
+    var  _10:bool;
+    var  _11:bool;
     message_representative <- witness;
     state <- witness;
+    (* Erased call to spill *)
     state <@ __keccak_init_ref1 (state);
     state_offset <- (W64.of_int 0);
     while ((state_offset \ult (W64.of_int 64))) {
@@ -680,13 +693,55 @@ module M = {
       (W64.to_uint state_offset) byte)));
       state_offset <- (state_offset + (W64.of_int 1));
     }
+    state <-
+    (Array25.init
+    (WArray200.get64
+    (WArray200.set8_direct (WArray200.init64 (fun i => state.[i]))
+    (W64.to_uint state_offset) (W8.of_int 0))));
+    state_offset <- (state_offset + (W64.of_int 1));
+     _0 <- (init_msf);
+    (* Erased call to unspill *)
+    context <- context_message_pointers.[0];
+    context_size <- context_message_sizes.[0];
+    state <-
+    (Array25.init
+    (WArray200.get64
+    (WArray200.set8_direct (WArray200.init64 (fun i => state.[i]))
+    (W64.to_uint state_offset) (truncateu8 context_size))));
+    state_offset <- (state_offset + (W64.of_int 1));
+    context_offset <- (W64.of_int 0);
+    while ((context_offset \ult context_size)) {
+      if (((W64.of_int 136) \ule state_offset)) {
+        (* Erased call to spill *)
+        state <@ _keccakf1600_ref1 (state);
+        (* Erased call to unspill *)
+        ( _1,  _2,  _3,  _4,  _5, state_offset) <- (set0_64);
+      } else {
+        
+      }
+      byte <- (loadW8 Glob.mem (W64.to_uint (context + context_offset)));
+      context_offset <- (context_offset + (W64.of_int 1));
+      state <-
+      (Array25.init
+      (WArray200.get64
+      (WArray200.set8 (WArray200.init64 (fun i => state.[i]))
+      (W64.to_uint state_offset)
+      ((get8 (WArray200.init64 (fun i => state.[i]))
+       (W64.to_uint state_offset)) `^`
+      byte))));
+      state_offset <- (state_offset + (W64.of_int 1));
+    }
+     _6 <- (init_msf);
+    (* Erased call to unspill *)
+    message <- context_message_pointers.[1];
+    message_size <- context_message_sizes.[1];
     message_offset <- (W64.of_int 0);
     while ((message_offset \ult message_size)) {
       if (((W64.of_int 136) \ule state_offset)) {
         (* Erased call to spill *)
         state <@ _keccakf1600_ref1 (state);
         (* Erased call to unspill *)
-        ( _0,  _1,  _2,  _3,  _4, state_offset) <- (set0_64);
+        ( _7,  _8,  _9,  _10,  _11, state_offset) <- (set0_64);
       } else {
         
       }
@@ -1134,15 +1189,13 @@ module M = {
     var mask_encoded:W8.t Array680.t;
     var block_being_squeezed:int;
     var  _0:W64.t;
-    var block_being_squeezed_0:int;
     mask_encoded <- witness;
     state <- witness;
     state <@ __absorb_for_shake256 (rho_prime, domain_separator);
     mask_encoded_offset <- (W64.of_int 0);
     inc <- (((((20 * 256) %/ 8) + 136) - 1) %/ 136);
-    block_being_squeezed_0 <- 0;
-    while ((block_being_squeezed_0 < inc)) {
-      block_being_squeezed <- block_being_squeezed_0;
+    block_being_squeezed <- 0;
+    while ((block_being_squeezed < inc)) {
       (* Erased call to spill *)
       state <@ _keccakf1600_ref1 (state);
       (* Erased call to unspill *)
@@ -1156,7 +1209,6 @@ module M = {
         mask_encoded_offset <- (mask_encoded_offset + (W64.of_int 1));
       }
       block_being_squeezed <- (block_being_squeezed + 1);
-      block_being_squeezed_0 <- (block_being_squeezed_0 + 1);
     }
     mask <@ gamma1____decode_to_polynomial (mask,
     (Array640.init (fun i_0 => mask_encoded.[(0 + i_0)])));
@@ -3186,7 +3238,8 @@ module M = {
   }
   proc __sign_internal (signature:W8.t Array3309.t,
                         signing_key:W8.t Array4032.t,
-                        pointer_to_message:W64.t, message_size:W64.t,
+                        context_message_pointers:W64.t Array2.t,
+                        context_message_sizes:W64.t Array2.t,
                         randomness:W8.t Array32.t) : W8.t Array3309.t = {
     var message_representative:W8.t Array64.t;
     var seed_for_matrix_A:W8.t Array32.t;
@@ -3247,7 +3300,7 @@ module M = {
                                                                signing_key.[
                                                                (64 + 
                                                                i)])),
-    pointer_to_message, message_size);
+    context_message_pointers, context_message_sizes);
     (* Erased call to unspill *)
     seed_for_matrix_A <- (Array32.init (fun i => signing_key.[(0 + i)]));
      _0 <- (init_msf);
@@ -3440,8 +3493,9 @@ module M = {
     commitment_encoded <@ commitment____encode (commitment);
     return commitment_encoded;
   }
-  proc __verify_internal (verification_key:W8.t Array1952.t, message:W64.t,
-                          message_size:W64.t,
+  proc __verify_internal (verification_key:W8.t Array1952.t,
+                          context_message_pointers:W64.t Array2.t,
+                          context_message_sizes:W64.t Array2.t,
                           signature_encoded:W8.t Array3309.t) : W64.t = {
     var result:W64.t;
     var signer_response:W32.t Array1280.t;
@@ -3496,7 +3550,7 @@ module M = {
         verification_key_hash);
         (* Erased call to unspill *)
         message_representative <@ __derive_message_representative (verification_key_hash,
-        message, message_size);
+        context_message_pointers, context_message_sizes);
         expected_commitment_hash <@ __derive_commitment_hash (message_representative,
         reconstructed_signer_commitment);
         (* Erased call to unspill *)
@@ -3521,23 +3575,39 @@ module M = {
     return (verification_key, signing_key);
   }
   proc ml_dsa_65_sign (signature:W8.t Array3309.t,
-                       signing_key:W8.t Array4032.t, message:W64.t,
-                       message_size:W64.t, randomness:W8.t Array32.t) : 
-  W8.t Array3309.t = {
+                       signing_key:W8.t Array4032.t,
+                       context_message_pointers:W64.t Array2.t,
+                       context_message_sizes:W64.t Array2.t,
+                       randomness:W8.t Array32.t) : W8.t Array3309.t * W64.t = {
+    var result:W64.t;
+    var context_size:W64.t;
     var  _0:W64.t;
      _0 <- (init_msf);
-    signature <@ __sign_internal (signature, signing_key, message,
-    message_size, randomness);
-    return signature;
+    context_size <- context_message_sizes.[0];
+    if ((context_size \ule (W64.of_int 255))) {
+      signature <@ __sign_internal (signature, signing_key,
+      context_message_pointers, context_message_sizes, randomness);
+      result <- (W64.of_int 0);
+    } else {
+      result <- (W64.of_int (- 1));
+    }
+    return (signature, result);
   }
-  proc ml_dsa_65_verify (verification_key:W8.t Array1952.t, message:W64.t,
-                         message_size:W64.t, signature:W8.t Array3309.t) : 
-  W64.t = {
+  proc ml_dsa_65_verify (verification_key:W8.t Array1952.t,
+                         context_message_pointers:W64.t Array2.t,
+                         context_message_sizes:W64.t Array2.t,
+                         signature:W8.t Array3309.t) : W64.t = {
     var verification_result:W64.t;
+    var context_size:W64.t;
     var  _0:W64.t;
      _0 <- (init_msf);
-    verification_result <@ __verify_internal (verification_key, message,
-    message_size, signature);
+    context_size <- context_message_sizes.[0];
+    if ((context_size \ule (W64.of_int 255))) {
+      verification_result <@ __verify_internal (verification_key,
+      context_message_pointers, context_message_sizes, signature);
+    } else {
+      verification_result <- (W64.of_int (- 1));
+    }
     return verification_result;
   }
 }.

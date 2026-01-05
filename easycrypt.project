@@ -1,9 +1,10 @@
 [general]
 timeout = 30
 
-provers = Alt-Ergo
 provers = CVC5
 provers = Z3
+
+spec = proofs/eclib/specs/avx2.spec
 
 rdirs = proofs
 rdirs = Jasmin:jasmin/eclib

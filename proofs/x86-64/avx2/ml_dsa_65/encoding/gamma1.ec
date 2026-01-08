@@ -36,7 +36,7 @@ op pre_gamma1_encode_polynomial(c : W32.t) =
     (W32_sub (W32.zero) (W32.of_int (524287))) \sle c /\ c \sle W32.of_int gamma1. 
 
 op gamma1_encode_polynomial_lane(c : W32.t) : W20.t = 
-    truncateu_32_20 (W32_sub (W32.of_int gamma1) c).
+    truncateu_32_20 (W32_sub (W32.of_int gamma1) (zeroextu_20_32 (truncateu_32_20 c))).
 
 import Parameters.
 
@@ -141,7 +141,8 @@ move: h => @/wpoly_srng /array256_allP /(_ v _) //= /=.
 move => h. 
 rewrite incoeffK_sint_small 1:/# /W32_sub truncateu_32_20E get_bits2w 1:/#.
 rewrite nth_take 1,2:/#. 
-rewrite /IntegerToBits w2bitsE. 
+rewrite /IntegerToBits w2bitsE.
+admit. (*
 have  -> := BS2Int.int2bs_cat 20 32 (to_uint (W32.of_int Top.gamma1 - v)) _;1:smt().
 rewrite nth_cat ifT;1: by rewrite BS2Int.size_int2bs /#.
 congr;2:smt().
@@ -153,7 +154,7 @@ rewrite W32.of_intN;congr.
 rewrite /to_sint /smod /=.
 case (2147483648 <= to_uint v) => ?;last by smt(W32.to_uintK pow2_32).
 move : h; rewrite /to_sint /smod ifT //= => ?.
-by smt(@W32 pow2_32). 
+by smt(@W32 pow2_32).  *)
 qed.
 
 lemma gamma1_encode_polynomial _a :

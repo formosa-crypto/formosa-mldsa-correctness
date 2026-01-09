@@ -36,7 +36,7 @@ op pre_gamma1_encode_polynomial(c : W32.t) =
     (W32_sub (W32.zero) (W32.of_int (524287))) \sle c /\ c \sle W32.of_int gamma1. 
 
 op gamma1_encode_polynomial_lane(c : W32.t) : W20.t = 
-    truncateu_32_20 (W32_sub (W32.of_int gamma1) (zeroextu_20_32 (truncateu_32_20 c))).
+    truncateu_32_20 (W32_sub (W32.of_int gamma1) c).
 
 import Parameters.
 
@@ -142,7 +142,6 @@ move => h.
 rewrite incoeffK_sint_small 1:/# /W32_sub truncateu_32_20E get_bits2w 1:/#.
 rewrite nth_take 1,2:/#. 
 rewrite /IntegerToBits w2bitsE.
-admit. (*
 have  -> := BS2Int.int2bs_cat 20 32 (to_uint (W32.of_int Top.gamma1 - v)) _;1:smt().
 rewrite nth_cat ifT;1: by rewrite BS2Int.size_int2bs /#.
 congr;2:smt().
@@ -154,7 +153,7 @@ rewrite W32.of_intN;congr.
 rewrite /to_sint /smod /=.
 case (2147483648 <= to_uint v) => ?;last by smt(W32.to_uintK pow2_32).
 move : h; rewrite /to_sint /smod ifT //= => ?.
-by smt(@W32 pow2_32).  *)
+by smt(@W32 pow2_32).  
 qed.
 
 lemma gamma1_encode_polynomial _a :
@@ -184,9 +183,12 @@ unroll for ^while.
 cfold 5.
 cfold 439.  
 wp -3.
-conseq (:  polynomial = _a ==>
-           output = let mapped = init_256_20 (fun i => gamma1_encode_polynomial_lane _a.[i]) in
-             init_array640_w8 (fun i => W8.init (fun j => mapped.[(i*8+j) %/ 20].[(i*8+j) %% 20]))); last by circuit.
+
+exlim  (Array256.init (fun i => truncateu_32_20 _a.[i])) => _f.
+
+conseq (:  polynomial = Array256.init (fun i => zeroextu_20_32 _f.[i]) ==>
+           output = let mapped = init_256_20 (fun i => gamma1_encode_polynomial_lane (zeroextu_20_32 _f.[i])) in
+             init_array640_w8 (fun i => W8.init (fun j => mapped.[(i*8+j) %/ 20].[(i*8+j) %% 20])));last by circuit.
 
 + by auto.
 + by move => &hr [<- Hrng] ? /= => ->;rewrite BitPack_liftE //=.

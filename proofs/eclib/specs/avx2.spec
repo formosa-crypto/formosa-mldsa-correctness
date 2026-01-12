@@ -63,6 +63,10 @@ VPSUB_16u16(w1@256, w2@256) -> @256 =
 VPSUB_32u8(w1@256, w2@256) -> @256 =
   map<8, 32>(sub<8>, w1, w2)
 
+# Intel intrinsic: _mm256_sub_epi16
+VPSUB_8u32(w1@256, w2@256) -> @256 =
+  map<32, 8>(sub<32>, w1, w2)
+
 # Intel intrinsic: _mm256_and_si256
 VPAND_256(w1@256, w2@256) -> @256 = 
   and<256>(w1, w2)

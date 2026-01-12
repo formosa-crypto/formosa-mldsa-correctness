@@ -1307,7 +1307,7 @@ module M = {
     coefficients <- (set0_256);
     input_offset <- 0;
     output_offset <- 0;
-    while ((input_offset < ((20 * 256) %/ 8))) {
+    while ((output_offset < ((256 * 32) %/ 8))) {
       sixteen_bytes <-
       (get128_direct (WArray640.init8 (fun i => bytes.[i])) input_offset);
       input_offset <- (input_offset + 4);

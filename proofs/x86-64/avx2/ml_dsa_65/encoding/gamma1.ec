@@ -156,6 +156,7 @@ move : h; rewrite /to_sint /smod ifT //= => ?.
 by smt(@W32 pow2_32).  
 qed.
 
+
 lemma gamma1_encode_polynomial _a :
    hoare [ M.gamma1____encode_polynomial :
        polynomial = _a /\ wpoly_srng 524287 524288 _a
@@ -184,13 +185,10 @@ cfold 5.
 cfold 439.  
 wp -3.
 
-exlim  (Array256.init (fun i => truncateu_32_20 _a.[i])) => _f.
-
-conseq (:  polynomial = Array256.init (fun i => zeroextu_20_32 _f.[i]) ==>
-           output = let mapped = init_256_20 (fun i => gamma1_encode_polynomial_lane (zeroextu_20_32 _f.[i])) in
+conseq (:  _ ==>
+           output = let mapped = init_256_20 (fun i => gamma1_encode_polynomial_lane _a.[i]) in
              init_array640_w8 (fun i => W8.init (fun j => mapped.[(i*8+j) %/ 20].[(i*8+j) %% 20])));last by circuit.
 
-+ by auto.
 + by move => &hr [<- Hrng] ? /= => ->;rewrite BitPack_liftE //=.
 
 qed.
@@ -272,18 +270,28 @@ lemma gamma1_decode_to_polynomial _a :
      ==>
        lifts_wpoly res = BitUnpack (to_list _a) (gamma1-1) gamma1
    ].
-proc => /=. 
-proc change ^while.3 : { temp <- sll_32 temp (W32.of_int 8);}; 1: by auto.
-proc change ^while.6 : {temp <- sll_32 temp (W32.of_int 16);}; 1: by auto.
-proc change ^while.9 : {coefficient <- W32_sub W32.zero coefficient;}; 1: by auto.
-proc change ^while.13 : {coefficient <- srl_32 coefficient (W32.of_int w1_bits);}; 1: by auto.
-proc change ^while.15 : {temp <- sll_32 temp (W32.of_int w1_bits);}; 1: by auto.
-proc change ^while.18 : {temp <- sll_32 temp (W32.of_int 12);}; 1: by auto.
-proc change ^while.20 : { coefficient <- W32_sub W32.zero coefficient;}; 1: by auto.
-proc change ^while.21 : { coefficient <- coefficient + W32.of_int 524288;}; 1: by auto.
+proc => /=.
+proc change 1 : { temp <- W64.of_int Top.gamma1;}; 1: by auto.
+proc change 2 : { temp1 <- zeroextu128 temp; }.
++ auto => &1 &2 ->; rewrite /VMOV_64 zeroextu128E.
+  rewrite wordP => i ib.
+  rewrite pack2E  initiE 1:/# /= pack2E initiE 1:/# /= initiE 1:/# /=.
+  case (i %/ 64 = 0) => ?;1: by rewrite get_of_list /#.
+  by rewrite get_of_list 1:/# /= ifF 1:/# /=.
+proc change 4 : { temp <- W64.of_int 1048575;}; 1: by auto.
+proc change 5 : { temp1 <- zeroextu128 temp; }.
++ auto => &1 &2 ->; rewrite /VMOV_64 zeroextu128E.
+  rewrite wordP => i ib.
+  rewrite pack2E  initiE 1:/# /= pack2E initiE 1:/# /= initiE 1:/# /=.
+  case (i %/ 64 = 0) => ?;1: by rewrite get_of_list /#.
+  by rewrite get_of_list 1:/# /= ifF 1:/# /=.
+proc change ^while.1 : { sixteen_bytes <- sliceget640_8_128 bytes (input_offset*8);};1: by auto;smt().
+proc change ^while.4 : { sixteen_bytes <- sliceget640_8_128 bytes (input_offset*8);};1: by auto;smt().
+proc change ^while.13 : {polynomial <- sliceset256_32_256 polynomial (output_offset*8) coefficients;}; 1: by auto;smt().
+
 unroll for ^while.
 
-cfold 1.
+cfold 8.
 wp -2.
 conseq (_: _ ==>
     polynomial = init_256_32 (fun i => gamma1_decode_to_polynomial_lane (W20.init (fun j =>

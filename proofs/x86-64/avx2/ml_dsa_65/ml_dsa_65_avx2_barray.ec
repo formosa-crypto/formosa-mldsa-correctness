@@ -1272,7 +1272,7 @@ module M = {
     coefficients <- (set0_256);
     input_offset <- 0;
     output_offset <- 0;
-    while ((input_offset < ((20 * 256) %/ 8))) {
+    while ((output_offset < ((256 * 32) %/ 8))) {
       sixteen_bytes <- (BArray640.get128d bytes input_offset);
       input_offset <- (input_offset + 4);
       coefficients <- (VINSERTI128 coefficients sixteen_bytes (W8.of_int 0));

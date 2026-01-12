@@ -168,9 +168,9 @@ proc change ^while.21 : { encoded_bytes <- srl_32 encoded_bytes (W32.of_int w1_b
 proc change ^while.24 : { encoded_byte <- sll_32 encoded_byte (W32.of_int 6);}; 1: by auto.
 print w1_bits. 
 proc change ^while.29 : { encoded_bytes <- srl_32 encoded_bytes (W32.of_int 2);}; 1: by auto.
-proc change ^while.9: { encoded_byte <- (encoded_bytes  `&` W32.of_int 3) `|` encoded_byte;};1:by admit.
-proc change ^while.17: { encoded_byte <- (encoded_bytes  `&` W32.of_int 15) `|` encoded_byte;};1:by admit.
-proc change ^while.25: { encoded_byte <- (encoded_bytes  `&` W32.of_int 63) `|` encoded_byte;};1:by admit.  
+proc change ^while.9: { encoded_bytes <- (encoded_bytes  `&` W32.of_int 3) `|` encoded_byte;};1:by admit.
+proc change ^while.17: { encoded_bytes <- (encoded_bytes  `&` W32.of_int 15) `|` encoded_byte;};1:by admit.
+proc change ^while.25: { encoded_bytes <- (encoded_bytes  `&` W32.of_int 63) `|` encoded_byte;};1:by admit.  
 
 unroll for ^while.
 cfold 1. cfold 1.

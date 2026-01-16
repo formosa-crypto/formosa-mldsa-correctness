@@ -97,14 +97,6 @@ proof.
 by move=> h; rewrite in_map_cancel // => bs /h; apply: W8.bits2wK.
 qed.
 
-abbrev a256_w20_tobits (a : W20.t Array256.t) : bool list =
-  flatten (List.map (W20.w2bits) (Array256.to_list a)).
-
-abbrev l640_w8_ofbits (a : bool list) : W8.t list =
-  List.map W8.bits2w (chunk 8 a).
-
-abbrev a640_w8_ofbits (a : bool list) : W8.t Array640.t =
-  Array640.of_list witness (l640_w8_ofbits a).
 
 lemma ilog_gamma1 : ilog 2 (gamma1 - 1 + gamma1) = 19 by rewrite /gamma1 /=.
  
@@ -153,8 +145,46 @@ rewrite W32.of_intN;congr.
 rewrite /to_sint /smod /=.
 case (2147483648 <= to_uint v) => ?;last by smt(W32.to_uintK pow2_32).
 move : h; rewrite /to_sint /smod ifT //= => ?.
-by smt(@W32 pow2_32). 
+congr;rewrite to_uint_eq of_uintK /=;smt(W32.to_uint_cmp pow2_32). 
 qed.
+
+op sigextu_20_32(a : W20.t) : W32.t = W32.of_int (to_sint a).
+bind op [W20.t & W32.t] sigextu_20_32 "sextend".
+realize bvsextendP.
+move => bv;rewrite  /sigextu_20_32 /to_sint /smod /= !of_uintK /=.
+case (524288 <= to_uint bv); 2: smt(W20.to_uint_cmp).
+have ? : 2^20 = 1048576 by auto => />.
+move =>?;rewrite -{2}(oppzK (to_uint bv - 1048576)) modNz /=; smt(W20.to_uint_cmp). 
+qed.
+realize le_size by done.
+
+lemma to_sint_uint_rng_pos_32 (xx : W32.t) (b : int) :
+    0 <= b < 2147483648 =>
+    (0 <= to_sint xx < b  <=> 0 <= to_uint xx < b).
+ have /= Hxx := W32.to_uint_cmp xx. 
+ rewrite /to_sint /smod /= /#.
+qed.
+
+lemma to_sint_uint_rng_neg_32(xx : W32.t) (b : int) :
+  0 < b <= 2147483648 =>
+    -b <= to_sint xx < 0  <=> 4294967296 - b <= to_uint xx <= 4294967296.
+ have /= Hxx := W32.to_uint_cmp xx. 
+ rewrite /to_sint /smod /= /#.
+qed.
+
+lemma to_sint_uint_rng_pos_20(xx : W20.t) :
+    0 <= to_sint xx  <=> 0 <= to_uint xx < 524288.
+ have /= Hxx := W20.to_uint_cmp xx. 
+ rewrite /to_sint /smod /= /#.
+qed.
+
+lemma to_sint_uint_rng_neg_20(xx : W20.t) :
+    to_sint xx < 0  <=> 524288 <= to_uint xx <1048576.
+ have /= Hxx := W20.to_uint_cmp xx. 
+ rewrite /to_sint /smod /= /#.
+qed.
+
+
 
 lemma gamma1_encode_polynomial _a :
    hoare [ M.gamma1____encode_polynomial :
@@ -172,16 +202,34 @@ proc change ^while.11 : { encoded_bytes  <- srl_32 encoded_bytes (W32.of_int 16)
 proc change ^while.14 : { encoded_bytes  <- sll_32 encoded_bytes (W32.of_int 4);}; 1: by auto.
 proc change ^while.18 : { encoded_bytes  <- srl_32 encoded_bytes (W32.of_int 4);}; 1: by auto.
 proc change ^while.21 : { encoded_bytes  <- srl_32 encoded_bytes (W32.of_int 12);}; 1: by auto.
-proc change ^while.15: { byte <- (byte  `&` W8.of_int 15) `|` (truncateu8 encoded_bytes);}; 1:by admit.
 unroll for ^while.
 cfold 1.
 wp -2.
-conseq (:  polynomial = _a ==>
+conseq (:  polynomial = init_256_32 (fun i => sigextu_20_32 (truncateu_32_20 (W32_sub _a.[i] W32.one)) + W32.one) ==>
            encoded = let mapped = init_256_20 (fun i => gamma1_encode_polynomial_lane _a.[i]) in
              init_array640_w8 (fun i => W8.init (fun j => mapped.[(i*8+j) %/ 20].[(i*8+j) %% 20]))); last by circuit.
 
-+ by auto.
-+ by move => &hr [<- Hrng] ? /= => ->;rewrite BitPack_liftE //=.
++ move => &hr [-> +]; rewrite /wpoly_srng allP => Hrng.
+  rewrite tP => k kb.
+  have /=  := Hrng k kb => /= => Hrngk.
+  rewrite /init_256_32 initiE 1:/# /=.
+  case (_a.[k] = W32.of_int 524288) => Hak.
+  + by rewrite Hak /=  /truncateu_32_20 /W32_sub /sigextu_20_32 of_sintK /= /smod /=.
+  rewrite /W32_sub /sigextu_20_32 /=.
+  have H : -524288 <= to_sint (_a.[k] - W32.one) <= 524287.
+  + rewrite to_sintB_small /= /(to_sint W32.one) /= /smod /= /#.    
+  have -> : (to_sint (truncateu_32_20 (_a.[k] - W32.one)) = to_sint (_a.[k] - W32.one)); last first.
+  + rewrite to_sintB_small;  rewrite /(to_sint W32.one) /= /smod /=;1: by smt().
+    rewrite /to_sint /smod /=;case (2147483648 <= to_uint _a.[k]); smt(@W32 pow2_32).
+  have ? : 2^20 = 1048576 by auto.
+  rewrite /to_sint /smod /= !of_uintK /=.
+  by smt(W32.to_uint_cmp pow2_32 W20.to_uint_cmp
+         to_sint_uint_rng_pos_20
+         to_sint_uint_rng_neg_20
+         to_sint_uint_rng_pos_32
+         to_sint_uint_rng_neg_32).
+  
+ + by move => &hr [<- Hrng] ? /= => ->;rewrite BitPack_liftE //=.
 
 qed.
 

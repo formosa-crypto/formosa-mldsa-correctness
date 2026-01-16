@@ -5656,32 +5656,30 @@ module M = {
   }
   proc t1__encode_polynomial (t1_encoded:BArray320.t, t1:BArray1024.t) : 
   BArray320.t = {
-    var input_offset:W64.t;
-    var output_offset:W64.t;
+    var output_offset:int;
+    var input_offset:int;
     var coefficients:W256.t;
     var bytestream:W128.t;
     var final_encoded_output:BArray16.t;
     var i:int;
     final_encoded_output <- witness;
-    input_offset <- (W64.of_int 0);
-    output_offset <- (W64.of_int 0);
-    while ((input_offset \ult (W64.of_int (((256 * 32) %/ 8) - 32)))) {
-      coefficients <- (BArray1024.get256d t1 (W64.to_uint input_offset));
-      input_offset <- (input_offset + (W64.of_int 32));
+    output_offset <- 0;
+    input_offset <- 0;
+    while ((input_offset < (((256 * 32) %/ 8) - 32))) {
+      coefficients <- (BArray1024.get256d t1 input_offset);
       bytestream <@ t1__coefficients_to_bytestream (coefficients);
-      t1_encoded <-
-      (BArray320.set128d t1_encoded (W64.to_uint output_offset) bytestream);
-      output_offset <- (output_offset + (W64.of_int 10));
+      t1_encoded <- (BArray320.set128d t1_encoded output_offset bytestream);
+      output_offset <- (output_offset + 10);
+      input_offset <- (input_offset + 32);
     }
-    coefficients <- (BArray1024.get256d t1 (W64.to_uint input_offset));
+    coefficients <- (BArray1024.get256d t1 input_offset);
     bytestream <@ t1__coefficients_to_bytestream (coefficients);
     final_encoded_output <-
     (BArray16.set128d final_encoded_output 0 bytestream);
     i <- 0;
     while ((i < 10)) {
       t1_encoded <-
-      (BArray320.set8 t1_encoded
-      (W64.to_uint (output_offset + (W64.of_int i)))
+      (BArray320.set8 t1_encoded (output_offset + i)
       (BArray16.get8 final_encoded_output i));
       i <- (i + 1);
     }
@@ -5706,17 +5704,16 @@ module M = {
   proc t1__decode_polynomial (t1:BArray1024.t, t1_encoded:BArray320.t) : 
   BArray1024.t = {
     var coefficients:W256.t;
-    var input_offset:W64.t;
-    var output_offset:W64.t;
+    var input_offset:int;
+    var output_offset:int;
     var bytestream:W128.t;
     var shifts:W256.t;
     coefficients <- (set0_256);
-    input_offset <- (W64.of_int 0);
-    output_offset <- (W64.of_int 0);
-    while ((input_offset \ult (W64.of_int ((((23 - 13) * 256) %/ 8) - 10)))) {
-      bytestream <-
-      (BArray320.get128d t1_encoded (W64.to_uint input_offset));
-      input_offset <- (input_offset + (W64.of_int 10));
+    input_offset <- 0;
+    output_offset <- 0;
+    while ((output_offset < ((256 - 8) * 4))) {
+      bytestream <- (BArray320.get128d t1_encoded input_offset);
+      input_offset <- (input_offset + 10);
       coefficients <- (VINSERTI128 coefficients bytestream (W8.of_int 0));
       coefficients <- (VINSERTI128 coefficients bytestream (W8.of_int 1));
       shifts <- (BArray64.get256 t1__DECODING_TABLE 0);
@@ -5724,8 +5721,8 @@ module M = {
       shifts <- (BArray64.get256 t1__DECODING_TABLE 1);
       coefficients <- (VPSRLV_8u32 coefficients shifts);
       coefficients <- (VPAND_256 coefficients t1__mask);
-      t1 <- (BArray1024.set256d t1 (W64.to_uint output_offset) coefficients);
-      output_offset <- (output_offset + (W64.of_int 32));
+      t1 <- (BArray1024.set256d t1 output_offset coefficients);
+      output_offset <- (output_offset + 32);
     }
     bytestream <-
     (BArray320.get128d t1_encoded ((((23 - 13) * 256) %/ 8) - 16));
@@ -5737,7 +5734,7 @@ module M = {
     shifts <- (BArray64.get256 t1__DECODING_TABLE 1);
     coefficients <- (VPSRLV_8u32 coefficients shifts);
     coefficients <- (VPAND_256 coefficients t1__mask);
-    t1 <- (BArray1024.set256d t1 (W64.to_uint output_offset) coefficients);
+    t1 <- (BArray1024.set256d t1 output_offset coefficients);
     return t1;
   }
   proc signature____encode (signature:BArray3309.t,

@@ -33,7 +33,7 @@ op b_t1 = 1023. (* 2^bitlenqm1md - 1 *)
 
 (* Circuit spec and precondition *)
 
-op pre_t1_encode_polynomial(c : W32.t) = c \ule W32.of_int b_t1. 
+op pre_t1_encode_polynomial(c : W32.t) =  c \ule W32.of_int b_t1. 
 
 op t1_encode_polynomial_lane(c : W32.t) : W10.t = 
     truncateu_32_10  c.
@@ -86,25 +86,6 @@ have {1}-> : 10 = size (take 10 (w2bits w)) by rewrite size_take //.
 by rewrite BS2Int.bs2intK.
 qed.
 
-lemma w2bitsE (w : W32.t) : w2bits w = BS2Int.int2bs 32 (W32.to_uint w).
-proof. rewrite to_uintE;smt(W32.size_w2bits BS2Int.bs2intK). qed.
-
-lemma map_W8_w2bits_cancel (s : bool list list) :
-     (forall bs, bs \in s => size bs = 8)
-  => map W8.w2bits (map W8.bits2w s) = s.
-proof.
-by move=> h; rewrite in_map_cancel // => bs /h; apply: W8.bits2wK.
-qed.
-
-abbrev a256_w10_tobits (a : W10.t Array256.t) : bool list =
-  flatten (List.map (W10.w2bits) (Array256.to_list a)).
-
-abbrev l320_w8_ofbits (a : bool list) : W8.t list =
-  List.map W8.bits2w (chunk 8 a).
-
-abbrev a320_w8_ofbits (a : bool list) : W8.t Array320.t =
-  Array320.of_list witness (l320_w8_ofbits a).
-
 lemma ilog_b_t1 : ilog 2 b_t1 = bitlenqm1md - 1 by rewrite /b_t1 /=.
 
 lemma SimpleBitPack_liftE (p : wpoly) :
@@ -145,12 +126,9 @@ move: h => @/wpoly_urng /array256_allP /(_ v _) //= /=.
 move => h. 
 rewrite incoeffK truncateu_32_10E get_bits2w 1:/#.
 rewrite nth_take 1,2:/#. 
-rewrite /IntegerToBits w2bitsE. 
-have  -> := BS2Int.int2bs_cat 10 32 (to_uint v) _;1:smt().
-rewrite nth_cat ifT;1: by rewrite BS2Int.size_int2bs /#.
-congr;2:smt().
-congr;1:smt().
-smt().
+rewrite /IntegerToBits w2bitsE /l ilog_b_t1 /bitlenqm1md /= (modz_small _ q) 1:/# /BS2Int.int2bs.
+rewrite !nth_mkseq 1,2:/# /=.
+by rewrite get_to_uint /#.
 qed. 
 
 lemma t1_encode_polynomial _a :
@@ -166,21 +144,17 @@ proc change ^while.13 : { encoded_bytes <- srl_32 encoded_bytes (W32.of_int 6);}
 proc change ^while.16 : { encoded_byte <- sll_32 encoded_byte (W32.of_int w1_bits);}; 1: by auto.
 proc change ^while.21 : { encoded_bytes <- srl_32 encoded_bytes (W32.of_int w1_bits);}; 1: by auto.
 proc change ^while.24 : { encoded_byte <- sll_32 encoded_byte (W32.of_int 6);}; 1: by auto.
-print w1_bits. 
 proc change ^while.29 : { encoded_bytes <- srl_32 encoded_bytes (W32.of_int 2);}; 1: by auto.
-proc change ^while.9: { encoded_bytes <- (encoded_bytes  `&` W32.of_int 3) `|` encoded_byte;};1:by admit.
-proc change ^while.17: { encoded_bytes <- (encoded_bytes  `&` W32.of_int 15) `|` encoded_byte;};1:by admit.
-proc change ^while.25: { encoded_bytes <- (encoded_bytes  `&` W32.of_int 63) `|` encoded_byte;};1:by admit.  
-
 unroll for ^while.
 cfold 1. cfold 1.
 wp -3.
 
-conseq (:  t1 = _a ==>
+conseq (:  t1 = init_256_32 (fun i => zeroextu10_32 (truncateu_32_10 _a.[i])) ==>
     encoded = let mapped = init_256_10 (fun i => t1_encode_polynomial_lane _a.[i]) in
     init_array320_w8 (fun i => W8.init (fun j => mapped.[(i*8+j) %/ 10].[(i*8+j) %% 10]))); last by circuit. 
 
-+ by auto.
++ move => &hr [->+]; rewrite /wpoly_urng allP => ?.
+  by rewrite tP => k kb; rewrite initiE 1:/# /= /zeroextu10_32 /truncateu_32_10 /= of_uintK /= modz_small 1:/# to_uintK.
 + by move => &hr [<- Hrng] ? /= => ->;rewrite SimpleBitPack_liftE //=.
   
 qed.
@@ -191,97 +165,38 @@ op t1_decode_to_polynomial_lane(c : W10.t) : W32.t =
     zeroextu10_32 c.
 
 
-lemma post_lane_commute_out_aligned ['a 'b 'c]
-    (lic : 'a list) 
-    (lo : 'c list) 
-    (tobitsic : 'a -> bool list)
-    (ofbitsic : bool list -> 'a)
-    (tobitsi : 'b -> bool list)
-    (ofbitsi : bool list -> 'b)
-    (tobitso : 'c -> bool list)
-    (ofbitso : bool list -> 'c)
-    (f : 'b -> 'c)
-    (nic ni no  : int) :
-  0 < nic =>  0 < ni => 0 < no => 
-  ni %| nic*size lic =>
-  size lo = (nic*size lic) %/ ni =>
-  (forall x, size (tobitsic x) = nic) =>
-  (forall x, ofbitsic (tobitsic x) = x) =>
-  (forall x, size (tobitsi x) = ni) =>
-  (forall x, ofbitsi (tobitsi x) = x) =>
-  (forall x, size x = ni => tobitsi (ofbitsi x) = x) =>
-  (forall x, size (tobitso x) = no) =>
-  (forall x, ofbitso (tobitso x) = x) =>
-map f (map ofbitsi (chunk ni (flatten (map tobitsic lic)))) =
-map ofbitso (chunk no (flatten (map tobitso lo))) => 
-   lo =
-   map f (map ofbitsi (chunk ni (flatten (map tobitsic lic)))).
-move => ????????????; rewrite  map_chunk_flatten_id /#.
-qed.
-
-abbrev l320_w8_tobits (a : W8.t Array320.t) : bool list  =
-  flatten (List.map W8.w2bits (to_list a)).
-
-abbrev l256_w10_ofbits (a : bool list) :  W10.t list   =
-  List.map W10.bits2w (chunk 10 a).
-
-abbrev a256_w10_ofbits (a : bool list) :  W10.t Array256.t   =
-  Array256.of_list witness (l256_w10_ofbits a).
-
-
 lemma SimpleBitUnpack_liftE (bytes : W8.t Array320.t) :
     SimpleBitUnpack (to_list bytes) b_t1
   =
-  Array256.map (fun c => incoeff (to_uint c))
-    (Array256.map zeroextu10_32 
-        (a256_w10_ofbits (l320_w8_tobits bytes))).
+  liftu_wpoly
+  (init_256_32
+     (fun (i0 : int) =>
+        zeroextu10_32 (W10.init (fun (j : int) => bytes.[(i0 * 10 + j) %/ 8].[(i0 * 10 + j) %% 8])))).
 proof.
 move=>  @/SimpleBitUnpack /=; rewrite tP => i ib.
-rewrite initiE 1:// get_of_list 1://. 
-pose l1 := List.map _ _.
-pose l2 := List.map _ _.
-have sl1 : size l1 = n.
-+   rewrite /l1;rewrite !size_map size_iota /BytesToBits.
-  rewrite (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
+rewrite initiE 1://  /liftu_wpoly mapiE 1:// /= (nth_map []) /=.
++ rewrite size_chunk ilog_b_t1 /= 1:/#. 
++ rewrite /BytesToBits (EclibExtra.size_flatten' 8);1: by smt(mapP W8.size_w2bits).
   by rewrite size_map size_to_list /= /b_t1 /#.
-have sl2 : size l2 = n.
-+   rewrite /l2;rewrite !size_map size_iota (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
-  by rewrite size_map size_to_list /= /#.
-suff : l1 = l2 by smt( nth_change_dfl).
-apply (eq_from_nth witness) => /=;1: by smt().
-move => k kb;rewrite !(nth_map witness).
-+ rewrite /b_t1 size_chunk 1:/# (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
-  by rewrite size_map /= size_to_list /#.
-+ rewrite size_iota (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
-  rewrite /b_t1 size_map size_to_list /= /#.
-+ rewrite !size_map size_iota (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
-  rewrite size_map size_to_list /= /#.
-+ rewrite !size_map size_iota (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
-  rewrite size_map size_to_list /= /#.
-+ rewrite size_chunk 1:/# (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
-  by rewrite size_map /= size_to_list /#.
-+ rewrite size_iota (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
-  rewrite size_map size_to_list /=  /#.
-simplify.
-congr; rewrite /W32_sub !nth_iota.
-+ rewrite  (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
-  rewrite /b_t1 size_map size_to_list /= /#.
-+ rewrite  (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
-  rewrite size_map size_to_list /=  /#.
-rewrite /b_t1 /zeroextu10_32 /= /W10.to_uint W10.bits2wK.
-+ rewrite size_take // size_drop 1:/# /max /= (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
-  rewrite !size_map !size_iota /max /= /#.
-pose i1 := BitsToInteger _.
-pose i2 := BS2Int.bs2int _.
-have -> : i1 = i2 by smt().
-rewrite of_uintK  /=.
-have ? : 0 <= i2 <= b_t1; last by smt().
-split;1: by exact BS2Int.bs2int_ge0.
-have := BS2Int.bs2int_le2Xs ((take 10 (drop (10 * k) (l320_w8_tobits bytes)))).
-+ rewrite size_take // size_drop 1:/# /max /= (size_flatten' 8);1: by smt(mapP W8.size_w2bits).
-  rewrite !size_map !size_iota /max /= -/i2.
-  pose ll := if _ then _ else _.
-  have -> /= : ll = 10; by smt().
+congr.
+rewrite initiE 1:/# /= /zeroextu10_32 of_uintK /= modz_small;1: by have /= /#:=W10.to_uint_cmp.
+rewrite /W10.to_uint /BitsToInteger;congr.
+apply (eq_from_nth false).
++ rewrite size_nth_chunk ilog_b_t1  /= 1:/# 2:/#.
++ rewrite /BytesToBits (EclibExtra.size_flatten' 8);1: by smt(mapP W8.size_w2bits).
+  by rewrite size_map size_to_list /= /b_t1 /#.
+move => kk.
+rewrite size_nth_chunk ilog_b_t1  /= 1:/#.
++ rewrite /BytesToBits (EclibExtra.size_flatten' 8);1: by smt(mapP W8.size_w2bits).
+  by rewrite size_map size_to_list /= /b_t1 /#.
+move => kkb. 
+rewrite (nth_chunk 10) 1,2:/#.
++ rewrite /BytesToBits (EclibExtra.size_flatten' 8);1: by smt(mapP W8.size_w2bits).
+  by rewrite size_map size_to_list /= /b_t1 /#.
+rewrite initiE 1:/# /= nth_take 1,2:/# /= nth_drop 1,2:/# /= /BytesToBits.
+rewrite (nth_flatten false 8);1: by rewrite allP => x /=; rewrite mapP => Hx;elim Hx;smt(W8.size_w2bits).
+rewrite (nth_map witness);1:smt(size_to_list).
+by rewrite get_w2bits get_to_list /#.
 qed.
 
 lemma t1_decode_polynomial _a :
@@ -291,48 +206,25 @@ lemma t1_decode_polynomial _a :
        liftu_wpoly res = SimpleBitUnpack (to_list _a) b_t1
    ].
 proc => /=. 
-proc change ^while.6 : (sll_32 temp1 (W32.of_int 8)); 1: by auto.
-proc change ^while.11 : (srl_32 temp2 (W32.of_int 2)); 1: by auto.
-proc change ^while.15 : (sll_32 temp1 (W32.of_int 6)); 1: by auto.
-proc change ^while.20 : (srl_32 temp2 (W32.of_int w1_bits)); 1: by auto.
-proc change ^while.24 : (sll_32 temp1 (W32.of_int w1_bits)); 1: by auto.
-proc change ^while.29 : (srl_32 temp2 (W32.of_int 6)); 1: by auto.
-proc change ^while.32 : (sll_32 temp1 (W32.of_int 2)); 1: by auto.
+proc change ^while.6 : {temp1 <- sll_32 temp1 (W32.of_int 8);}; 1: by auto.
+proc change ^while.11 : {coefficient <- srl_32 temp2 (W32.of_int 2);}; 1: by auto.
+proc change ^while.15 : {temp1 <- sll_32 temp1 (W32.of_int 6);}; 1: by auto.
+proc change ^while.20 : { coefficient <- srl_32 temp2 (W32.of_int w1_bits);}; 1: by auto.
+proc change ^while.24 : { temp1 <- sll_32 temp1 (W32.of_int w1_bits);}; 1: by auto.
+proc change ^while.29 : { coefficient <- srl_32 temp2 (W32.of_int 6);}; 1: by auto.
+proc change ^while.32 : { temp1 <- sll_32 temp1 (W32.of_int 2);}; 1: by auto.
 
 unroll for ^while.
 
 cfold 1. cfold 1.
-wp -3. 
-bdep 10 32 [_a] [encoded] [t1] t1_decode_to_polynomial_lane pre_t1_decode_to_polynomial.
+wp -3.
 
-(* Part 1 *)
-by move=> &hr |>;rewrite /pre_t1_decode_to_polynomial /= allP /#.
-
-(* Part 2 *)
-move=> &hr |>  ae /= h.
-
-have {h}h :=
-  post_lane_commute_out_aligned<: W8.t, W10.t, W32.t>
-    (to_list encoded{hr}) (to_list ae)
-    W8.w2bits W8.bits2w
-    W10.w2bits W10.bits2w
-    W32.w2bits W32.bits2w
-    t1_decode_to_polynomial_lane
-    8 10 32 _ _ _ _ _ _ _ _ _ _ _ _ h; move=> //. (* FIXME *)
-- by rewrite Array320.size_to_list /(%|).
-- by rewrite !size_to_list //.
-- by apply: W10.bits2wK.
-
-rewrite /liftu_wpoly /=; apply (inj_eq Array256.to_list Array256.to_list_inj).
+conseq (: encoded = _a ==>
+     t1 = init_256_32 (fun i => zeroextu10_32 (W10.init (fun j => _a.[(i*10+j) %/ 8].[(i*10+j) %% 8])))); last by circuit. 
 
 
-rewrite SimpleBitUnpack_liftE ~-1:// !array256_mapE h;  do 2!congr => //.
-rewrite of_listK. 
-- rewrite size_map size_chunk // (size_flatten' 8) => *;1:smt(mapP W8.size_w2bits).
-  by rewrite size_map size_to_list /=.
-
-done.
-
+move=> &hr |>  /=.
+by rewrite SimpleBitUnpack_liftE ~-1://. 
 qed.
 
 import VecMat PolyKVec.

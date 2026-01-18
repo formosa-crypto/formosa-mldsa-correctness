@@ -134,5 +134,4 @@ op ntt_dotp (v1 v2 : polylvec) : poly =
 
 op ntt_mulmxv(m : polymat, v : polylvec) : polykvec = 
    KArray.init (fun i => ntt_dotp (row m i) v).
-  
-
+ 

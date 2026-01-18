@@ -1,84 +1,18 @@
 require import AllCore List IntDiv RealExp.
 
 from Jasmin require import JModel_x86.
-require import Bindings JWordList.
+require import Bindings.
 
 from JazzEC require import Ml_dsa_65_ref.
 from JazzEC require import Array256 Array320.
-from Spec require import GFq Rq Serialization Conversion.
-import BitEncoding.
-import BitChunking.
+from Spec require import GFq Rq Serialization Conversion Parameters VecMat MLDSA_W32_Rep.
+import BitEncoding BitChunking.
 
 import CDR Round Zq.
 
-type wpoly = W32.t Array256.t.
-
-op liftu_wpoly (pw : wpoly) : poly =
-  map (fun w => incoeff (W32.to_uint w)) pw.
-
-op lifts_wpoly (pw : wpoly) : poly =
-  map (fun w => incoeff (W32.to_sint w)) pw.
-
-op unlift_poly (p : poly) : wpoly = map (fun c => W32.of_int (asint c)) p.
-
-op poly_urng(b : int, p : poly) = all (fun i => 0 <= asint i < b) p.
-op poly_srng(bl bh : int, p : poly) = all (fun i => -bl <= as_sint i <= bh) p.
-
-op wpoly_urng(b : int, pw : wpoly) = all (fun i => 0 <= W32.to_uint i < b) pw.
-op wpoly_srng(bl bh : int, pw : wpoly) = all (fun i => -bl <= W32.to_sint i <= bh) pw.
-
-(* natural spec and precondition *)
-op bitlenqm1md : int = 10 . (* bitlen (q-1) - d = 23 - 13 *)
-op b_t1 = 1023. (* 2^bitlenqm1md - 1 *)
-
-(* Circuit spec and precondition *)
-
-op pre_t1_encode_polynomial(c : W32.t) =  c \ule W32.of_int b_t1. 
-
-op t1_encode_polynomial_lane(c : W32.t) : W10.t = 
-    truncateu_32_10  c.
-
-import Parameters.
-
-(* Move to array theory *)
-lemma all_tolist ['a] (p : 'a -> bool) (a : 'a Array256.t) :
-  (Array256.all p a) <=> (List.all p (to_list a)) by 
-  rewrite /all !allP /to_list /mkseq /=;split => H x Hx; 
-   [have /# := mapP ("_.[_]" a) (iota_ 0 n) x | smt(mapP)].
-   
-lemma all_imply ['a] (p q : 'a -> bool) (s : 'a Array256.t) :
-  (forall x, p x => q x) => all p s => all q s
-  by rewrite /all !allP /to_list /mkseq /= => H x Hx;smt(mapP).
-
-lemma array256_mapE ['a 'b] (f : 'a -> 'b) (a : 'a Array256.t) :
-  Array256.to_list (Array256.map f a) = List.map f (Array256.to_list a).
-  rewrite /all /to_list /mkseq /= -{1}map_comp /(\o) /=.
-  apply (eq_from_nth witness);1: by rewrite !size_map.
-  move => i;rewrite !size_map size_iota /max /= => ib.
-  rewrite !(nth_map witness) /=;1,2:smt(size_map size_iota).
-  by rewrite /map initiE /=;1:by rewrite nth_iota /#.
-qed.
-  
-lemma array256_map_comp ['a 'b 'c] (f : 'a -> 'b) (g : 'b -> 'c) (a : 'a Array256.t) :
-  Array256.map g ((Array256.map f a)) = Array256.map (fun x => g (f x)) a
-  by rewrite /map tP => i ib;smt(Array256.initiE).
-
-lemma array256_allP ['a] (p : 'a -> bool) (a : 'a Array256.t) :
-  Array256.all p a <=> (forall x, x \in Array256.to_list a => p x).
-proof. by rewrite all_tolist allP. qed.
-(* *)
-
-(* move to list theory *)
-lemma in_map_id ['a] (f : 'a -> 'a) (s : 'a list) :
-  (forall x, x \in s => f x = x) => map f s = s.
-proof. by move=> id_f; rewrite -{2}[s]map_id &(eq_in_map). qed.
-
-lemma in_map_cancel ['a 'b] (f : 'a -> 'b) (g : 'b -> 'a) (s : 'a list) :
-  (forall x, x \in s => g (f x) = x) => map g (map f s) = s.
-proof. by move=> can_fg; rewrite -map_comp in_map_id. qed.
-
-(* *)
-
+require import ArrayExtra JWord_extra (* w2bitsE as int2bs *) EclibExtra (* size_flatten' *) JWordList (* nth_chunk *).
+ 
+(* Words of weird size should be cloned and bound here. *)
 lemma truncateu_32_10E (w : W32.t) : truncateu_32_10 w = W10.bits2w (take 10 (W32.w2bits w)).
 proof.
 rewrite /truncateu_32_10 W10.of_intE W32.to_uintE BS2Int.bs2int_mod //;congr.
@@ -86,7 +20,15 @@ have {1}-> : 10 = size (take 10 (w2bits w)) by rewrite size_take //.
 by rewrite BS2Int.bs2intK.
 qed.
 
+op bitlenqm1md : int = 10 . (* bitlen (q-1) - d = 23 - 13 *)
+op b_t1 = 1023. (* 2^bitlenqm1md - 1 *)
 lemma ilog_b_t1 : ilog 2 b_t1 = bitlenqm1md - 1 by rewrite /b_t1 /=.
+
+(* Circuit spec  *)
+
+op t1_encode_polynomial_lane(c : W32.t) : W10.t = 
+    truncateu_32_10  c.
+
 
 lemma SimpleBitPack_liftE (p : wpoly) :
   wpoly_urng b_t1 p =>
@@ -127,8 +69,7 @@ move => h.
 rewrite incoeffK truncateu_32_10E get_bits2w 1:/#.
 rewrite nth_take 1,2:/#. 
 rewrite /IntegerToBits w2bitsE /l ilog_b_t1 /bitlenqm1md /= (modz_small _ q) 1:/# /BS2Int.int2bs.
-rewrite !nth_mkseq 1,2:/# /=.
-by rewrite get_to_uint /#.
+by rewrite !nth_mkseq 1,2:/# /= /#.
 qed. 
 
 lemma t1_encode_polynomial _a :
@@ -158,8 +99,6 @@ conseq (:  t1 = init_256_32 (fun i => zeroextu10_32 (truncateu_32_10 _a.[i])) ==
 + by move => &hr [<- Hrng] ? /= => ->;rewrite SimpleBitPack_liftE //=.
   
 qed.
-
-op pre_t1_decode_to_polynomial(c : W10.t) = true.
 
 op t1_decode_to_polynomial_lane(c : W10.t) : W32.t = 
     zeroextu10_32 c.
@@ -195,7 +134,7 @@ rewrite (nth_chunk 10) 1,2:/#.
   by rewrite size_map size_to_list /= /b_t1 /#.
 rewrite initiE 1:/# /= nth_take 1,2:/# /= nth_drop 1,2:/# /= /BytesToBits.
 rewrite (nth_flatten false 8);1: by rewrite allP => x /=; rewrite mapP => Hx;elim Hx;smt(W8.size_w2bits).
-rewrite (nth_map witness);1:smt(size_to_list).
+rewrite (nth_map witness); 1: by  rewrite size_to_list; smt().
 by rewrite get_w2bits get_to_list /#.
 qed.
 
@@ -226,24 +165,6 @@ conseq (: encoded = _a ==>
 move=> &hr |>  /=.
 by rewrite SimpleBitUnpack_liftE ~-1://. 
 qed.
-
-import VecMat PolyKVec.
-
-type wpolykvec = wpoly KArray.t. 
-
-op liftu_wpolykvec(wv : wpolykvec) : polykvec =
-  map liftu_wpoly wv.
-
-op lifts_wpolykvec (wv : wpolykvec) : polykvec =
-  map lifts_wpoly wv.
-
-op unlift_polykvec (v : polykvec) : wpolykvec = map unlift_poly v.
-
-op polykvec_urng(p : polykvec, b : int) = all (poly_urng b) p.
-op polykvec_srng(p : polykvec, bl bh : int) = all (poly_srng bl bh) p.
-
-op wpolykvec_urng(pw : wpolykvec, b : int) = all (wpoly_urng b) pw.
-op wpolykvec_srng(pw : wpolykvec, bl bh : int) = all (wpoly_srng bl bh) pw.
 
 require import Array1920 Array1536.
 

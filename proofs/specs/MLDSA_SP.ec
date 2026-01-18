@@ -138,7 +138,3 @@ module MLDSA_SP(S : Samplers, RO : LeakyRO) = {
     return rb;
   }
 }.
-
-require import Dilithium.
-clone import ConcreteDilithium as CD.
-print ConcreteDilithium.Dilithium.

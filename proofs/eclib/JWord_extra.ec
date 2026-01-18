@@ -1,12 +1,41 @@
 require import AllCore List IntDiv.
 require import BitEncoding.
 require import StdOrder.
+require import ListExtra (* in_map_cancel *).
 
 import Ring.IntID.
 import IntOrder.
 import BS2Int.
 
-from Jasmin require import JModel.
+from Jasmin require import JModel_x86.
+
+(* NEW DILITHIUM STUFF *)
+
+lemma w2bitsE (w : W32.t) : w2bits w = BS2Int.int2bs 32 (W32.to_uint w).
+proof. rewrite to_uintE;smt(W32.size_w2bits BS2Int.bs2intK). qed.
+
+lemma map_W8_w2bits_cancel (s : bool list list) :
+     (forall bs, bs \in s => size bs = 8)
+  => map W8.w2bits (map W8.bits2w s) = s.
+proof.
+by move=> h; rewrite in_map_cancel // => bs /h; apply: W8.bits2wK.
+qed.
+
+lemma to_sint_uint_rng_pos_32 (xx : W32.t) (b : int) :
+    0 <= b < 2147483648 =>
+    (0 <= to_sint xx < b  <=> 0 <= to_uint xx < b).
+ have /= Hxx := W32.to_uint_cmp xx. 
+ rewrite /to_sint /smod /= /#.
+qed.
+
+lemma to_sint_uint_rng_neg_32(xx : W32.t) (b : int) :
+  0 < b <= 2147483648 =>
+    -b <= to_sint xx < 0  <=> 4294967296 - b <= to_uint xx <= 4294967296.
+ have /= Hxx := W32.to_uint_cmp xx. 
+ rewrite /to_sint /smod /= /#.
+qed.
+
+
 
 (* misc *)
 

@@ -1083,8 +1083,8 @@ module M = {
     var shift:W256.t;
     var eta_0:W256.t;
     var encoding_shuffles:W256.t;
-    var input_offset:W64.t;
-    var output_offset:W64.t;
+    var input_offset:int;
+    var output_offset:int;
     var c0:W256.t;
     var c1:W256.t;
     var c2:W256.t;
@@ -1100,49 +1100,49 @@ module M = {
     eta_0 <- (zeroextu256 (VMOV_64 temp));
     eta_0 <- (VPBROADCAST_8u32 (truncateu32 eta_0));
     encoding_shuffles <- error_polynomial__ENCODING_SHUFFLES;
-    input_offset <- (W64.of_int 0);
-    output_offset <- (W64.of_int 0);
-    while ((input_offset \ult (W64.of_int ((256 * 32) %/ 8)))) {
+    input_offset <- 0;
+    output_offset <- 0;
+    while ((output_offset < 128)) {
       c0 <-
       (get256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-      (W64.to_uint input_offset));
+      input_offset);
       c0 <- (VPSUB_8u32 eta_0 c0);
-      input_offset <- (input_offset + (W64.of_int 32));
+      input_offset <- (input_offset + 32);
       c1 <-
       (get256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-      (W64.to_uint input_offset));
+      input_offset);
       c1 <- (VPSUB_8u32 eta_0 c1);
-      input_offset <- (input_offset + (W64.of_int 32));
+      input_offset <- (input_offset + 32);
       c2 <-
       (get256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-      (W64.to_uint input_offset));
+      input_offset);
       c2 <- (VPSUB_8u32 eta_0 c2);
-      input_offset <- (input_offset + (W64.of_int 32));
+      input_offset <- (input_offset + 32);
       c3 <-
       (get256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-      (W64.to_uint input_offset));
+      input_offset);
       c3 <- (VPSUB_8u32 eta_0 c3);
-      input_offset <- (input_offset + (W64.of_int 32));
+      input_offset <- (input_offset + 32);
       c4 <-
       (get256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-      (W64.to_uint input_offset));
+      input_offset);
       c4 <- (VPSUB_8u32 eta_0 c4);
-      input_offset <- (input_offset + (W64.of_int 32));
+      input_offset <- (input_offset + 32);
       c5 <-
       (get256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-      (W64.to_uint input_offset));
+      input_offset);
       c5 <- (VPSUB_8u32 eta_0 c5);
-      input_offset <- (input_offset + (W64.of_int 32));
+      input_offset <- (input_offset + 32);
       c6 <-
       (get256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-      (W64.to_uint input_offset));
+      input_offset);
       c6 <- (VPSUB_8u32 eta_0 c6);
-      input_offset <- (input_offset + (W64.of_int 32));
+      input_offset <- (input_offset + 32);
       c7 <-
       (get256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-      (W64.to_uint input_offset));
+      input_offset);
       c7 <- (VPSUB_8u32 eta_0 c7);
-      input_offset <- (input_offset + (W64.of_int 32));
+      input_offset <- (input_offset + 32);
       c0 <- (VPACKUS_8u32 c0 c1);
       c1 <- (VPACKUS_8u32 c2 c3);
       c2 <- (VPACKUS_8u32 c4 c5);
@@ -1158,8 +1158,8 @@ module M = {
       (Array128.init
       (WArray128.get8
       (WArray128.set256_direct (WArray128.init8 (fun i => encoded.[i]))
-      (W64.to_uint output_offset) c0)));
-      output_offset <- (output_offset + (W64.of_int 32));
+      output_offset c0)));
+      output_offset <- (output_offset + 32);
     }
     return encoded;
   }
@@ -1171,10 +1171,10 @@ module M = {
     var decoding_shuffles:W256.t;
     var shifts:W256.t;
     var coefficients:W256.t;
-    var input_offset:W64.t;
-    var output_offset:W64.t;
+    var input_offset:int;
+    var output_offset:int;
     var bytes:W128.t;
-    var byte_group:W64.t;
+    var byte_group:int;
     temp <- (W64.of_int ((1 `<<` 4) - 1));
     mask <- (zeroextu256 (VMOV_64 temp));
     mask <- (VPBROADCAST_8u32 (truncateu32 mask));
@@ -1184,15 +1184,13 @@ module M = {
     decoding_shuffles <- error_polynomial__DECODING_SHUFFLES;
     shifts <- error_polynomial__SHIFTS;
     coefficients <- (set0_256);
-    input_offset <- (W64.of_int 0);
-    output_offset <- (W64.of_int 0);
-    while ((input_offset \ult (W64.of_int 128))) {
+    input_offset <- 0;
+    output_offset <- 0;
+    while ((input_offset < 128)) {
       bytes <-
-      (get128_direct (WArray128.init8 (fun i => encoded.[i]))
-      (W64.to_uint input_offset));
-      input_offset <- (input_offset + (W64.of_int 16));
-      byte_group <- (W64.of_int 0);
-      while ((byte_group \ult (W64.of_int 4))) {
+      (get128_direct (WArray128.init8 (fun i => encoded.[i])) input_offset);
+      byte_group <- 0;
+      while ((byte_group < 4)) {
         coefficients <- (VINSERTI128 coefficients bytes (W8.of_int 0));
         coefficients <- (VINSERTI128 coefficients bytes (W8.of_int 1));
         coefficients <- (VPSHUFB_256 coefficients decoding_shuffles);
@@ -1203,11 +1201,12 @@ module M = {
         (Array256.init
         (WArray1024.get32
         (WArray1024.set256_direct (WArray1024.init32 (fun i => decoded.[i]))
-        (W64.to_uint output_offset) coefficients)));
-        output_offset <- (output_offset + (W64.of_int 32));
+        output_offset coefficients)));
+        output_offset <- (output_offset + 32);
         bytes <- (VPSRLDQ_128 bytes (W8.of_int 4));
-        byte_group <- (byte_group + (W64.of_int 1));
+        byte_group <- (byte_group + 1);
       }
+      input_offset <- (input_offset + 16);
     }
     return decoded;
   }

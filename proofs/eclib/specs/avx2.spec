@@ -259,6 +259,17 @@ VPACKUS_16u16(w1@256, w2@256) -> @256 =
     pack(w2[@128|1])
   )
 
+# Intel intrinsic: _mm256_packus_epi32
+VPACKUS_8u32(w1@256, w2@256) -> @256 =
+  let pack (w@128) = map<32, 4>(usat<32, 16>, w) in
+
+  concat<64>(
+    pack(w1[@128|0]),
+    pack(w2[@128|0]),
+    pack(w1[@128|1]),
+    pack(w2[@128|1])
+  )
+
 # Intel intrincis: _mm256_packs_epi16
 VPACKSS_16u16(w1@256, w2@256) -> @256 =
   let pack (w@128) = map<16, 8>(ssat<16, 8>, w) in

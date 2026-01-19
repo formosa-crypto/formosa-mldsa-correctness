@@ -99,6 +99,9 @@ move : h; rewrite /to_sint /smod ifT //= => ?.
 congr;rewrite to_uint_eq of_uintK /=;smt(W32.to_uint_cmp pow2_32). 
 qed. 
 
+bind op [bool & W32.t] W32.(\sle) "sle".
+realize bvsleP by admit.
+
 lemma encode _a :
    hoare [ M.error_polynomial__encode : 
        polynomial = _a /\ wpoly_srng 4 4 _a
@@ -138,10 +141,14 @@ proc change ^while.36 : {encoded <- sliceset128_8_256 encoded (output_offset*8) 
 unroll for ^while.
 cfold 8.
 wp -2.
-
-conseq (:  polynomial = init_256_32 (fun i => W32.one)  ==> 
-           encoded = let mapped = init_256_4 (fun i => error_polynomial_encode_lane _a.[i]) in
-             init_128_8 (fun i => W8.init (fun j => mapped.[(i*8+j) %/ 4].[(i*8+j) %% 4])));last by circuit.
+conseq (:  
+  List.all (fun i => 
+    _a.[i] \sle W32.of_int 4 /\ 
+    W32.of_int (-4) \sle _a.[i]) 
+    (iota_ 0 256) 
+  /\ _a = polynomial  ==> 
+  encoded = let mapped = init_256_4 (fun i => error_polynomial_encode_lane _a.[i]) in
+  init_128_8 (fun i => W8.init (fun j => mapped.[(i*8+j) %/ 4].[(i*8+j) %% 4])));last by circuit.
 
 + by move => &hr [<- Hrng] ? /= => ->;rewrite BitPack_liftE //=.
 

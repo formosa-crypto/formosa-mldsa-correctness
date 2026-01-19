@@ -99,10 +99,7 @@ move : h; rewrite /to_sint /smod ifT //= => ?.
 congr;rewrite to_uint_eq of_uintK /=;smt(W32.to_uint_cmp pow2_32). 
 qed. 
 
-bind op [bool & W32.t] W32.(\sle) "sle".
-realize bvsleP by admit.
-
-lemma encode _a :
+lemma error_polynomial_encode _a :
    hoare [ M.error_polynomial__encode : 
        polynomial = _a /\ wpoly_srng 4 4 _a
      ==>
@@ -150,58 +147,62 @@ conseq (:
   encoded = let mapped = init_256_4 (fun i => error_polynomial_encode_lane _a.[i]) in
   init_128_8 (fun i => W8.init (fun j => mapped.[(i*8+j) %/ 4].[(i*8+j) %% 4])));last by circuit.
 
++ move => &hr [<- +]; rewrite /wpoly_srng allP /= => Hrng.
+  rewrite /(\sle) allP => x; rewrite mem_iota /= => Hx.
+  rewrite to_sintK_small //=.
+  by rewrite of_sintK /= /smod /= /#.
+
 + by move => &hr [<- Hrng] ? /= => ->;rewrite BitPack_liftE //=.
 
 qed.
 
-op gamma1_decode_to_polynomial_lane(c : W20.t) : W32.t = 
-    (W32_sub (W32.of_int gamma1) (zeroextu_20_32 c)).
+op error_polynomial_decode_lane(c : W4.t) : W32.t = 
+    (W32_sub (W32.of_int Eta) (zeroextu4_32 c)).
 
-
-lemma BitUnack_liftE (bytes : W8.t Array640.t) :
-    BitUnpack (to_list bytes) (gamma1 - 1) gamma1
+lemma BitUnack_liftE (bytes : W8.t Array128.t) :
+    BitUnpack (to_list bytes) Eta Eta
   =
   (map (fun (w : W32.t) => incoeff (to_sint w))
      (init_256_32
         (fun (i : int) =>
-           gamma1_decode_to_polynomial_lane
-             (W20.init (fun (j : int) => bytes.[(gamma1_bits * i + j) %/ 8].[(gamma1_bits * i + j) %% 8]))))).
+           error_polynomial_decode_lane
+             (W4.init (fun (j : int) => bytes.[(4 * i + j) %/ 8].[(4 * i + j) %% 8]))))).
 proof.
 move=>  @/BitUnpack /=; rewrite tP => i ib.
 rewrite initiE 1:// mapiE //= initiE 1:/# /=.
 pose l1 := List.map _ _.
 have sl1 : size l1 = n.
-+   rewrite /l1;rewrite !size_map size_iota ilog_gamma1 /= /BytesToBits. 
++   rewrite /l1;rewrite !size_map size_iota ilog_Eta /= /BytesToBits. 
   rewrite (EclibExtra.size_flatten' 8);1: by smt(mapP W8.size_w2bits).
   by rewrite size_map size_to_list /= /#.
 rewrite (nth_map []) /=.
-+ rewrite size_chunk ilog_gamma1 //=.
++ rewrite size_chunk ilog_Eta //=.
   rewrite /BytesToBits. 
   rewrite (EclibExtra.size_flatten' 8);1: by smt(mapP W8.size_w2bits).
   by rewrite size_map size_to_list /= /#.
-congr; rewrite  /gamma1_decode_to_polynomial_lane /W32_sub.
-rewrite ilog_gamma1 /= /zeroextu_20_32. 
+congr; rewrite  /error_polynomial_decode_lane /W32_sub.
+rewrite ilog_Eta /= /zeroextu_4_32. 
 rewrite nth_chunk // 1:/#.
 + rewrite /BytesToBits. 
   rewrite (EclibExtra.size_flatten' 8);1: by smt(mapP W8.size_w2bits).
   by rewrite size_map size_to_list /= /#.
-have  := BS2Int.bs2int_le2Xs ((take gamma1_bits (drop (gamma1_bits * i) (BytesToBits (to_list bytes))))).
+have  := BS2Int.bs2int_le2Xs ((take 4 (drop (4 * i) (BytesToBits (to_list bytes))))).
 + rewrite size_take // size_drop 1:/# /max /= (EclibExtra.size_flatten' 8);1: by smt(mapP W8.size_w2bits).
   rewrite !size_map !size_iota /max /=.
   pose ll := if _ then _ else _.
-  have -> /= : ll = 20;1: by smt().
-rewrite /BitsToInteger.
-pose p := BS2Int.bs2int  (take gamma1_bits (drop (gamma1_bits * i) (BytesToBits (to_list bytes)))) .
+  have -> /= : ll = 4;1: by smt().
+rewrite /BitsToInteger /zeroextu4_32 .
+pose p := BS2Int.bs2int  (take 4 (drop (4 * i) (BytesToBits (to_list bytes)))) .
 move => ?.
 have ? : 0 <= p by smt(BS2Int.bs2int_ge0).
-have <- : p = to_uint (W20.init (fun (j : int) => bytes.[(gamma1_bits * i + j) %/ 8].[(gamma1_bits * i + j) %% 8])); last by have /= :=  W32.to_sintK_small (Top.gamma1 - p); smt().
+have <- : p = to_uint (W4.init (fun (j : int) => bytes.[(4 * i + j) %/ 8].[(4 * i + j) %% 8])); last by have /= :=  W32.to_sintK_small (4 - p); smt().
 rewrite /to_uint /p;congr.
 apply (eq_from_nth false).
 + rewrite size_take // size_drop 1:/# size_w2bits /BytesToBits. 
   rewrite (EclibExtra.size_flatten' 8);1: by smt(mapP W8.size_w2bits).
   by rewrite size_map size_to_list /= /#.
 move => k kb.
-have ? : size (take gamma1_bits (drop (gamma1_bits * i) (BytesToBits (to_list bytes)))) = gamma1_bits.
+have ? : size (take 4 (drop (4 * i) (BytesToBits (to_list bytes)))) = 4.
 + rewrite size_take // size_drop 1:/# /BytesToBits. 
   rewrite (EclibExtra.size_flatten' 8);1: by smt(mapP W8.size_w2bits).
   by rewrite size_map size_to_list /= /#.
@@ -214,38 +215,43 @@ by rewrite initiE 1:/# /=.
 qed.
 
 
-lemma gamma1_decode_to_polynomial _a :
-   hoare [ M.gamma1____decode_to_polynomial :
-       bytes = _a 
+lemma error_polynomial_decode _a :
+   hoare [ M.error_polynomial__decode :
+       encoded = _a 
      ==>
-       lifts_wpoly res = BitUnpack (to_list _a) (gamma1-1) gamma1
+       lifts_wpoly res = BitUnpack (to_list _a) Eta Eta
    ].
 proc => /=.
-proc change 1 : { temp <- W64.of_int Top.gamma1;}; 1: by auto.
-proc change 2 : { temp1 <- zeroextu128 temp; }.
-+ auto => &1 &2 ->; rewrite /VMOV_64 zeroextu128E.
+proc change 1 : { temp <- W64.of_int 15;}; 1: by auto.
+proc change 2 : { mask <- zeroextu256 temp; }.
++ auto => &1 &2 ->; rewrite /VMOV_64 zeroextu256E zeroextu256E.
   rewrite wordP => i ib.
-  rewrite pack2E  initiE 1:/# /= pack2E initiE 1:/# /= initiE 1:/# /=.
-  case (i %/ 64 = 0) => ?;1: by rewrite get_of_list /#.
-  by rewrite get_of_list 1:/# /= ifF 1:/# /=.
-proc change 4 : { temp <- W64.of_int 1048575;}; 1: by auto.
-proc change 5 : { temp1 <- zeroextu128 temp; }.
-+ auto => &1 &2 ->; rewrite /VMOV_64 zeroextu128E.
+  rewrite pack2E pack2E pack4E initiE 1:/# /= initiE 1:/# /= initiE 1:/# /= initiE 1:/# /=.
+  case (i %/ 64 = 0) => ?; 1: by rewrite ifT 1:/# initiE 1:/# /= get_of_list /#.
+  case (i %/ 128 = 0) => ?; 2: by auto.
+  rewrite initiE 1:/# /= get_of_list 1:/#.
+  by have -> /= : (i %% 128 %/ 64) = 1 by smt().
+proc change 5 : { eta_0 <- zeroextu256 temp; }.
++ auto => &1 &2 ->; rewrite /VMOV_64 zeroextu256E zeroextu256E.
   rewrite wordP => i ib.
-  rewrite pack2E  initiE 1:/# /= pack2E initiE 1:/# /= initiE 1:/# /=.
-  case (i %/ 64 = 0) => ?;1: by rewrite get_of_list /#.
-  by rewrite get_of_list 1:/# /= ifF 1:/# /=.
-proc change ^while.1 : { sixteen_bytes <- sliceget640_8_128 bytes (input_offset*8);};1: by auto;smt().
-proc change ^while.4 : { sixteen_bytes <- sliceget640_8_128 bytes (input_offset*8);};1: by auto;smt().
-proc change ^while.13 : {polynomial <- sliceset256_32_256 polynomial (output_offset*8) coefficients;}; 1: by auto;smt().
+  rewrite pack2E pack2E pack4E initiE 1:/# /= initiE 1:/# /= initiE 1:/# /= initiE 1:/# /=.
+  case (i %/ 64 = 0) => ?; 1: by rewrite ifT 1:/# initiE 1:/# /= get_of_list /#.
+  case (i %/ 128 = 0) => ?; 2: by auto.
+  rewrite initiE 1:/# /= get_of_list 1:/#.
+  by have -> /= : (i %% 128 %/ 64) = 1 by smt().
+proc change ^while.1 : { bytes <- sliceget128_8_128 encoded (input_offset*8);};1: by auto;smt().proc change ^while.^while.7 : {decoded <- sliceset256_32_256 decoded (output_offset*8) coefficients;}; 1: by auto;smt().
 
+swap 10 1.
 unroll for ^while.
+do 8!(unroll for ^while).
 
-cfold 8.
-wp -2.
+
+cfold 10.
+do 8!(cfold ^byte_group<-).
+wp -3.
 conseq (_: _ ==>
-    polynomial = init_256_32 (fun i => gamma1_decode_to_polynomial_lane (W20.init (fun j =>
-               _a.[(20*i+j) %/ 8].[(20*i+j) %% 8])))); last by circuit.
+    decoded = init_256_32 (fun i => error_polynomial_decode_lane (W4.init (fun j =>
+               _a.[(4*i+j) %/ 8].[(4*i+j) %% 8])))); last by circuit.
             
 (* Part 1 *)
 move=> &hr |>.
@@ -253,53 +259,4 @@ rewrite /lifts_wpoly /=; apply (inj_eq Array256.to_list Array256.to_list_inj).
 
 
 by rewrite BitUnack_liftE ~-1:// !array256_mapE; do 2!congr => //.
-qed.
-
-import VecMat PolyLVec.
-
-require import Array1280 Array3200.
-
-op  input_unflatten(a : 'a Array3200.t) =
-     LArray.init (fun i => Array640.of_list witness (sub a (640*i) 640)).
-op  output_unflatten(a : 'a Array1280.t) =
-     LArray.init (fun i => Array256.of_list witness (sub a (256*i) 256)).
-
-lemma gamma1_decode _a :
-    lvec = 5 =>
-    hoare [ M.gamma1____decode :
-       encoded = _a 
-     ==>
-       lifts_wpolylvec (output_unflatten res) = 
-           LArray.map (fun p => BitUnpack (to_list p) (gamma1-1) gamma1) (input_unflatten _a)
-   ].
-move => Hlvec.
-proc => /=.
-while (0 <= i <= 5 /\ encoded = _a /\
-       forall k, 0 <= k < i =>
-       (lifts_wpolylvec (output_unflatten decoded)).[k] =
-       (map (fun (p : W8.t Array640.t) => BitUnpack (to_list p) (Top.gamma1 - 1) Top.gamma1) (input_unflatten _a)).[k]);
-       last first.
-       + auto => /> &hr *;do split;1: smt().
-         move => r0 i0 *;rewrite tP => k kb; smt().
-wp; ecall (gamma1_decode_to_polynomial (Array640.init (fun (i_0 : int) => _a.[i * (gamma1_bits * n %/ 8) + i_0]))).
-auto => /> &hr ?? H ? rr Hrr;do split;1,2:smt().
-move => k kbl kbh.
-case(0<=k<i{hr}) => *.
-+ have -> : (lifts_wpolylvec
-   (output_unflatten
-      (Array1280.init
-         (fun (i_0 : int) => if i{hr} * n <= i_0 < i{hr} * n + n then rr.[i_0 - i{hr} * n] else decoded{hr}.[i_0])))).[k] =
-    (lifts_wpolylvec (output_unflatten decoded{hr})).[k]; last by smt().
-  rewrite !mapiE 1..2:/# initiE 1:/# /= initiE 1:/# /= tP =>  ii iib.
-  rewrite mapiE 1:/# /= initiE 1:/# /= mapiE 1:/# /= initiE 1:/# /= !nth_sub 1,2:/# initiE 1:/# /= /#.
-have -> : k = i{hr} by smt().
-+ have -> : (lifts_wpolylvec
-   (output_unflatten
-      (Array1280.init
-         (fun (i_0 : int) => if i{hr} * n <= i_0 < i{hr} * n + n then rr.[i_0 - i{hr} * n] else decoded{hr}.[i_0])))).[i{hr}]  =
-    (lifts_wpoly rr); last first.
-  + rewrite Hrr mapiE 1:/# /=;congr;congr;rewrite /input_unflatten initiE 1:/# /= tP => ii iib.
-    by rewrite initiE 1:/# get_of_list 1:/# /= nth_sub /#.
-rewrite mapiE 1:/# /= initiE 1:/# /= tP => ii iib.
-rewrite !mapiE 1,2:/# /= initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.
 qed.

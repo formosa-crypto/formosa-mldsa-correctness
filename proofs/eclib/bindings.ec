@@ -614,6 +614,9 @@ op W32_sub (a : W32.t, b: W32.t) : W32.t =
 bind op W32.t W32_sub "sub".
 realize bvsubP by  rewrite /W32_sub => bv1 bv2; rewrite W32.to_uintD to_uintN /= /#.
 
+bind op [bool & W32.t] W32.\sle "sle".
+realize bvsleP by  move=> w1 w2; rewrite W32.sleE /#. 
+
 bind op W32.t W32.andw "and".
 realize bvandP. 
 rewrite /andw /map2 => bv1 bv2.
@@ -2157,6 +2160,24 @@ realize bvaslicegetP.
 move => /= arr offset; rewrite /sliceget128_8_16 /= => H k kb. 
 case (8%| offset) => /= *; last by smt(W16.get_bits2w).
 rewrite /get16_direct pack2E initiE 1:/# /= initiE 1:/# /= initiE 1:/# /=.
+rewrite nth_take 1,2:/# nth_drop 1,2:/#.
+rewrite (BitEncoding.BitChunking.nth_flatten false 8 _). 
++ rewrite allP => x /=; rewrite mapP => He; elim He;smt(W8.size_w2bits).
+rewrite (nth_map W8.zero []); 1: smt(Array128.size_to_list).
+rewrite nth_mkseq /#.
+qed.
+realize le_size by done.
+
+op sliceget128_8_128 (arr: W8.t Array128.t) (offset: int) : W128.t = 
+   if 8 %| offset then 
+    get128_direct ((init8 (fun (i_0 : int) => arr.[i_0])))%WArray128 (offset %/ 8)
+   else W128.bits2w (take 128 (drop offset (flatten (map W8.w2bits (to_list arr))))).
+
+bind op [W8.t & W128.t & Array128.t] sliceget128_8_128 "asliceget".
+realize bvaslicegetP.
+move => /= arr offset; rewrite /sliceget128_8_128 /= => H k kb. 
+case (8%| offset) => /= *; last by smt(W128.get_bits2w).
+rewrite /get128_direct pack16E initiE 1:/# /= initiE 1:/# /= initiE 1:/# /=.
 rewrite nth_take 1,2:/# nth_drop 1,2:/#.
 rewrite (BitEncoding.BitChunking.nth_flatten false 8 _). 
 + rewrite allP => x /=; rewrite mapP => He; elim He;smt(W8.size_w2bits).

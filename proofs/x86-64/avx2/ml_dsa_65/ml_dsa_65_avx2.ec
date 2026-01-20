@@ -6126,32 +6126,30 @@ module M = {
   }
   proc t0__encode_polynomial (t0_encoded:W8.t Array416.t, t0:W32.t Array256.t) : 
   W8.t Array416.t = {
-    var input_offset:W64.t;
-    var output_offset:W64.t;
+    var output_offset:int;
+    var input_offset:int;
     var coefficients:W256.t;
     var bytestream:W128.t;
     var final_encoded_output:W8.t Array16.t;
     var i:int;
     final_encoded_output <- witness;
-    input_offset <- (W64.of_int 0);
-    output_offset <- (W64.of_int 0);
-    while ((input_offset \ult (W64.of_int (((256 * 32) %/ 8) - 32)))) {
+    output_offset <- 0;
+    input_offset <- 0;
+    while ((input_offset < (((256 * 32) %/ 8) - 32))) {
       coefficients <-
-      (get256_direct (WArray1024.init32 (fun i_0 => t0.[i_0]))
-      (W64.to_uint input_offset));
-      input_offset <- (input_offset + (W64.of_int 32));
+      (get256_direct (WArray1024.init32 (fun i_0 => t0.[i_0])) input_offset);
       bytestream <@ t0__coefficients_to_bytestream (coefficients);
       t0_encoded <-
       (Array416.init
       (WArray416.get8
       (WArray416.set128_direct
-      (WArray416.init8 (fun i_0 => t0_encoded.[i_0]))
-      (W64.to_uint output_offset) bytestream)));
-      output_offset <- (output_offset + (W64.of_int 13));
+      (WArray416.init8 (fun i_0 => t0_encoded.[i_0])) output_offset
+      bytestream)));
+      output_offset <- (output_offset + 13);
+      input_offset <- (input_offset + 32);
     }
     coefficients <-
-    (get256_direct (WArray1024.init32 (fun i_0 => t0.[i_0]))
-    (W64.to_uint input_offset));
+    (get256_direct (WArray1024.init32 (fun i_0 => t0.[i_0])) input_offset);
     bytestream <@ t0__coefficients_to_bytestream (coefficients);
     final_encoded_output <-
     (Array16.init
@@ -6160,8 +6158,7 @@ module M = {
     (WArray16.init8 (fun i_0 => final_encoded_output.[i_0])) 0 bytestream)));
     i <- 0;
     while ((i < 13)) {
-      t0_encoded.[(W64.to_uint (output_offset + (W64.of_int i)))] <-
-      final_encoded_output.[i];
+      t0_encoded.[(output_offset + i)] <- final_encoded_output.[i];
       i <- (i + 1);
     }
     return t0_encoded;
@@ -6216,24 +6213,24 @@ module M = {
   }
   proc t0____decode_polynomial (t0:W32.t Array256.t,
                                 t0_encoded:W8.t Array416.t) : W32.t Array256.t = {
-    var input_offset:W64.t;
-    var output_offset:W64.t;
+    var output_offset:int;
+    var input_offset:int;
     var bytestream:W128.t;
     var coefficients:W256.t;
-    input_offset <- (W64.of_int 0);
-    output_offset <- (W64.of_int 0);
-    while ((input_offset \ult (W64.of_int (((13 * 256) %/ 8) - 13)))) {
+    output_offset <- 0;
+    input_offset <- 0;
+    while ((input_offset < (((13 * 256) %/ 8) - 13))) {
       bytestream <-
-      (get128_direct (WArray416.init8 (fun i => t0_encoded.[i]))
-      (W64.to_uint input_offset));
-      input_offset <- (input_offset + (W64.of_int 13));
+      (get128_direct (WArray416.init8 (fun i => t0_encoded.[i])) input_offset
+      );
       coefficients <@ t0__bytestream_to_coefficients (bytestream);
       t0 <-
       (Array256.init
       (WArray1024.get32
       (WArray1024.set256_direct (WArray1024.init32 (fun i => t0.[i]))
-      (W64.to_uint output_offset) coefficients)));
-      output_offset <- (output_offset + (W64.of_int 32));
+      output_offset coefficients)));
+      output_offset <- (output_offset + 32);
+      input_offset <- (input_offset + 13);
     }
     bytestream <-
     (get128_direct (WArray416.init8 (fun i => t0_encoded.[i]))
@@ -6244,7 +6241,7 @@ module M = {
     (Array256.init
     (WArray1024.get32
     (WArray1024.set256_direct (WArray1024.init32 (fun i => t0.[i]))
-    (W64.to_uint output_offset) coefficients)));
+    output_offset coefficients)));
     return t0;
   }
   proc t0__decode (t0:W32.t Array1536.t, encoded:W8.t Array2496.t) : 

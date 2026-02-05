@@ -239,7 +239,8 @@ proc change 5 : { eta_0 <- zeroextu256 temp; }.
   case (i %/ 128 = 0) => ?; 2: by auto.
   rewrite initiE 1:/# /= get_of_list 1:/#.
   by have -> /= : (i %% 128 %/ 64) = 1 by smt().
-proc change ^while.1 : { bytes <- sliceget128_8_128 encoded (input_offset*8);};1: by auto;smt().proc change ^while.^while.7 : {decoded <- sliceset256_32_256 decoded (output_offset*8) coefficients;}; 1: by auto;smt().
+proc change ^while.1 : { bytes <- sliceget128_8_128 encoded (input_offset*8);};1: by auto;smt().
+proc change ^while.^while.7 : {decoded <- sliceset256_32_256 decoded (output_offset*8) coefficients;}; 1: by auto;smt().
 
 swap 10 1.
 unroll for ^while.

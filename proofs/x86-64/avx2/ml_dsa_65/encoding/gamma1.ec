@@ -134,6 +134,7 @@ conseq (:  _ ==>
 
 qed.
 
+
 op gamma1_decode_to_polynomial_lane(c : W20.t) : W32.t = 
     (W32_sub (W32.of_int gamma1) (zeroextu_20_32 c)).
 
@@ -239,25 +240,79 @@ import VecMat PolyLVec.
 
 require import Array1280 Array3200.
 
-op  input_unflatten(a : 'a Array3200.t) =
+op  encode_input_unflatten(a : 'a Array1280.t) =
+     LArray.init (fun i => Array256.of_list witness (sub a (256*i) 256)).
+op  encode_output_unflatten(a : 'a Array3200.t) =
      LArray.init (fun i => Array640.of_list witness (sub a (640*i) 640)).
-op  output_unflatten(a : 'a Array1280.t) =
+
+lemma gamma1_encode _a :
+    lvec = 5 =>
+    hoare [ M.gamma1____encode :
+       decoded = _a /\ wpolylvec_srng (encode_input_unflatten _a) (gamma1-1) gamma1
+     ==>
+       encode_output_unflatten res =
+           LArray.map (fun (p : poly) => Array640.of_list witness (BitPack p (gamma1-1) gamma1)) (lifts_wpolylvec (encode_input_unflatten _a))
+   ].
+move => Hlvec.
+proc => /=.
+while (0 <= i <= 5 /\ decoded = _a /\
+       wpolylvec_srng (encode_input_unflatten _a) (gamma1-1) gamma1  /\
+       forall k, 0 <= k < i =>
+       (encode_output_unflatten encoded).[k] =
+       (map (fun (p : poly) => Array640.of_list witness (BitPack p (gamma1-1) gamma1)) (lifts_wpolylvec (encode_input_unflatten _a))).[k]);
+       last first.
+       + auto => /> &hr *;do split;1: smt().
+         by move => r0 j0 *;rewrite tP => k kb; smt().
+wp; ecall (gamma1_encode_polynomial (Array256.init (fun (i_0 : int) => _a.[i * 256 + i_0]))).
+auto => /> &hr ?? Hrng H ?;do split. 
++ move : Hrng; rewrite /wpolylvec_srng /wpoly_srng !allP /=  => Hrng ii iib.
+  have := Hrng i{hr} _; 1:smt().
+  rewrite allP /= /encode_input_unflatten initiE 1:/# /= => Hrngj.
+  have := Hrngj ii _; 1:smt().
+  rewrite initiE 1:/# /= initiE 1:/# /= nth_sub 1:/# /#.
+move => ? rr Hrr; do split;1,2: smt().
+move => k kbl kbh.
+case(0<=k<i{hr}) => *.
++
+   have -> : (encode_output_unflatten
+   (Array3200.init
+      (fun (i_0 : int) => if i{hr} * 640 <= i_0 < i{hr} * 640 + 640 then rr.[i_0 - i{hr} * 640] else encoded{hr}.[i_0]))).[k] =
+    ((encode_output_unflatten encoded{hr})).[k]; last by smt().
+  rewrite !initiE 1..2:/# /= /of_list /= tP => kk kkb.
+  rewrite !initiE 1,2:/# !nth_sub 1,2:/# initiE 1:/# /= /#.
+have -> : k = i{hr} by smt().
++ have -> :
+   (encode_output_unflatten
+   (Array3200.init
+      (fun (i_0 : int) => if i{hr} * 640 <= i_0 < i{hr} * 640 + 640 then rr.[i_0 - i{hr} * 640] else encoded{hr}.[i_0]))).[i{hr}]  =
+    (rr); last first.
+  + have <- := Array640.to_listK witness rr;rewrite Hrr mapiE 1:/# /=;congr;congr.
+    rewrite /lifts_wpolylvec mapiE 1:/#;congr;rewrite /encode_input_unflatten initiE 1:/# /=.
+    rewrite tP => kk kkb; rewrite !initiE 1,2:/# /= nth_sub /#.
+
+rewrite initiE 1:/# /= tP => ii iib.
+rewrite  initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.
+qed.
+
+op  decode_input_unflatten(a : 'a Array3200.t) =
+     LArray.init (fun i => Array640.of_list witness (sub a (640*i) 640)).
+op  decode_output_unflatten(a : 'a Array1280.t) =
      LArray.init (fun i => Array256.of_list witness (sub a (256*i) 256)).
 
 lemma gamma1_decode _a :
     lvec = 5 =>
     hoare [ M.gamma1____decode :
-       encoded = _a 
+       encoded = _a
      ==>
-       lifts_wpolylvec (output_unflatten res) = 
-           LArray.map (fun p => BitUnpack (to_list p) (gamma1-1) gamma1) (input_unflatten _a)
+       lifts_wpolylvec (decode_output_unflatten res) =
+           LArray.map (fun p => BitUnpack (to_list p) (gamma1-1) gamma1) (decode_input_unflatten _a)
    ].
 move => Hlvec.
 proc => /=.
 while (0 <= i <= 5 /\ encoded = _a /\
        forall k, 0 <= k < i =>
-       (lifts_wpolylvec (output_unflatten decoded)).[k] =
-       (map (fun (p : W8.t Array640.t) => BitUnpack (to_list p) (Top.gamma1 - 1) Top.gamma1) (input_unflatten _a)).[k]);
+       (lifts_wpolylvec (decode_output_unflatten decoded)).[k] =
+       (map (fun (p : W8.t Array640.t) => BitUnpack (to_list p) (Top.gamma1 - 1) Top.gamma1) (decode_input_unflatten _a)).[k]);
        last first.
        + auto => /> &hr *;do split;1: smt().
          move => r0 i0 *;rewrite tP => k kb; smt().
@@ -266,19 +321,19 @@ auto => /> &hr ?? H ? rr Hrr;do split;1,2:smt().
 move => k kbl kbh.
 case(0<=k<i{hr}) => *.
 + have -> : (lifts_wpolylvec
-   (output_unflatten
+   (decode_output_unflatten
       (Array1280.init
          (fun (i_0 : int) => if i{hr} * n <= i_0 < i{hr} * n + n then rr.[i_0 - i{hr} * n] else decoded{hr}.[i_0])))).[k] =
-    (lifts_wpolylvec (output_unflatten decoded{hr})).[k]; last by smt().
+    (lifts_wpolylvec (decode_output_unflatten decoded{hr})).[k]; last by smt().
   rewrite !mapiE 1..2:/# initiE 1:/# /= initiE 1:/# /= tP =>  ii iib.
   rewrite mapiE 1:/# /= initiE 1:/# /= mapiE 1:/# /= initiE 1:/# /= !nth_sub 1,2:/# initiE 1:/# /= /#.
 have -> : k = i{hr} by smt().
 + have -> : (lifts_wpolylvec
-   (output_unflatten
+   (decode_output_unflatten
       (Array1280.init
          (fun (i_0 : int) => if i{hr} * n <= i_0 < i{hr} * n + n then rr.[i_0 - i{hr} * n] else decoded{hr}.[i_0])))).[i{hr}]  =
     (lifts_wpoly rr); last first.
-  + rewrite Hrr mapiE 1:/# /=;congr;congr;rewrite /input_unflatten initiE 1:/# /= tP => ii iib.
+  + rewrite Hrr mapiE 1:/# /=;congr;congr;rewrite /decode_input_unflatten initiE 1:/# /= tP => ii iib.
     by rewrite initiE 1:/# get_of_list 1:/# /= nth_sub /#.
 rewrite mapiE 1:/# /= initiE 1:/# /= tP => ii iib.
 rewrite !mapiE 1,2:/# /= initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.

@@ -1286,6 +1286,35 @@ module M = {
     }
     return output;
   }
+  proc gamma1____encode (encoded:W8.t Array3200.t, decoded:W32.t Array1280.t) : 
+  W8.t Array3200.t = {
+    var aux:W8.t Array640.t;
+    var i:int;
+    i <- 0;
+    while ((i < 5)) {
+      aux <@ gamma1____encode_polynomial ((Array640.init
+                                          (fun i_0 => encoded.[((i *
+                                                                ((20 * 256) %/
+                                                                8)) +
+                                                               i_0)])
+                                          ),
+      (Array256.init (fun i_0 => decoded.[((i * 256) + i_0)])));
+      encoded <-
+      (Array3200.init
+      (fun i_0 => (if ((i * ((20 * 256) %/ 8)) <= i_0 < ((i *
+                                                         ((20 * 256) %/ 8)) +
+                                                        640)) then aux.[
+                                                                   (i_0 -
+                                                                   (i *
+                                                                   ((20 *
+                                                                    256) %/
+                                                                   8)))] else 
+                  encoded.[i_0]))
+      );
+      i <- (i + 1);
+    }
+    return encoded;
+  }
   proc gamma1____decode_to_polynomial (polynomial:W32.t Array256.t,
                                        bytes:W8.t Array640.t) : W32.t Array256.t = {
     var temp:W64.t;
@@ -6397,85 +6426,74 @@ module M = {
     output_offset coefficients)));
     return t1;
   }
+  proc signature____encode_hint (signature:W8.t Array3309.t,
+                                 hint_0:W32.t Array1536.t) : W8.t Array3309.t = {
+    var i:int;
+    var hints_written:int;
+    var j:int;
+    var hint_offset:int;
+    var hint_coefficient:W32.t;
+    var condition:bool;
+    i <- 0;
+    while ((i < (55 + 6))) {
+      signature.[((48 + (5 * ((20 * 256) %/ 8))) + i)] <- (W8.of_int 0);
+      i <- (i + 1);
+    }
+    hints_written <- 0;
+    i <- 0;
+    condition <- (i < 6);
+    while (condition) {
+      j <- 0;
+      condition <- (j < 256);
+      while (condition) {
+        hint_offset <- i;
+        hint_offset <- (hint_offset `<<` 8);
+        hint_offset <- (hint_offset + j);
+        hint_coefficient <- hint_0.[hint_offset];
+        if ((hint_coefficient <> (W32.of_int 0))) {
+          signature.[((48 + (5 * ((20 * 256) %/ 8))) + hints_written)] <-
+          (W8.of_int j);
+          hints_written <- (hints_written + 1);
+        } else {
+          
+        }
+        j <- (j + 1);
+        condition <- (j < 256);
+      }
+      signature.[(((48 + (5 * ((20 * 256) %/ 8))) + 55) + i)] <-
+      (W8.of_int hints_written);
+      i <- (i + 1);
+      condition <- (i < 6);
+    }
+    return signature;
+  }
   proc signature____encode (signature:W8.t Array3309.t,
                             commitment_hash:W8.t Array48.t,
                             signer_response:W32.t Array1280.t,
                             hint_0:W32.t Array1536.t) : W8.t Array3309.t = {
-    var aux:W8.t Array640.t;
-    var i:W64.t;
+    var aux:W8.t Array3200.t;
+    var i:int;
     var bytes:W128.t;
-    var k:int;
-    var offset:int;
-    var hints_written:W64.t;
-    var j:W64.t;
-    var hint_offset:W64.t;
-    var hint_coefficient:W32.t;
-    var condition:bool;
-    i <- (W64.of_int 0);
-    while ((i \ult (W64.of_int 48))) {
+    i <- 0;
+    while ((i < 48)) {
       bytes <-
-      (get128_direct (WArray48.init8 (fun i_0 => commitment_hash.[i_0]))
-      (W64.to_uint i));
+      (get128_direct (WArray48.init8 (fun i_0 => commitment_hash.[i_0])) i);
       signature <-
       (Array3309.init
       (WArray3309.get8
       (WArray3309.set128_direct
-      (WArray3309.init8 (fun i_0 => signature.[i_0])) (W64.to_uint i) 
-      bytes)));
-      i <- (i + (W64.of_int 16));
+      (WArray3309.init8 (fun i_0 => signature.[i_0])) i bytes)));
+      i <- (i + 16);
     }
-    k <- 0;
-    while ((k < 5)) {
-      offset <- (48 + (k * ((20 * 256) %/ 8)));
-      aux <@ gamma1____encode_polynomial ((Array640.init
-                                          (fun i_0 => signature.[(offset +
-                                                                 i_0)])
-                                          ),
-      (Array256.init (fun i_0 => signer_response.[((k * 256) + i_0)])));
-      signature <-
-      (Array3309.init
-      (fun i_0 => (if (offset <= i_0 < (offset + 640)) then aux.[(i_0 -
-                                                                 offset)] else 
-                  signature.[i_0]))
-      );
-      k <- (k + 1);
-    }
-    i <- (W64.of_int 0);
-    while ((i \ult (W64.of_int (55 + 6)))) {
-      signature.[(W64.to_uint
-                 ((W64.of_int (48 + (5 * ((20 * 256) %/ 8)))) + i))] <-
-      (W8.of_int 0);
-      i <- (i + (W64.of_int 1));
-    }
-    hints_written <- (W64.of_int 0);
-    i <- (W64.of_int 0);
-    condition <- (i \ult (W64.of_int 6));
-    while (condition) {
-      j <- (W64.of_int 0);
-      condition <- (j \ult (W64.of_int 256));
-      while (condition) {
-        hint_offset <- i;
-        hint_offset <- (hint_offset `<<` (W8.of_int 8));
-        hint_offset <- (hint_offset + j);
-        hint_coefficient <- hint_0.[(W64.to_uint hint_offset)];
-        if ((hint_coefficient <> (W32.of_int 0))) {
-          signature.[(W64.to_uint
-                     ((W64.of_int (48 + (5 * ((20 * 256) %/ 8)))) +
-                     hints_written))] <-
-          (truncateu8 j);
-          hints_written <- (hints_written + (W64.of_int 1));
-        } else {
-          
-        }
-        j <- (j + (W64.of_int 1));
-        condition <- (j \ult (W64.of_int 256));
-      }
-      signature.[(W64.to_uint
-                 ((W64.of_int ((48 + (5 * ((20 * 256) %/ 8))) + 55)) + i))] <-
-      (truncateu8 hints_written);
-      i <- (i + (W64.of_int 1));
-      condition <- (i \ult (W64.of_int 6));
-    }
+    aux <@ gamma1____encode ((Array3200.init
+                             (fun i_0 => signature.[(48 + i_0)])),
+    signer_response);
+    signature <-
+    (Array3309.init
+    (fun i_0 => (if (48 <= i_0 < (48 + 3200)) then aux.[(i_0 - 48)] else 
+                signature.[i_0]))
+    );
+    signature <@ signature____encode_hint (signature, hint_0);
     return signature;
   }
   proc signature____decode_hint (hints:W32.t Array1536.t,

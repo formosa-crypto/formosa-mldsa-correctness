@@ -19,10 +19,9 @@ BArray4032 BArray5120 BArray6144 BArray30720 SBArray768_16 SBArray128_32
 SBArray1952_32 SBArray4032_32 SBArray1952_48 SBArray3309_48 SBArray3309_61
 SBArray128_64 SBArray4032_64 SBArray640_128 SBArray768_128 SBArray272_136
 SBArray680_136 SBArray768_136 SBArray1952_136 SBArray848_168 SBArray1920_320
-SBArray2496_416 SBArray680_640 SBArray3200_640 SBArray3309_640
-SBArray4032_640 SBArray4032_768 SBArray5120_1024 SBArray6144_1024
-SBArray30720_1024 SBArray1952_1920 SBArray4032_2496 SBArray3309_3200
-SBArray30720_5120.
+SBArray2496_416 SBArray680_640 SBArray3200_640 SBArray4032_640
+SBArray4032_768 SBArray5120_1024 SBArray6144_1024 SBArray30720_1024
+SBArray1952_1920 SBArray4032_2496 SBArray3309_3200 SBArray30720_5120.
 
 abbrev [-printing] commitment__ENCODING_SHUFFLES =
 (W256.of_int
@@ -1250,6 +1249,21 @@ module M = {
       i <- (i + 1);
     }
     return output;
+  }
+  proc gamma1____encode (encoded:BArray3200.t, decoded:BArray5120.t) : 
+  BArray3200.t = {
+    var aux:BArray640.t;
+    var i:int;
+    i <- 0;
+    while ((i < 5)) {
+      aux <@ gamma1____encode_polynomial ((SBArray3200_640.get_sub8 encoded
+                                          (i * ((20 * 256) %/ 8))),
+      (SBArray5120_1024.get_sub32 decoded (i * 256)));
+      encoded <-
+      (SBArray3200_640.set_sub8 encoded (i * ((20 * 256) %/ 8)) aux);
+      i <- (i + 1);
+    }
+    return encoded;
   }
   proc gamma1____decode_to_polynomial (polynomial:BArray1024.t,
                                        bytes:BArray640.t) : BArray1024.t = {
@@ -5733,75 +5747,68 @@ module M = {
     t1 <- (BArray1024.set256d t1 output_offset coefficients);
     return t1;
   }
+  proc signature____encode_hint (signature:BArray3309.t, hint_0:BArray6144.t) : 
+  BArray3309.t = {
+    var i:int;
+    var hints_written:int;
+    var j:int;
+    var hint_offset:int;
+    var hint_coefficient:W32.t;
+    var condition:bool;
+    i <- 0;
+    while ((i < (55 + 6))) {
+      signature <-
+      (BArray3309.set8 signature ((48 + (5 * ((20 * 256) %/ 8))) + i)
+      (W8.of_int 0));
+      i <- (i + 1);
+    }
+    hints_written <- 0;
+    i <- 0;
+    condition <- (i < 6);
+    while (condition) {
+      j <- 0;
+      condition <- (j < 256);
+      while (condition) {
+        hint_offset <- i;
+        hint_offset <- (hint_offset `<<` 8);
+        hint_offset <- (hint_offset + j);
+        hint_coefficient <- (BArray6144.get32 hint_0 hint_offset);
+        if ((hint_coefficient <> (W32.of_int 0))) {
+          signature <-
+          (BArray3309.set8 signature
+          ((48 + (5 * ((20 * 256) %/ 8))) + hints_written) (W8.of_int j));
+          hints_written <- (hints_written + 1);
+        } else {
+          
+        }
+        j <- (j + 1);
+        condition <- (j < 256);
+      }
+      signature <-
+      (BArray3309.set8 signature (((48 + (5 * ((20 * 256) %/ 8))) + 55) + i)
+      (W8.of_int hints_written));
+      i <- (i + 1);
+      condition <- (i < 6);
+    }
+    return signature;
+  }
   proc signature____encode (signature:BArray3309.t,
                             commitment_hash:BArray48.t,
                             signer_response:BArray5120.t, hint_0:BArray6144.t) : 
   BArray3309.t = {
-    var aux:BArray640.t;
-    var i:W64.t;
+    var aux:BArray3200.t;
+    var i:int;
     var bytes:W128.t;
-    var k:int;
-    var offset:int;
-    var hints_written:W64.t;
-    var j:W64.t;
-    var hint_offset:W64.t;
-    var hint_coefficient:W32.t;
-    var condition:bool;
-    i <- (W64.of_int 0);
-    while ((i \ult (W64.of_int 48))) {
-      bytes <- (BArray48.get128d commitment_hash (W64.to_uint i));
-      signature <- (BArray3309.set128d signature (W64.to_uint i) bytes);
-      i <- (i + (W64.of_int 16));
+    i <- 0;
+    while ((i < 48)) {
+      bytes <- (BArray48.get128d commitment_hash i);
+      signature <- (BArray3309.set128d signature i bytes);
+      i <- (i + 16);
     }
-    k <- 0;
-    while ((k < 5)) {
-      offset <- (48 + (k * ((20 * 256) %/ 8)));
-      aux <@ gamma1____encode_polynomial ((SBArray3309_640.get_sub8 signature
-                                          offset),
-      (SBArray5120_1024.get_sub32 signer_response (k * 256)));
-      signature <- (SBArray3309_640.set_sub8 signature offset aux);
-      k <- (k + 1);
-    }
-    i <- (W64.of_int 0);
-    while ((i \ult (W64.of_int (55 + 6)))) {
-      signature <-
-      (BArray3309.set8 signature
-      (W64.to_uint ((W64.of_int (48 + (5 * ((20 * 256) %/ 8)))) + i))
-      (W8.of_int 0));
-      i <- (i + (W64.of_int 1));
-    }
-    hints_written <- (W64.of_int 0);
-    i <- (W64.of_int 0);
-    condition <- (i \ult (W64.of_int 6));
-    while (condition) {
-      j <- (W64.of_int 0);
-      condition <- (j \ult (W64.of_int 256));
-      while (condition) {
-        hint_offset <- i;
-        hint_offset <- (hint_offset `<<` (W8.of_int 8));
-        hint_offset <- (hint_offset + j);
-        hint_coefficient <-
-        (BArray6144.get32 hint_0 (W64.to_uint hint_offset));
-        if ((hint_coefficient <> (W32.of_int 0))) {
-          signature <-
-          (BArray3309.set8 signature
-          (W64.to_uint
-          ((W64.of_int (48 + (5 * ((20 * 256) %/ 8)))) + hints_written))
-          (truncateu8 j));
-          hints_written <- (hints_written + (W64.of_int 1));
-        } else {
-          
-        }
-        j <- (j + (W64.of_int 1));
-        condition <- (j \ult (W64.of_int 256));
-      }
-      signature <-
-      (BArray3309.set8 signature
-      (W64.to_uint ((W64.of_int ((48 + (5 * ((20 * 256) %/ 8))) + 55)) + i))
-      (truncateu8 hints_written));
-      i <- (i + (W64.of_int 1));
-      condition <- (i \ult (W64.of_int 6));
-    }
+    aux <@ gamma1____encode ((SBArray3309_3200.get_sub8 signature 48),
+    signer_response);
+    signature <- (SBArray3309_3200.set_sub8 signature 48 aux);
+    signature <@ signature____encode_hint (signature, hint_0);
     return signature;
   }
   proc signature____decode_hint (hints:BArray6144.t, hint_encoded:BArray61.t) : 

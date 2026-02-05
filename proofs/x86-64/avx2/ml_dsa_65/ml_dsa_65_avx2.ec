@@ -6433,7 +6433,8 @@ module M = {
     var j:int;
     var hint_offset:int;
     var hint_coefficient:W32.t;
-    var condition:bool;
+    var condition2:bool;
+    var condition1:bool;
     i <- 0;
     while ((i < (55 + 6))) {
       signature.[((48 + (5 * ((20 * 256) %/ 8))) + i)] <- (W8.of_int 0);
@@ -6441,11 +6442,11 @@ module M = {
     }
     hints_written <- 0;
     i <- 0;
-    condition <- (i < 6);
-    while (condition) {
+    condition1 <- (i < 6);
+    while (condition1) {
       j <- 0;
-      condition <- (j < 256);
-      while (condition) {
+      condition2 <- (j < 256);
+      while (condition2) {
         hint_offset <- i;
         hint_offset <- (hint_offset `<<` 8);
         hint_offset <- (hint_offset + j);
@@ -6458,12 +6459,12 @@ module M = {
           
         }
         j <- (j + 1);
-        condition <- (j < 256);
+        condition2 <- (j < 256);
       }
       signature.[(((48 + (5 * ((20 * 256) %/ 8))) + 55) + i)] <-
       (W8.of_int hints_written);
       i <- (i + 1);
-      condition <- (i < 6);
+      condition1 <- (i < 6);
     }
     return signature;
   }
@@ -6508,16 +6509,18 @@ module M = {
     var current_true_hints_seen:W64.t;
     var hint_at_j:W64.t;
     var hint_at_j_minus_one:W64.t;
-    var done_0:W8.t;
+    var done2:W8.t;
     var within_bounds:bool;
+    var done1:W8.t;
     var hint_0:W64.t;
+    var done3:W8.t;
     ill_formed_hint <- (W64.of_int 0);
     previous_true_hints_seen <- (W64.of_int 0);
     encoded_offset <- (W64.of_int 0);
     within_bounds <- ((W64.of_int 6) \ule encoded_offset);
-    done_0 <- (SETcc within_bounds);
-    done_0 <- (done_0 `|` (truncateu8 ill_formed_hint));
-    while ((done_0 = (W8.of_int 0))) {
+    done1 <- (SETcc within_bounds);
+    done1 <- (done1 `|` (truncateu8 ill_formed_hint));
+    while ((done1 = (W8.of_int 0))) {
       decoded_offset <- encoded_offset;
       decoded_offset <- (decoded_offset `<<` (W8.of_int 8));
       j <- (W64.of_int 0);
@@ -6537,9 +6540,9 @@ module M = {
         } else {
           j <- previous_true_hints_seen;
           within_bounds <- (current_true_hints_seen \ule j);
-          done_0 <- (SETcc within_bounds);
-          done_0 <- (done_0 `|` (truncateu8 ill_formed_hint));
-          while ((done_0 = (W8.of_int 0))) {
+          done2 <- (SETcc within_bounds);
+          done2 <- (done2 `|` (truncateu8 ill_formed_hint));
+          while ((done2 = (W8.of_int 0))) {
             hint_at_j <- (zeroextu64 hint_encoded.[(W64.to_uint j)]);
             if ((previous_true_hints_seen \ult j)) {
               hint_at_j_minus_one <-
@@ -6560,8 +6563,8 @@ module M = {
               
             }
             within_bounds <- (current_true_hints_seen \ule j);
-            done_0 <- (SETcc within_bounds);
-            done_0 <- (done_0 `|` (truncateu8 ill_formed_hint));
+            done2 <- (SETcc within_bounds);
+            done2 <- (done2 `|` (truncateu8 ill_formed_hint));
           }
         }
       }
@@ -6572,14 +6575,14 @@ module M = {
         
       }
       within_bounds <- ((W64.of_int 6) \ule encoded_offset);
-      done_0 <- (SETcc within_bounds);
-      done_0 <- (done_0 `|` (truncateu8 ill_formed_hint));
+      done1 <- (SETcc within_bounds);
+      done1 <- (done1 `|` (truncateu8 ill_formed_hint));
     }
     encoded_offset <- previous_true_hints_seen;
     within_bounds <- ((W64.of_int 55) \ule encoded_offset);
-    done_0 <- (SETcc within_bounds);
-    done_0 <- (done_0 `|` (truncateu8 ill_formed_hint));
-    while ((done_0 = (W8.of_int 0))) {
+    done3 <- (SETcc within_bounds);
+    done3 <- (done3 `|` (truncateu8 ill_formed_hint));
+    while ((done3 = (W8.of_int 0))) {
       hint_0 <- (zeroextu64 hint_encoded.[(W64.to_uint encoded_offset)]);
       if ((hint_0 <> (W64.of_int 0))) {
         ill_formed_hint <- (W64.of_int 1);
@@ -6588,8 +6591,8 @@ module M = {
       }
       encoded_offset <- (encoded_offset + (W64.of_int 1));
       within_bounds <- ((W64.of_int 55) \ule encoded_offset);
-      done_0 <- (SETcc within_bounds);
-      done_0 <- (done_0 `|` (truncateu8 ill_formed_hint));
+      done3 <- (SETcc within_bounds);
+      done3 <- (done3 `|` (truncateu8 ill_formed_hint));
     }
     ill_formed_hint <- (- ill_formed_hint);
     return (hints, ill_formed_hint);

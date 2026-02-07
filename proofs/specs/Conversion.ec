@@ -61,7 +61,7 @@ module HintPackUnpack = {
         j <- 0;
         while (j < 256) {
            if (h.[i].[j] = Zq.one) {
-              y <- put y j (W8.of_int index);
+              y <- put y index (W8.of_int j);
               index <- index + 1;
            }
            j <- j + 1;

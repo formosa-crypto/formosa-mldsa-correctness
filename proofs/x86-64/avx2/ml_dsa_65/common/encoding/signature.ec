@@ -20,6 +20,33 @@ require import Array1536 Array3309.
 op  decoded_unflatten(a : 'a Array1536.t) =
      KArray.init (fun i => Array256.of_list witness (sub a (256*i) 256)).
 
+lemma decoded_unflattenE i j (h : 'a Array1536.t) (P : 'a -> bool) :
+   kvec = 6 =>
+   0 <= i < kvec =>
+   0 <= j < 256 =>
+        all (all P) (decoded_unflatten h) =>
+        P h.[i*256+j].
+move => ???;rewrite allP => Hii.
+have := Hii i _;1:smt().
+rewrite allP => Hjj. 
+have := Hjj j _;1:smt().
+by rewrite initiE 1:/# /= get_of_list 1:/# /= nth_sub /#. 
+qed.
+
+lemma decoded_unflattenP i j (h1 : 'a Array1536.t) (h2 : 'b Array1536.t) (F : 'a -> 'b) :
+   kvec = 6 =>
+   0 <= i < kvec =>
+   0 <= j < 256 =>
+        map (map F) (decoded_unflatten h1) = decoded_unflatten h2 =>
+        F h1.[i*256+j] = h2.[i*256+j].
+move => ???; rewrite tP => Hii.
+have := Hii i _; 1:smt().
+rewrite tP => Hjj.
+have := Hjj j _; 1:smt().
+rewrite mapiE 1:/# /= mapiE 1:/# /= initiE 1:/# initiE 1:/# /=.
+by rewrite !get_of_list 1,2:/# /= !nth_sub /#. 
+qed.
+
 op count_nonzero_coeffs(p : poly) = count (fun c => c = Zq.one) (to_list p).
 
 import Bigint BIA. 
@@ -32,6 +59,29 @@ op count_nonzero_prefix(v : polykvec) (i j : int) : int =
   (if 0 <= i < kvec then
      count (fun c => c = Zq.one) (take j (to_list v.[i]))
    else 0).
+
+lemma count_nonzero_prefix_one(v : coeff Array1536.t) (i j : int)  :
+   0 <= i < kvec =>
+   0 <= j < n =>
+   (decoded_unflatten v).[i].[j] = Zq.one =>
+   count_nonzero_coeffs_kvec (decoded_unflatten v) = w_hint =>
+      count_nonzero_prefix (decoded_unflatten v) i j < w_hint.
+move => ???.
+rewrite /count_nonzero_coeffs_kvec /count_nonzero_prefix ifT 1:/#.
+have {1}<- := cat_take_drop i (to_list (decoded_unflatten v)).
+rewrite big_cat.
+have {1}<- := cat_take_drop 1 (drop i (to_list (decoded_unflatten v))).
+rewrite (drop_take1_nth witness);1: by rewrite size_to_list 1:/#.
+rewrite big_cat /= drop_drop 1,2:/# /= big_cons big_nil /= ifT 1:/#.
+have :  count (fun (c : coeff) => c = Zq.one) (take j (to_list (decoded_unflatten v).[i])) <
+  count_nonzero_coeffs (decoded_unflatten v).[i]; last by smt(count_ge0 sumr_ge0_seq).
+rewrite /count_nonzero_coeffs.
+have {2}<- := cat_take_drop j (to_list (decoded_unflatten v).[i]).
+rewrite count_cat.
+have {1}<- := cat_take_drop 1 (drop j (to_list (decoded_unflatten v).[i])).
+rewrite (drop_take1_nth witness);1: by rewrite size_to_list 1:/#.
+by rewrite count_cat /= drop_drop 1,2:/# /=;smt(count_ge0).
+qed.
 
 op touch_hint(sig_in sig_out : W8.t Array3309.t) =
     forall k, 0<=k<3248 =>
@@ -153,50 +203,30 @@ seq 1 2 : (#{/~i{1}}{i{2}}{index{1}}{hints_written{2}}pre
    + by smt(get_setE).
 
  seq 0 4 : (#pre /\
-     to_uint hint_coefficient{2} =
-        asint h{1}.[i{1}].[j{1}]).
- + auto => /> &1 &2 Hrng ? Hh2 ???????????.
-   move : Hrng; rewrite /wpolykvec_urng allP /= => Hrng.
-   have := Hrng i{2} _;1:smt().
-   rewrite /wpoly_urng allP /= => Hrngp.
-   have := Hrngp j{2} _; 1:smt().
-   move : Hh2; rewrite /liftu_wpolykvec tP => Hh2.
-   have := Hh2 i{2} _; 1:smt().
-   rewrite mapiE 1:/# /=.
-   rewrite /liftu_wpoly tP => Hh2p.
-   have := Hh2p j{2} _;1:smt().
-   rewrite mapiE 1:/# /=.
+     to_uint hint_coefficient{2} = asint h{1}.[i{1}].[j{1}]).
+ + auto => /> &1 &2 Hrng ? Hh2 ???????????. 
+   have  /= Hrngp := decoded_unflattenE i{2} j{2} hint_0{2} (fun (ii : W32.t) => 0 <= to_uint ii < 2) _ _ _ _;1..4:smt().
+   have  /= Hh2p := decoded_unflattenP i{2} j{2} hint_0{2} _hint (fun (ii : W32.t) => incoeff (to_uint ii)) _ _ _ _;1..4: smt(). 
    rewrite /(`<<`) /= /decoded_unflatten initiE 1:/# /=.
-   rewrite get_of_list 1:/# /= nth_sub 1:/# /=.
-   rewrite initiE 1:/# /= get_of_list 1:/# /= nth_sub 1:/# /=.
-   by move => <-; rewrite incoeffK /#.
+   by rewrite get_of_list 1:/# /= nth_sub 1:/# /=; smt(incoeffK).
 
 if.
  + auto => /> &1 &2 Hrng ? Hh2 ???????????.
-   move : Hrng; rewrite /wpolykvec_urng allP /= => Hrng.
-   have := Hrng i{2} _;1:smt().
-   rewrite /wpoly_urng allP /= => Hrngp.
-   have := Hrngp j{2} _; 1:smt().
-   move : Hh2; rewrite /liftu_wpolykvec tP => Hh2.
-   have := Hh2 i{2} _; 1:smt().
-   rewrite mapiE 1:/# /=.
-   rewrite /liftu_wpoly tP => Hh2p.
-   have := Hh2p j{2} _;1:smt().
-   rewrite mapiE 1:/# /=.
-   rewrite /decoded_unflatten initiE 1:/# /=.
-   rewrite get_of_list 1:/# /= nth_sub 1:/# /=.
-   rewrite initiE 1:/# /= get_of_list 1:/# /=.
-   rewrite nth_sub 1:/# /=.
-   move => <- => +; rewrite !to_uint_eq /= incoeffK.
-   by rewrite /one -!eq_incoeff /#.
-  + auto => /> &1 &2 ???????????????Hone; do split; 1..2,5..6,9:smt(get_setE size_put). 
-   + admit. 
+   have  /= Hrngp := decoded_unflattenE i{2} j{2} hint_0{2} (fun (ii : W32.t) => 0 <= to_uint ii < 2) _ _ _ _;1..4:smt().
+   have  /= Hh2p := decoded_unflattenP i{2} j{2} hint_0{2} _hint (fun (ii : W32.t) => incoeff (to_uint ii)) _ _ _ _;1..4: smt(). 
+   rewrite /(`<<`) /= /decoded_unflatten initiE 1:/# /=.
+
+   rewrite initiE 1:/# /= nth_sub 1:/# /=.
+   rewrite mulrC -Hh2p => H.
+   by rewrite !to_uint_eq /=;smt( incoeffK).
+
+ + auto => /> &1 &2 ???????????????Hone; do split; 1..2,5..6,9:smt(get_setE size_put). 
+   + by smt(count_nonzero_prefix_one). 
    + move : Hone;rewrite /decoded_unflatten /count_nonzero_prefix ifT 1:/# ifT 1:/# /= (take_nth witness);1: by rewrite size_to_list /#.
      rewrite initiE 1:/# /= get_of_list 1:/# nth_sub 1:/# /= => -> /=.
      by rewrite -cats1 count_cat /= /#.
    + smt(get_setE size_put nth_put). 
-   + move => k kbl kbh; rewrite nth_put.
-     + admit.
+   + move => k kbl kbh; rewrite nth_put; 1:by smt(count_nonzero_prefix_one).
      case (count_nonzero_prefix (decoded_unflatten _hint) i{2} j{2} = w_hint + k);  smt(get_setE). 
 + auto => /> &1 &2 ???????????????Hone; do split; 2..:smt().
    + move : Hone;rewrite /decoded_unflatten /count_nonzero_prefix ifT 1:/# ifT 1:/# /=  (take_nth witness);1: by rewrite size_to_list /#.

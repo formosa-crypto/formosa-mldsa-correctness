@@ -76,28 +76,39 @@ module HintPackUnpack = {
      var h : polykvec;
      var index : int;
      var error : bool;
+     var _first : int;
      var i;
      h <- witness;
      index <- 0;
      error <- false;
      i <- 0;
-     while (i < kvec) {
+     while (i < kvec && !error) {
+       h.[i] <- Array256.init (fun k => Zq.zero);
        if (to_uint (nth witness y (w_hint+i)) < index || 
                    w_hint < to_uint (nth witness y (w_hint+i))) {
            error <- true; 
        }
-       while (index < to_uint (nth witness y (w_hint+i))) {
-          h.[i] <- h.[i].[to_uint (nth witness y index) <- Zq.one];
-          index <- index + 1;
-       }
-       
-       i <- i + 1;
+       else {
+          _first <- index;
+          while (index < to_uint (nth witness y (w_hint+i)) && !error) {
+             if (_first < index /\ to_uint (nth witness y (index)) <= to_uint (nth witness y (index-1))) {
+                error <- true;
+             }
+             else {
+                h.[i] <- h.[i].[to_uint (nth witness y index) <- Zq.one];
+                index <- index + 1;
+             }
+          }
+          i <- i + 1;
+       }       
      }
-     while (index < w_hint) {
+     while (index < w_hint && !error) {
        if (to_uint (nth witness y index) <> 0) {
          error <- true;
        }
-       index <- index + 1;
+       else {
+         index <- index + 1;
+       }
      }
      return if error then None else Some h;
    }

@@ -6501,12 +6501,12 @@ module M = {
                                  hint_encoded:W8.t Array61.t) : W32.t Array1536.t *
                                                                 W64.t = {
     var ill_formed_hint:W64.t;
-    var previous_true_hints_seen:W64.t;
-    var encoded_offset:W64.t;
-    var decoded_offset:W64.t;
-    var j:W64.t;
-    var index:W64.t;
-    var current_true_hints_seen:W64.t;
+    var previous_true_hints_seen:int;
+    var encoded_offset:int;
+    var decoded_offset:int;
+    var j:int;
+    var index:int;
+    var current_true_hints_seen:int;
     var hint_at_j:W64.t;
     var hint_at_j_minus_one:W64.t;
     var done2:W8.t;
@@ -6515,38 +6515,36 @@ module M = {
     var hint_0:W64.t;
     var done3:W8.t;
     ill_formed_hint <- (W64.of_int 0);
-    previous_true_hints_seen <- (W64.of_int 0);
-    encoded_offset <- (W64.of_int 0);
-    within_bounds <- ((W64.of_int 6) \ule encoded_offset);
+    previous_true_hints_seen <- 0;
+    encoded_offset <- 0;
+    within_bounds <- (6 <= encoded_offset);
     done1 <- (SETcc within_bounds);
     done1 <- (done1 `|` (truncateu8 ill_formed_hint));
     while ((done1 = (W8.of_int 0))) {
       decoded_offset <- encoded_offset;
-      decoded_offset <- (decoded_offset `<<` (W8.of_int 8));
-      j <- (W64.of_int 0);
-      while ((j \ult (W64.of_int 256))) {
-        index <- (LEA_64 (decoded_offset + j));
-        hints.[(W64.to_uint index)] <- (W32.of_int 0);
-        j <- (j + (W64.of_int 1));
+      decoded_offset <- (decoded_offset `<<` 8);
+      j <- 0;
+      while ((j < 256)) {
+        index <- (decoded_offset + j);
+        hints.[index] <- (W32.of_int 0);
+        j <- (j + 1);
       }
       current_true_hints_seen <-
-      (zeroextu64
-      hint_encoded.[(W64.to_uint ((W64.of_int 55) + encoded_offset))]);
-      if ((current_true_hints_seen \ult previous_true_hints_seen)) {
+      (W64.to_uint (zeroextu64 hint_encoded.[(55 + encoded_offset)]));
+      if ((current_true_hints_seen < previous_true_hints_seen)) {
         ill_formed_hint <- (W64.of_int 1);
       } else {
-        if (((W64.of_int 55) \ult previous_true_hints_seen)) {
+        if ((55 < previous_true_hints_seen)) {
           ill_formed_hint <- (W64.of_int 1);
         } else {
           j <- previous_true_hints_seen;
-          within_bounds <- (current_true_hints_seen \ule j);
+          within_bounds <- (current_true_hints_seen <= j);
           done2 <- (SETcc within_bounds);
           done2 <- (done2 `|` (truncateu8 ill_formed_hint));
           while ((done2 = (W8.of_int 0))) {
-            hint_at_j <- (zeroextu64 hint_encoded.[(W64.to_uint j)]);
-            if ((previous_true_hints_seen \ult j)) {
-              hint_at_j_minus_one <-
-              (zeroextu64 hint_encoded.[(W64.to_uint (j - (W64.of_int 1)))]);
+            hint_at_j <- (zeroextu64 hint_encoded.[j]);
+            if ((previous_true_hints_seen < j)) {
+              hint_at_j_minus_one <- (zeroextu64 hint_encoded.[(j - 1)]);
               if ((hint_at_j \ule hint_at_j_minus_one)) {
                 ill_formed_hint <- (W64.of_int 1);
               } else {
@@ -6556,13 +6554,14 @@ module M = {
               
             }
             if ((ill_formed_hint = (W64.of_int 0))) {
-              index <- (LEA_64 (decoded_offset + hint_at_j));
-              hints.[(W64.to_uint index)] <- (W32.of_int 1);
-              j <- (j + (W64.of_int 1));
+              index <-
+              (W64.to_uint ((W64.of_int decoded_offset) + hint_at_j));
+              hints.[index] <- (W32.of_int 1);
+              j <- (j + 1);
             } else {
               
             }
-            within_bounds <- (current_true_hints_seen \ule j);
+            within_bounds <- (current_true_hints_seen <= j);
             done2 <- (SETcc within_bounds);
             done2 <- (done2 `|` (truncateu8 ill_formed_hint));
           }
@@ -6570,27 +6569,31 @@ module M = {
       }
       if ((ill_formed_hint = (W64.of_int 0))) {
         previous_true_hints_seen <- current_true_hints_seen;
-        encoded_offset <- (encoded_offset + (W64.of_int 1));
+        encoded_offset <- (encoded_offset + 1);
       } else {
         
       }
-      within_bounds <- ((W64.of_int 6) \ule encoded_offset);
+      within_bounds <- (6 <= encoded_offset);
       done1 <- (SETcc within_bounds);
       done1 <- (done1 `|` (truncateu8 ill_formed_hint));
     }
     encoded_offset <- previous_true_hints_seen;
-    within_bounds <- ((W64.of_int 55) \ule encoded_offset);
+    within_bounds <- (55 <= encoded_offset);
     done3 <- (SETcc within_bounds);
     done3 <- (done3 `|` (truncateu8 ill_formed_hint));
     while ((done3 = (W8.of_int 0))) {
-      hint_0 <- (zeroextu64 hint_encoded.[(W64.to_uint encoded_offset)]);
+      hint_0 <- (zeroextu64 hint_encoded.[encoded_offset]);
       if ((hint_0 <> (W64.of_int 0))) {
         ill_formed_hint <- (W64.of_int 1);
       } else {
         
       }
-      encoded_offset <- (encoded_offset + (W64.of_int 1));
-      within_bounds <- ((W64.of_int 55) \ule encoded_offset);
+      if ((ill_formed_hint = (W64.of_int 0))) {
+        encoded_offset <- (encoded_offset + 1);
+      } else {
+        
+      }
+      within_bounds <- (55 <= encoded_offset);
       done3 <- (SETcc within_bounds);
       done3 <- (done3 `|` (truncateu8 ill_formed_hint));
     }

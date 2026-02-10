@@ -6534,7 +6534,7 @@ module M = {
       if ((current_true_hints_seen < previous_true_hints_seen)) {
         ill_formed_hint <- (W64.of_int 1);
       } else {
-        if ((55 < previous_true_hints_seen)) {
+        if ((55 < current_true_hints_seen)) {
           ill_formed_hint <- (W64.of_int 1);
         } else {
           j <- previous_true_hints_seen;

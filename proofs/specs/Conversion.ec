@@ -99,7 +99,9 @@ module HintPackUnpack = {
                 index <- index + 1;
              }
           }
-          i <- i + 1;
+          if (!error) {
+              i <- i + 1;
+          }
        }       
      }
      while (index < w_hint && !error) {

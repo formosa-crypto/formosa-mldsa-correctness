@@ -191,12 +191,12 @@ seq 1 2 : (#pre /\
      by move : H; rewrite to_uint_zeroextu64 /#.
      auto => /> &1 &2 *;do split;1:smt(W64.to_uint_eq W64.to_uint0 W64.to_uint1). 
      move => ?; rewrite /SETcc /= wordP.
-     smt(@W8 @W64).
+     by rewrite /truncateu8 /=;smt(W8.orwE W8.nth_one  W8.to_uint1 W8.to_uint0).
  if{2}.
  + rcondt{1} 1;1: by auto => /> &2 ??????????; rewrite to_uint_zeroextu64 /= /#.
    auto => /> &1 &2 *;do split;1:smt(W64.to_uint_eq W64.to_uint0 W64.to_uint1). 
    move => ?; rewrite /SETcc /= wordP.
-   smt(@W8 @W64).
+   by rewrite /truncateu8 /=;smt(W8.orwE W8.nth_one  W8.to_uint1 W8.to_uint0).
 
    
 rcondf{1} 1.
@@ -252,9 +252,12 @@ seq 1 4 : (#pre /\
  + if{2}; auto => /> &1 &2 [#] *; do split;3:smt(W8u8.to_uint_zeroextu64).
    move => ?; do split;1..3:smt(W8u8.to_uint_zeroextu64).
    + by move => ?; rewrite /SETcc /truncateu8 /= /#.
-   + rewrite /SETcc /truncateu8 /=;smt(@W8u8 @W8 @W64).
-   + rewrite /SETcc /truncateu8 /=;smt(@W8u8 @W8 @W64).
-   + rewrite /SETcc /truncateu8 /=;smt(@W8u8 @W8 @W64).
+   + rewrite /SETcc /truncateu8 /=;smt(W8.orwE W8.nth_one  W8.to_uint1 W8.to_uint0).
+   + rewrite /SETcc /truncateu8 /=; smt( W64.to_uint1 W64.to_uint0).
+   + move => ?;rewrite /SETcc /truncateu8 /=.
+     have -> : W8.of_int (to_uint ill_formed_hint{2}) = W8.one; last
+       by rewrite wordP; smt(W8.orwE W8.nth_one  W8.to_uint_eq W8.to_uint1 W8.to_uint0).
+     by rewrite to_uint_eq /=;smt(W64.to_uint1).
 
  while (#{/~done2{2} <> W8.zero}post); last by auto => />;smt(W8u8.to_uint_zeroextu64).
 
@@ -263,9 +266,9 @@ if {1}.
   + rcondt {2} 2; 1: by  auto => /> /#.
     rcondt {2} 3;1: by auto => /> &hr *;rewrite uleE /= !to_uint_zeroextu64 /#.
     by auto.
-    auto => /> => &1 &2 [#] ????????;split;1:smt(@W64).
+    auto => /> => &1 &2 [#] ????????;split;1: smt(W64.to_uint1 W64.to_uint0).
     move => ?; rewrite /SETcc !to_uint_zeroextu64 /truncateu8 /=.
-    rewrite !wordP;split =>  *;smt(@W8 W8.orwE W8.nth_one).
+    by rewrite !wordP;split =>  *;smt(W8.orwE W8.nth_one W8.to_uint1 W8.to_uint0).
 
 seq 0 2 : (#pre /\
     hint_at_j{2} = zeroextu64 hint_encoded{2}.[j{2}]).
@@ -274,7 +277,7 @@ seq 0 2 : (#pre /\
 
 rcondt {2} 1; 1: by auto => /> /#.
 
-auto => /> &1 &2 ??????H????.
+auto => /> &1 &2 ????? H0 H????.
 have ? : 0<= to_uint hint_encoded{2}.[index{1}]  < 256 by smt(W8.to_uint_cmp pow2_8).
 have -> : to_uint (W64.of_int (n * encoded_offset{2}) + zeroextu64 hint_encoded{2}.[index{1}]) =
       n*encoded_offset{2} + to_uint hint_encoded{2}.[index{1}].
@@ -282,7 +285,8 @@ have -> : to_uint (W64.of_int (n * encoded_offset{2}) + zeroextu64 hint_encoded{
   by rewrite of_uintK /= modz_small 1:/# to_uint_zeroextu64 /#.
 
   
-do split;1:smt().
+do split; 1:smt().
+
 + move => k kbl kbh;split.
   rewrite mapiE 1:/# initiE 1:/# /= tP => kk kkb.
   rewrite mapiE 1:/# /= get_of_list 1:/# /= nth_sub 1:/# /=.
@@ -303,19 +307,16 @@ do split;1:smt().
   rewrite initiE 1:/# initiE 1:/# /= nth_sub 1:/#.
   by case (n * k + kk = n * encoded_offset{2} + to_uint hint_encoded{2}.[index{1}]) => //=.
 
-+ rewrite /SETcc to_uint_zeroextu64 /=; smt(@W8 @W64).
-+ rewrite /SETcc to_uint_zeroextu64 /=; smt(@W8 @W64).
-+ rewrite /SETcc to_uint_zeroextu64 /=; smt(@W8 @W64).
-+ rewrite /SETcc to_uint_zeroextu64 /=; smt(@W8 @W64).
++ by rewrite /SETcc H0 // to_uint_zeroextu64 /= wordP;smt(W8.wordP W8.orwE W8.to_uint_eq W8.to_uint1 W8.to_uint0 W64.to_uint1 W64.to_uint0).
+
++ by move =>?;rewrite /SETcc H0 // to_uint_zeroextu64 /= wordP => *; smt(W8.wordP W8.zerowE W8.orwE W8.to_uint_eq W8.to_uint1 W8.to_uint0 W64.to_uint1 W64.to_uint0).
+
+  + by move =>?;rewrite /SETcc H0 // to_uint_zeroextu64 /= wordP => *; smt(W8.wordP W8.zerowE W8.orwE W8.to_uint_eq W8.to_uint1 W8.to_uint0 W64.to_uint1 W64.to_uint0).
+
+ + by rewrite /SETcc H0 // to_uint_zeroextu64 /= wordP;smt(W8.wordP W8.orwE W8.to_uint_eq W8.to_uint1 W8.to_uint0 W64.to_uint1 W64.to_uint0).
     
 qed.
 
-
-
-
-
-
- 
 op count_nonzero_coeffs(p : poly) = count (fun c => c = Zq.one) (to_list p).
 
 import Bigint BIA. 

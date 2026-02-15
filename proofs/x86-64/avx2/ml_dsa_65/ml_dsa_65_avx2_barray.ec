@@ -5840,7 +5840,8 @@ module M = {
       decoded_offset <- (decoded_offset `<<` 8);
       j <- 0;
       while ((j < 256)) {
-        index <- (decoded_offset + j);
+        index <- decoded_offset;
+        index <- (index + j);
         hints <- (BArray6144.set32 hints index (W32.of_int 0));
         j <- (j + 1);
       }
@@ -5871,7 +5872,8 @@ module M = {
               
             }
             if ((ill_formed_hint = (W64.of_int 0))) {
-              index <- (decoded_offset + (W64.to_uint hint_at_j));
+              index <- decoded_offset;
+              index <- (index + (W64.to_uint hint_at_j));
               hints <- (BArray6144.set32 hints index (W32.of_int 1));
               j <- (j + 1);
             } else {

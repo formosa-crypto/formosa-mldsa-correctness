@@ -1090,8 +1090,6 @@ module M = {
     var shift:W256.t;
     var eta_0:W256.t;
     var encoding_shuffles:W256.t;
-    var input_offset:int;
-    var output_offset:int;
     var c0:W256.t;
     var c1:W256.t;
     var c2:W256.t;
@@ -1100,6 +1098,8 @@ module M = {
     var c5:W256.t;
     var c6:W256.t;
     var c7:W256.t;
+    var input_offset:int;
+    var output_offset:int;
     temp <- (W64.of_int ((16 `<<` 8) + 1));
     shift <- (zeroextu256 (VMOV_64 temp));
     shift <- (VPBROADCAST_16u16 (truncateu16 shift));
@@ -1158,9 +1158,9 @@ module M = {
     var decoding_shuffles:W256.t;
     var shifts:W256.t;
     var coefficients:W256.t;
+    var bytes:W128.t;
     var input_offset:int;
     var output_offset:int;
-    var bytes:W128.t;
     var byte_group:int;
     temp <- (W64.of_int ((1 `<<` 4) - 1));
     mask <- (zeroextu256 (VMOV_64 temp));
@@ -1212,13 +1212,13 @@ module M = {
                                     polynomial:BArray1024.t) : BArray640.t = {
     var temp:W64.t;
     var gamma1:W256.t;
-    var output_offset:int;
-    var input_offset:int;
     var coefficients:W256.t;
     var lower:W128.t;
     var upper:W128.t;
     var final_output_block:BArray16.t;
     var i:int;
+    var output_offset:int;
+    var input_offset:int;
     final_output_block <- witness;
     temp <- (W64.of_int (1 `<<` 19));
     gamma1 <- (zeroextu256 (VMOV_64 temp));
@@ -1272,10 +1272,10 @@ module M = {
     var gamma1:W256.t;
     var gamma1_times_2_mask:W256.t;
     var coefficients:W256.t;
-    var input_offset:int;
-    var output_offset:int;
     var sixteen_bytes:W128.t;
     var shifts:W256.t;
+    var input_offset:int;
+    var output_offset:int;
     temp <- (W64.of_int (1 `<<` 19));
     temp1 <- (VMOV_64 temp);
     gamma1 <- (VPBROADCAST_8u32 (truncateu32 temp1));
@@ -5549,12 +5549,12 @@ module M = {
   }
   proc t0__encode_polynomial (t0_encoded:BArray416.t, t0:BArray1024.t) : 
   BArray416.t = {
-    var output_offset:int;
-    var input_offset:int;
     var coefficients:W256.t;
     var bytestream:W128.t;
     var final_encoded_output:BArray16.t;
     var i:int;
+    var output_offset:int;
+    var input_offset:int;
     final_encoded_output <- witness;
     output_offset <- 0;
     input_offset <- 0;
@@ -5613,10 +5613,10 @@ module M = {
   }
   proc t0____decode_polynomial (t0:BArray1024.t, t0_encoded:BArray416.t) : 
   BArray1024.t = {
-    var output_offset:int;
-    var input_offset:int;
     var bytestream:W128.t;
     var coefficients:W256.t;
+    var output_offset:int;
+    var input_offset:int;
     output_offset <- 0;
     input_offset <- 0;
     while ((input_offset < (((13 * 256) %/ 8) - 13))) {
@@ -5666,12 +5666,12 @@ module M = {
   }
   proc t1__encode_polynomial (t1_encoded:BArray320.t, t1:BArray1024.t) : 
   BArray320.t = {
-    var output_offset:int;
-    var input_offset:int;
     var coefficients:W256.t;
     var bytestream:W128.t;
     var final_encoded_output:BArray16.t;
     var i:int;
+    var output_offset:int;
+    var input_offset:int;
     final_encoded_output <- witness;
     output_offset <- 0;
     input_offset <- 0;
@@ -5714,10 +5714,10 @@ module M = {
   proc t1__decode_polynomial (t1:BArray1024.t, t1_encoded:BArray320.t) : 
   BArray1024.t = {
     var coefficients:W256.t;
-    var input_offset:int;
-    var output_offset:int;
     var bytestream:W128.t;
     var shifts:W256.t;
+    var input_offset:int;
+    var output_offset:int;
     coefficients <- (set0_256);
     input_offset <- 0;
     output_offset <- 0;
@@ -5749,13 +5749,13 @@ module M = {
   }
   proc signature____encode_hint (signature:BArray3309.t, hint_0:BArray6144.t) : 
   BArray3309.t = {
+    var hint_coefficient:W32.t;
+    var condition2:bool;
+    var condition1:bool;
     var i:int;
     var hints_written:int;
     var j:int;
     var hint_offset:int;
-    var hint_coefficient:W32.t;
-    var condition2:bool;
-    var condition1:bool;
     i <- 0;
     while ((i < (55 + 6))) {
       signature <-
@@ -5777,7 +5777,8 @@ module M = {
         if ((hint_coefficient <> (W32.of_int 0))) {
           signature <-
           (BArray3309.set8 signature
-          ((48 + (5 * ((20 * 256) %/ 8))) + hints_written) (W8.of_int j));
+          ((48 + (5 * ((20 * 256) %/ 8))) + hints_written)
+          (truncateu8 (W64.of_int j)));
           hints_written <- (hints_written + 1);
         } else {
           
@@ -5787,7 +5788,7 @@ module M = {
       }
       signature <-
       (BArray3309.set8 signature (((48 + (5 * ((20 * 256) %/ 8))) + 55) + i)
-      (W8.of_int hints_written));
+      (truncateu8 (W64.of_int hints_written)));
       i <- (i + 1);
       condition1 <- (i < 6);
     }
@@ -5798,8 +5799,8 @@ module M = {
                             signer_response:BArray5120.t, hint_0:BArray6144.t) : 
   BArray3309.t = {
     var aux:BArray3200.t;
-    var i:int;
     var bytes:W128.t;
+    var i:int;
     i <- 0;
     while ((i < 48)) {
       bytes <- (BArray48.get128d commitment_hash i);
@@ -5815,12 +5816,6 @@ module M = {
   proc signature____decode_hint (hints:BArray6144.t, hint_encoded:BArray61.t) : 
   BArray6144.t * W64.t = {
     var ill_formed_hint:W64.t;
-    var previous_true_hints_seen:int;
-    var encoded_offset:int;
-    var decoded_offset:int;
-    var j:int;
-    var index:int;
-    var current_true_hints_seen:int;
     var hint_at_j:W64.t;
     var hint_at_j_minus_one:W64.t;
     var done2:W8.t;
@@ -5828,6 +5823,12 @@ module M = {
     var done1:W8.t;
     var hint_0:W64.t;
     var done3:W8.t;
+    var previous_true_hints_seen:int;
+    var encoded_offset:int;
+    var decoded_offset:int;
+    var j:int;
+    var index:int;
+    var current_true_hints_seen:int;
     ill_formed_hint <- (W64.of_int 0);
     previous_true_hints_seen <- 0;
     encoded_offset <- 0;
@@ -5870,8 +5871,7 @@ module M = {
               
             }
             if ((ill_formed_hint = (W64.of_int 0))) {
-              index <-
-              (W64.to_uint ((W64.of_int decoded_offset) + hint_at_j));
+              index <- (decoded_offset + (W64.to_uint hint_at_j));
               hints <- (BArray6144.set32 hints index (W32.of_int 1));
               j <- (j + 1);
             } else {
@@ -6834,8 +6834,6 @@ module M = {
     var temp:W64.t;
     var shift:W256.t;
     var encoding_shuffles:W256.t;
-    var input_offset:int;
-    var output_offset:int;
     var c0:W256.t;
     var c1:W256.t;
     var c2:W256.t;
@@ -6844,6 +6842,8 @@ module M = {
     var c5:W256.t;
     var c6:W256.t;
     var c7:W256.t;
+    var input_offset:int;
+    var output_offset:int;
     temp <- (W64.of_int ((16 `<<` 8) + 1));
     shift <- (zeroextu256 (VMOV_64 temp));
     shift <- (VPBROADCAST_16u16 (truncateu16 shift));

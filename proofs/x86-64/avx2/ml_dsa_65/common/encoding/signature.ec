@@ -279,11 +279,6 @@ rcondt {2} 1; 1: by auto => /> /#.
 
 auto => /> &1 &2 ????? H0 H????.
 have ? : 0<= to_uint hint_encoded{2}.[index{1}]  < 256 by smt(W8.to_uint_cmp pow2_8).
-have -> : to_uint (W64.of_int (n * encoded_offset{2}) + zeroextu64 hint_encoded{2}.[index{1}]) =
-      n*encoded_offset{2} + to_uint hint_encoded{2}.[index{1}].
-+ rewrite to_uintD_small; 1: by rewrite of_uintK /= to_uint_zeroextu64 /#.
-  by rewrite of_uintK /= modz_small 1:/# to_uint_zeroextu64 /#.
-
   
 do split; 1:smt().
 
@@ -294,12 +289,12 @@ do split; 1:smt().
   rewrite mapiE 1:/# initiE 1:/# /= tP => [# H1 H2].
   have := H1 kk _;1:smt().
   rewrite mapiE 1:/# /= get_of_list 1:/# nth_sub 1:/# /= => H3.
-  rewrite !get_setE 1,2:/#. 
+  rewrite !to_uint_zeroextu64 !get_setE 1,2:/#. 
   case (k = encoded_offset{2}) => ? ; last by smt().
   case (kk = to_uint hint_encoded{2}.[index{1}]) => ?;2: by smt(Array256.get_setE).
   by rewrite ifT 1:/# /=; smt(Array256.get_setE).
 
-+ rewrite /wpoly_urng allP => kk kkb /=.
++ rewrite to_uint_zeroextu64 /wpoly_urng allP => kk kkb /=.
   have [?+] := H _ k _;1,2:smt().
   rewrite /wpoly_urng allP /= => H1.
   rewrite initiE 1:/# /= get_of_list 1:/# /= nth_sub 1:/# /= get_setE 1:/#.
@@ -450,7 +445,8 @@ seq 1 2 : (#{/~i{1}}{i{2}}{index{1}}{hints_written{2}}pre
       by rewrite big_rcons ifT 1:/# /= take0 /= (take_oversize j2) ?size_to_list /#.
    + apply (eq_from_nth witness);1:smt(size_put size_mkseq).
      move => k; rewrite size_put size_mkseq /max ifT 1:/# /= => kb.
-     by rewrite nth_put 1:/# /=; smt(nth_mkseq Array3309.get_setE).
+     rewrite nth_put 1:/# /= !nth_mkseq 1,2:/# /= /=.
+     rewrite get_setE 1:/#  /truncateu8 /= of_uintK /=;smt(W8.to_uint_cmp pow2_8).
    + by smt(Array3309.get_setE).
 
  seq 0 4 : (#pre /\
@@ -478,7 +474,8 @@ if.
      by rewrite -cats1 count_cat /= /#.
    + apply (eq_from_nth witness);1:smt(size_put size_mkseq).
      move => k; rewrite size_put size_mkseq /max ifT 1:/# /= => kb.
-     by rewrite nth_put 1:/# /=; smt(nth_mkseq Array3309.get_setE).
+     rewrite nth_put 1:/# /= !nth_mkseq 1,2:/# /= /=.
+     rewrite get_setE 1:/#  /truncateu8 /= of_uintK /=;smt(W8.to_uint_cmp pow2_8).
 + auto => /> &1 &2 ????????????Hone; do split; 2..:smt().
    + move : Hone;rewrite /decoded_unflatten /count_nonzero_prefix ifT 1:/# ifT 1:/# /=  (take_nth witness);1: by rewrite size_to_list /#.
      rewrite initiE 1:/# /= get_of_list 1:/# nth_sub 1:/# /=.

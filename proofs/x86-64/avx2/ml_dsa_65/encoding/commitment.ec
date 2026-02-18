@@ -3,7 +3,7 @@ require import AllCore List IntDiv RealExp.
 from Jasmin require import JModel_x86.
 require import Bindings.
 
-from JazzEC require import Ml_dsa_65_avx2.
+from JazzEC require import Ml_dsa_65_avx2 Mldsa_65_prelude.
 from JazzEC require import Array256 Array128.
 from Spec require import GFq Rq Serialization Conversion Parameters VecMat MLDSA_W32_Rep.
 import BitEncoding BitChunking.
@@ -117,25 +117,19 @@ import VecMat PolyKVec.
 
 require import Array768 Array1536.
 
-op  input_unflatten(a : 'a Array1536.t) =
-     KArray.init (fun i => Array256.of_list witness (sub a (256*i) 256)).
-op  output_unflatten(a : 'a Array768.t) =
-     KArray.init (fun i => Array128.of_list witness (sub a (128*i) 128)).
-
 lemma commitment_encode _a :
-    kvec = 6 =>
     hoare [ M.commitment____encode :
-       commitment = _a /\ wpolykvec_urng (input_unflatten _a) b_w1 
+       commitment = _a /\ wpolykvec_urng (kvec_unflatten256 _a) b_w1 
      ==>
-       output_unflatten res = 
-           KArray.map (fun (p : poly) => Array128.of_list witness (SimpleBitPack  p b_w1)) (liftu_wpolykvec (input_unflatten _a))
+       kvec_unflatten128 res = 
+           KArray.map (fun (p : poly) => Array128.of_list witness (SimpleBitPack  p b_w1)) (liftu_wpolykvec (kvec_unflatten256 _a))
    ].
-move => Hkvec.
+have Hkvec := mldsa65_kvec.
 proc => /=.
-while (0 <= i <= 6 /\ commitment = _a /\ wpolykvec_urng (input_unflatten _a) b_w1  /\
+while (0 <= i <= 6 /\ commitment = _a /\ wpolykvec_urng (kvec_unflatten256 _a) b_w1  /\
        forall k, 0 <= k < i =>
-       (output_unflatten encoded_commitment).[k] =
-       (map (fun (p : poly) => Array128.of_list witness (SimpleBitPack  p b_w1)) (liftu_wpolykvec (input_unflatten _a))).[k]);
+       (kvec_unflatten128 encoded_commitment).[k] =
+       (map (fun (p : poly) => Array128.of_list witness (SimpleBitPack  p b_w1)) (liftu_wpolykvec (kvec_unflatten256 _a))).[k]);
        last first.
        + auto => /> &hr *;do split;1: smt().
          move => r0 j0 *;rewrite tP => k kb; smt().
@@ -150,15 +144,15 @@ move => ? rr Hrr; do split;1,2: smt().
 move => k kbl kbh.
 case(0<=k<i{hr}) => *.
 + 
-   have -> : (output_unflatten
+   have -> : (kvec_unflatten128
    (Array768.init
       (fun (ii : int) => if i{hr} * 128 <= ii < i{hr} * 128 + 128 then rr.[ii - i{hr} * 128] else encoded_commitment{hr}.[ii]))).[k] =
-    ((output_unflatten encoded_commitment{hr})).[k]; last by smt().
+    ((kvec_unflatten128 encoded_commitment{hr})).[k]; last by smt().
   rewrite !initiE 1..2:/# /= /of_list /= tP => kk kkb.
   rewrite !initiE 1,2:/# !nth_sub 1,2:/# initiE 1:/# /= /#.
 have -> : k = i{hr} by smt().
 + have -> : 
-   (output_unflatten
+   (kvec_unflatten128
    (Array768.init
       (fun (ii : int) => if i{hr} * 128 <= ii < i{hr} * 128 + 128 then rr.[ii - i{hr} * 128] else encoded_commitment{hr}.[ii]))).[i{hr}]  =
     (rr); last first.

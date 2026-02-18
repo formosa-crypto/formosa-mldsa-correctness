@@ -3,7 +3,7 @@ require import AllCore List IntDiv RealExp.
 from Jasmin require import JModel_x86.
 require import Bindings.
 
-from JazzEC require import Ml_dsa_65_avx2.
+from JazzEC require import Ml_dsa_65_avx2 Mldsa_65_prelude.
 from JazzEC require import Array256 Array128.
 from Spec require import GFq Rq Serialization Conversion Parameters VecMat MLDSA_W32_Rep.
 import BitEncoding BitChunking.
@@ -16,42 +16,29 @@ require import Array768 Array1536.
 
 require import Error_polynomial.
 
-(* For s2, Eta = 4 for ML-DSA-65 *)
 abbrev Eta = Error_polynomial.Eta.
 
 import VecMat PolyLVec.
 
-(*
-   For s2:
-   - Input: 6 polynomials × 256 W32.t coefficients = 1536 W32.t elements (6144 bytes)
-   - Output: 1536 coefficients × 4 bits = 6144 bits = 768 bytes
-*)
-
-op  input_unflatten(a : 'a Array1536.t) =
-     LArray.init (fun i => Array256.of_list witness (sub a (256*i) 256)).
-op  output_unflatten(a : 'a Array768.t) =
-     LArray.init (fun i => Array128.of_list witness (sub a (128*i) 128)).
-
 lemma s2_encode _a :
-    lvec = 6 =>
     hoare [ M.s2____encode :
-       s2 = _a /\ wpolylvec_srng (input_unflatten _a) Eta Eta
+       s2 = _a /\ wpolykvec_srng (kvec_unflatten256 _a) Eta Eta
      ==>
-       output_unflatten res =
-           LArray.map (fun (p : poly) => Array128.of_list witness (BitPack p Eta Eta)) (lifts_wpolylvec (input_unflatten _a))
+       kvec_unflatten128 res =
+           KArray.map (fun (p : poly) => Array128.of_list witness (BitPack p Eta Eta)) (lifts_wpolykvec (kvec_unflatten256 _a))
    ].
-move => Hkvec.
+have Hkvec := mldsa65_kvec.
 proc => /=.
-while (0 <= i <= 6 /\ s2 = _a /\ wpolylvec_srng (input_unflatten _a) Eta Eta  /\
+while (0 <= i <= 6 /\ s2 = _a /\ wpolykvec_srng (kvec_unflatten256 _a) Eta Eta  /\
        forall k, 0 <= k < i =>
-       (output_unflatten encoded).[k] =
-       (map (fun (p : poly) => Array128.of_list witness (BitPack p Eta Eta)) (lifts_wpolylvec (input_unflatten _a))).[k]);
+       (kvec_unflatten128 encoded).[k] =
+       (map (fun (p : poly) => Array128.of_list witness (BitPack p Eta Eta)) (lifts_wpolykvec (kvec_unflatten256 _a))).[k]);
        last first.
        + auto => /> &hr *;do split;1: smt().
          move => r0 j0 *;rewrite tP => k kb; smt().
 wp; ecall (error_polynomial_encode (Array256.init (fun (i_0 : int) => _a.[i * 256 + i_0]))).
 auto => /> &hr ?? Hrng H ?;do split;1:smt().
-+ move : Hrng; rewrite /wpolylvec_srng /wpoly_srng !allP /=  => Hrng ii iib.
++ move : Hrng; rewrite /wpolykvec_srng /wpoly_srng !allP /=  => Hrng ii iib.
   have := Hrng i{hr} _; 1:smt().
   rewrite allP /= /input_unflatten initiE 1:/# /= => Hrngj.
   have := Hrngj ii _; 1:smt().
@@ -60,15 +47,15 @@ move => ?? rr Hrr; do split;1,2: smt().
 move => k kbl kbh.
 case(0<=k<i{hr}) => *.
 +
-   have -> : (output_unflatten
+   have -> : (kvec_unflatten128
    (Array768.init
       (fun (i_0 : int) => if 128 * i{hr} <= i_0 < 128 * i{hr} + 128 then rr.[i_0 - 128 * i{hr}] else encoded{hr}.[i_0]))).[k] =
-    ((output_unflatten encoded{hr})).[k]; last by smt().
+    ((kvec_unflatten128 encoded{hr})).[k]; last by smt().
   rewrite !initiE 1..2:/# /= /of_list /= tP => kk kkb.
   rewrite !initiE 1,2:/# !nth_sub 1,2:/# initiE 1:/# /= /#.
 have -> : k = i{hr} by smt().
 + have -> :
-   (output_unflatten
+   (kvec_unflatten128
    (Array768.init
       (fun (i_0 : int) => if 128 * i{hr} <= i_0 < 128 * i{hr} + 128 then rr.[i_0 - 128 * i{hr}] else encoded{hr}.[i_0]))).[i{hr}]  =
     (rr); last first.
@@ -80,31 +67,20 @@ rewrite initiE 1:/# /= tP => ii iib.
 rewrite  initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.
 qed.
 
-(*
-   For s2 decode:
-   - Input: 768 bytes = Array768 W8.t
-   - Output: 6 polynomials × 256 W32.t coefficients = 1536 W32.t elements
-*)
-
-op  decode_input_unflatten(a : 'a Array768.t) =
-     LArray.init (fun i => Array128.of_list witness (sub a (128*i) 128)).
-op  decode_output_unflatten(a : 'a Array1536.t) =
-     LArray.init (fun i => Array256.of_list witness (sub a (256*i) 256)).
 
 lemma s2_decode _a :
-    lvec = 6 =>
     hoare [ M.s2____decode :
        encoded = _a
      ==>
-       lifts_wpolylvec (decode_output_unflatten res) =
-           LArray.map (fun (bytes : W8.t Array128.t) => BitUnpack (to_list bytes) Eta Eta) (decode_input_unflatten _a)
+       lifts_wpolykvec (kvec_unflatten256 res) =
+           KArray.map (fun (bytes : W8.t Array128.t) => BitUnpack (to_list bytes) Eta Eta) (kvec_unflatten128 _a)
    ].
-move => Hkvec.
+have Hkvec := mldsa65_kvec.
 proc => /=.
 while (0 <= i <= 6 /\ encoded = _a /\
        forall k, 0 <= k < i =>
-       (lifts_wpolylvec (decode_output_unflatten s2)).[k] =
-       (map (fun (bytes : W8.t Array128.t) => BitUnpack (to_list bytes) Eta Eta) (decode_input_unflatten _a)).[k]);
+       (lifts_wpolykvec (kvec_unflatten256 s2)).[k] =
+       (map (fun (bytes : W8.t Array128.t) => BitUnpack (to_list bytes) Eta Eta) (kvec_unflatten128 _a)).[k]);
        last first.
        + auto => /> &hr *; do split; 1: smt().
          move => r0 j0 *; rewrite tP => k kb; smt().
@@ -113,16 +89,16 @@ auto => /> &hr ??H?;split;1:smt().
 move => ? rr Hrr;do split;1,2:smt().
 move => k kbl kbh.
 case(0<=k<i{hr}) => *.
-+ have -> : (lifts_wpolylvec
-   (decode_output_unflatten
++ have -> : (lifts_wpolykvec
+   (kvec_unflatten256
       (Array1536.init
          (fun (i_0 : int) => if i{hr} * n <= i_0 < i{hr} * n + n then rr.[i_0 - i{hr} * n] else s2{hr}.[i_0])))).[k] =
-    (lifts_wpolylvec (decode_output_unflatten s2{hr})).[k]; last by smt().
+    (lifts_wpolykvec (kvec_unflatten256 s2{hr})).[k]; last by smt().
   rewrite !mapiE 1..2:/# initiE 1:/# /= initiE 1:/# /= tP =>  ii iib.
   rewrite mapiE 1:/# /= initiE 1:/# /= mapiE 1:/# /= initiE 1:/# /= !nth_sub 1,2:/# initiE 1:/# /= /#.
 have -> : k = i{hr} by smt().
-+ have -> : (lifts_wpolylvec
-   (decode_output_unflatten
++ have -> : (lifts_wpolykvec
+   (kvec_unflatten256
       (Array1536.init
          (fun (i_0 : int) => if i{hr} * n <= i_0 < i{hr} * n + n then rr.[i_0 - i{hr} * n] else s2{hr}.[i_0])))).[i{hr}]  =
     (lifts_wpoly rr); last first.

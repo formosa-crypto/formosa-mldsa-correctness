@@ -3,7 +3,7 @@ require import AllCore List IntDiv RealExp.
 from Jasmin require import JModel_x86.
 require import Bindings.
 
-from JazzEC require import Ml_dsa_65_avx2.
+from JazzEC require import Ml_dsa_65_avx2 Mldsa_65_prelude.
 from JazzEC require import Array256 Array320.
 from Spec require import GFq Rq Serialization Conversion Parameters VecMat MLDSA_W32_Rep.
 import BitEncoding BitChunking.

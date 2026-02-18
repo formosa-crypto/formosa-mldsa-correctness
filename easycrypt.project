@@ -13,5 +13,4 @@ idirs = jasmin-dilithium/proofs/security
 idirs = proofs/eclib
 idirs = Spec:proofs/specs
 idirs = JazzEC:proofs/arrays
-rdirs = JazzEC:proofs/x86-64/ref/ml_dsa_65
 rdirs = JazzEC:proofs/x86-64/avx2/ml_dsa_65

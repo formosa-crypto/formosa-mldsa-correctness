@@ -3,7 +3,7 @@ require import AllCore List IntDiv RealExp.
 from Jasmin require import JModel_x86.
 require import Bindings.
 
-from JazzEC require import Ml_dsa_65_avx2.
+from JazzEC require import Ml_dsa_65_avx2 Mldsa_65_prelude.
 from JazzEC require import Array256 Array640.
 from Spec require import GFq Rq Serialization Conversion Parameters MLDSA_W32_Rep.
 import BitEncoding BitChunking.
@@ -44,11 +44,10 @@ qed.
 
 (* Circuit spec *)
 
-op gamma1 : int = 524288. (* 2**19 *) 
-lemma ilog_gamma1 : ilog 2 (gamma1 - 1 + gamma1) = 19 by rewrite /gamma1 /=.
+lemma ilog_gamma1 : ilog 2 (gamma1 - 1 + gamma1) = 19 by rewrite mldsa65_gamma1 /=.
 
 op gamma1_encode_polynomial_lane(c : W32.t) : W20.t = 
-    truncateu_32_20 (W32_sub (W32.of_int gamma1) c).
+    truncateu_32_20 (W32_sub (W32.of_int 524288) c).
 
  
 lemma BitPack_liftE (p : wpoly) :
@@ -57,12 +56,13 @@ lemma BitPack_liftE (p : wpoly) :
   = to_list (let mapped = init_256_20 (fun i => gamma1_encode_polynomial_lane p.[i]) in
              init_array640_w8 (fun i => W8.init (fun j => mapped.[(i*8+j) %/ 20].[(i*8+j) %% 20]))).
 proof.
+have gamma1_val := mldsa65_gamma1.
 move=> h @/BitPack; (pose l := ilog 2 _) => /=.
 have Hlog := ilog_gamma1.
 have ? : size
-  (flatten (map (fun (x : W32.t) => IntegerToBits (Top.gamma1 - as_sint (incoeff (to_sint x))) (l + 1)) (to_list p))) = 256*20.
+  (flatten (map (fun (x : W32.t) => IntegerToBits (gamma1 - as_sint (incoeff (to_sint x))) (l + 1)) (to_list p))) = 256*20.
 +  rewrite  (size_flatten_ctt (l+1)).
-  +  by move => x; rewrite mapP => Hx;elim Hx => xw /= [? ->]; rewrite /IntegerToBits BS2Int.size_int2bs //.
+  +  by move => x; rewrite mapP => Hx;elim Hx => xw /= [? ->]; rewrite /IntegerToBits BS2Int.size_int2bs // /#.
   by rewrite size_map /= size_to_list  /l /= /#.
 
 rewrite /BitsToBytes !array256_mapE /=.
@@ -74,7 +74,7 @@ rewrite wordP => j jb.
 rewrite !initiE //= initiE 1:/# /= get_bits2w // nth_take // 1:/# nth_drop;2: by smt().
 + rewrite nth_iota /#. 
 rewrite (nth_flatten false (l+1)).
-+ by rewrite allP => x;rewrite mapP => Hx;elim Hx => xw /= [? ->]; rewrite /IntegerToBits BS2Int.size_int2bs //.
++ by rewrite allP => x;rewrite mapP => Hx;elim Hx => xw /= [? ->]; rewrite /IntegerToBits BS2Int.size_int2bs // /#.
 rewrite nth_iota 1:/#  (nth_map witness) /=; 1: by rewrite size_to_list /= /#. 
 rewrite /gamma1_encode_polynomial_lane .
 pose v:=p.[(i * 8 + j) %/ gamma1_bits].
@@ -84,17 +84,17 @@ move: h => @/wpoly_srng /array256_allP /(_ v _) //= /=.
 move => h. 
 rewrite incoeffK_sint_small 1:/# /W32_sub truncateu_32_20E get_bits2w 1:/#.
 rewrite nth_take 1,2:/# w2bitsE. 
-have  -> := BS2Int.int2bs_cat 20 32 (to_uint (W32.of_int Top.gamma1 - v)) _;1:smt().
+have  -> := BS2Int.int2bs_cat 20 32 (to_uint (W32.of_int 524288 - v)) _;1:smt().
 rewrite /IntegerToBits nth_cat ifT;1: by rewrite BS2Int.size_int2bs /#.
 congr;2:smt().
 congr;1:smt(). 
-have := (W32.of_uintK (Top.gamma1 - to_sint v)).
+have := (W32.of_uintK (gamma1 - to_sint v)).
 rewrite modz_small;1:by smt(pow2_64).
 move => <-; rewrite -W32.of_intD';congr.
 rewrite W32.of_intN;congr. 
 rewrite /to_sint /smod /=.
 case (2147483648 <= to_uint v) => ?;last by smt(W32.to_uintK pow2_32).
-move : h; rewrite /to_sint /smod ifT //= => ?.
+move : h; rewrite /to_sint /smod ifT /#.
 congr;rewrite to_uint_eq of_uintK /=;smt(W32.to_uint_cmp pow2_32). 
 qed.
 
@@ -104,8 +104,9 @@ lemma gamma1_encode_polynomial _a :
      ==>
        to_list res = BitPack (lifts_wpoly _a) (gamma1-1) gamma1
    ].
+have gamma1_val := mldsa65_gamma1.
 proc;inline * => /=.
-proc change 2 : { temp <- W64.of_int Top.gamma1;}; 1: by auto.
+proc change 2 : { temp <- W64.of_int 524288;}; 1: by  auto; rewrite /(`<<`) /= /#.
 proc change 3 : { gamma1 <- zeroextu256 temp; }.
 + auto => &1 &2 ->; rewrite /VMOV_64 zeroextu256E zeroextu256E.
   rewrite wordP => i ib.
@@ -130,13 +131,13 @@ conseq (:  _ ==>
            output = let mapped = init_256_20 (fun i => gamma1_encode_polynomial_lane _a.[i]) in
              init_array640_w8 (fun i => W8.init (fun j => mapped.[(i*8+j) %/ 20].[(i*8+j) %% 20])));last by circuit.
 
-+ by move => &hr [<- Hrng] ? /= => ->;rewrite BitPack_liftE //=.
++ by move => &hr [<- Hrng] ? /= => ->;rewrite BitPack_liftE //= /#.
 
 qed.
 
 
 op gamma1_decode_to_polynomial_lane(c : W20.t) : W32.t = 
-    (W32_sub (W32.of_int gamma1) (zeroextu_20_32 c)).
+    (W32_sub (W32.of_int 524288) (zeroextu_20_32 c)).
 
 
 lemma BitUnack_liftE (bytes : W8.t Array640.t) :
@@ -148,6 +149,7 @@ lemma BitUnack_liftE (bytes : W8.t Array640.t) :
            gamma1_decode_to_polynomial_lane
              (W20.init (fun (j : int) => bytes.[(gamma1_bits * i + j) %/ 8].[(gamma1_bits * i + j) %% 8]))))).
 proof.
+have gamma1_val := mldsa65_gamma1.
 move=>  @/BitUnpack /=; rewrite tP => i ib.
 rewrite initiE 1:// mapiE //= initiE 1:/# /=.
 pose l1 := List.map _ _.
@@ -175,7 +177,7 @@ rewrite /BitsToInteger.
 pose p := BS2Int.bs2int  (take gamma1_bits (drop (gamma1_bits * i) (BytesToBits (to_list bytes)))) .
 move => ?.
 have ? : 0 <= p by smt(BS2Int.bs2int_ge0).
-have <- : p = to_uint (W20.init (fun (j : int) => bytes.[(gamma1_bits * i + j) %/ 8].[(gamma1_bits * i + j) %% 8])); last by have /= :=  W32.to_sintK_small (Top.gamma1 - p); smt().
+have <- : p = to_uint (W20.init (fun (j : int) => bytes.[(gamma1_bits * i + j) %/ 8].[(gamma1_bits * i + j) %% 8])); last by have /= :=  W32.to_sintK_small (gamma1 - p); smt().
 rewrite /to_uint /p;congr.
 apply (eq_from_nth false).
 + rewrite size_take // size_drop 1:/# size_w2bits /BytesToBits. 
@@ -202,7 +204,7 @@ lemma gamma1_decode_to_polynomial _a :
        lifts_wpoly res = BitUnpack (to_list _a) (gamma1-1) gamma1
    ].
 proc => /=.
-proc change 1 : { temp <- W64.of_int Top.gamma1;}; 1: by auto.
+proc change 1 : { temp <- W64.of_int 524288;}; 1: by  auto; rewrite /(`<<`) /= /#.
 proc change 2 : { temp1 <- zeroextu128 temp; }.
 + auto => &1 &2 ->; rewrite /VMOV_64 zeroextu128E.
   rewrite wordP => i ib.
@@ -240,26 +242,21 @@ import VecMat PolyLVec.
 
 require import Array1280 Array3200.
 
-op  encode_input_unflatten(a : 'a Array1280.t) =
-     LArray.init (fun i => Array256.of_list witness (sub a (256*i) 256)).
-op  encode_output_unflatten(a : 'a Array3200.t) =
-     LArray.init (fun i => Array640.of_list witness (sub a (640*i) 640)).
-
 lemma gamma1_encode _a :
-    lvec = 5 =>
     hoare [ M.gamma1____encode :
-       decoded = _a /\ wpolylvec_srng (encode_input_unflatten _a) (gamma1-1) gamma1
+       decoded = _a /\ wpolylvec_srng (lvec_unflatten256 _a) (gamma1-1) gamma1
      ==>
-       encode_output_unflatten res =
-           LArray.map (fun (p : poly) => Array640.of_list witness (BitPack p (gamma1-1) gamma1)) (lifts_wpolylvec (encode_input_unflatten _a))
+       lvec_unflatten640 res =
+           LArray.map (fun (p : poly) => Array640.of_list witness (BitPack p (gamma1-1) gamma1)) (lifts_wpolylvec (lvec_unflatten256 _a))
    ].
-move => Hlvec.
+have Hlvec := mldsa65_lvec.
+have Hgamma1 := mldsa65_gamma1.
 proc => /=.
 while (0 <= i <= 5 /\ decoded = _a /\
-       wpolylvec_srng (encode_input_unflatten _a) (gamma1-1) gamma1  /\
+       wpolylvec_srng (lvec_unflatten256 _a) (gamma1-1) gamma1  /\
        forall k, 0 <= k < i =>
-       (encode_output_unflatten encoded).[k] =
-       (map (fun (p : poly) => Array640.of_list witness (BitPack p (gamma1-1) gamma1)) (lifts_wpolylvec (encode_input_unflatten _a))).[k]);
+       (lvec_unflatten640 encoded).[k] =
+       (map (fun (p : poly) => Array640.of_list witness (BitPack p (gamma1-1) gamma1)) (lifts_wpolylvec (lvec_unflatten256 _a))).[k]);
        last first.
        + auto => /> &hr *;do split;1: smt().
          by move => r0 j0 *;rewrite tP => k kb; smt().
@@ -274,45 +271,61 @@ move => ? rr Hrr; do split;1,2: smt().
 move => k kbl kbh.
 case(0<=k<i{hr}) => *.
 +
-   have -> : (encode_output_unflatten
+   have -> : (lvec_unflatten640
    (Array3200.init
       (fun (i_0 : int) => if i{hr} * 640 <= i_0 < i{hr} * 640 + 640 then rr.[i_0 - i{hr} * 640] else encoded{hr}.[i_0]))).[k] =
-    ((encode_output_unflatten encoded{hr})).[k]; last by smt().
+    ((lvec_unflatten640 encoded{hr})).[k]; last by smt().
   rewrite !initiE 1..2:/# /= /of_list /= tP => kk kkb.
   rewrite !initiE 1,2:/# !nth_sub 1,2:/# initiE 1:/# /= /#.
 have -> : k = i{hr} by smt().
 + have -> :
-   (encode_output_unflatten
+   (lvec_unflatten640
    (Array3200.init
       (fun (i_0 : int) => if i{hr} * 640 <= i_0 < i{hr} * 640 + 640 then rr.[i_0 - i{hr} * 640] else encoded{hr}.[i_0]))).[i{hr}]  =
     (rr); last first.
   + have <- := Array640.to_listK witness rr;rewrite Hrr mapiE 1:/# /=;congr;congr.
-    rewrite /lifts_wpolylvec mapiE 1:/#;congr;rewrite /encode_input_unflatten initiE 1:/# /=.
+    rewrite /lifts_wpolylvec mapiE 1:/#;congr;rewrite initiE 1:/# /=.
     rewrite tP => kk kkb; rewrite !initiE 1,2:/# /= nth_sub /#.
 
 rewrite initiE 1:/# /= tP => ii iib.
 rewrite  initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.
 qed.
 
-op  decode_input_unflatten(a : 'a Array3200.t) =
-     LArray.init (fun i => Array640.of_list witness (sub a (640*i) 640)).
-op  decode_output_unflatten(a : 'a Array1280.t) =
-     LArray.init (fun i => Array256.of_list witness (sub a (256*i) 256)).
+lemma gamma2_encode_polynomial_ll : islossless M.gamma1____encode_polynomial.
+proc.
+while (0 <= i <= 10) (10 - i); 1: by auto => /> /#.
+inline 9; wp;conseq (: _ ==> true); 1: by smt().
+by while (0 <= input_offset <= 992 /\ input_offset %% 32 = 0) (992 - input_offset); move => *; inline *; auto => /> /#.
+qed.
+
+lemma gamma1_encode_ll : islossless  M.gamma1____encode.
+proc;unroll for ^while.
+by do 5!(wp;call gamma2_encode_polynomial_ll).
+qed.
+
+lemma gamma1_encode_ph _a :
+    phoare [ M.gamma1____encode :
+       decoded = _a /\ wpolylvec_srng (lvec_unflatten256 _a) (gamma1-1) gamma1
+     ==>
+       lvec_unflatten640 res =
+           LArray.map (fun (p : poly) => Array640.of_list witness (BitPack p (gamma1-1) gamma1)) (lifts_wpolylvec (lvec_unflatten256 _a))
+   ] = 1%r by conseq gamma1_encode_ll (gamma1_encode _a).
+
 
 lemma gamma1_decode _a :
-    lvec = 5 =>
     hoare [ M.gamma1____decode :
        encoded = _a
      ==>
-       lifts_wpolylvec (decode_output_unflatten res) =
-           LArray.map (fun p => BitUnpack (to_list p) (gamma1-1) gamma1) (decode_input_unflatten _a)
+       lifts_wpolylvec (lvec_unflatten256 res) =
+           LArray.map (fun p => BitUnpack (to_list p) (gamma1-1) gamma1) (lvec_unflatten640 _a)
    ].
-move => Hlvec.
+have Hlvec := mldsa65_lvec.
+have Hgamma1 := mldsa65_gamma1.
 proc => /=.
 while (0 <= i <= 5 /\ encoded = _a /\
        forall k, 0 <= k < i =>
-       (lifts_wpolylvec (decode_output_unflatten decoded)).[k] =
-       (map (fun (p : W8.t Array640.t) => BitUnpack (to_list p) (Top.gamma1 - 1) Top.gamma1) (decode_input_unflatten _a)).[k]);
+       (lifts_wpolylvec (lvec_unflatten256 decoded)).[k] =
+       (map (fun (p : W8.t Array640.t) => BitUnpack (to_list p) (gamma1 - 1) gamma1) (lvec_unflatten640 _a)).[k]);
        last first.
        + auto => /> &hr *;do split;1: smt().
          move => r0 i0 *;rewrite tP => k kb; smt().
@@ -321,19 +334,19 @@ auto => /> &hr ?? H ? rr Hrr;do split;1,2:smt().
 move => k kbl kbh.
 case(0<=k<i{hr}) => *.
 + have -> : (lifts_wpolylvec
-   (decode_output_unflatten
+   (lvec_unflatten256
       (Array1280.init
          (fun (i_0 : int) => if i{hr} * n <= i_0 < i{hr} * n + n then rr.[i_0 - i{hr} * n] else decoded{hr}.[i_0])))).[k] =
-    (lifts_wpolylvec (decode_output_unflatten decoded{hr})).[k]; last by smt().
+    (lifts_wpolylvec (lvec_unflatten256 decoded{hr})).[k]; last by smt().
   rewrite !mapiE 1..2:/# initiE 1:/# /= initiE 1:/# /= tP =>  ii iib.
   rewrite mapiE 1:/# /= initiE 1:/# /= mapiE 1:/# /= initiE 1:/# /= !nth_sub 1,2:/# initiE 1:/# /= /#.
 have -> : k = i{hr} by smt().
 + have -> : (lifts_wpolylvec
-   (decode_output_unflatten
+   (lvec_unflatten256
       (Array1280.init
          (fun (i_0 : int) => if i{hr} * n <= i_0 < i{hr} * n + n then rr.[i_0 - i{hr} * n] else decoded{hr}.[i_0])))).[i{hr}]  =
     (lifts_wpoly rr); last first.
-  + rewrite Hrr mapiE 1:/# /=;congr;congr;rewrite /decode_input_unflatten initiE 1:/# /= tP => ii iib.
+  + rewrite Hrr mapiE 1:/# /=;congr;congr;rewrite  initiE 1:/# /= tP => ii iib.
     by rewrite initiE 1:/# get_of_list 1:/# /= nth_sub /#.
 rewrite mapiE 1:/# /= initiE 1:/# /= tP => ii iib.
 rewrite !mapiE 1,2:/# /= initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.

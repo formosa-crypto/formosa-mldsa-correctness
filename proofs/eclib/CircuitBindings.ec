@@ -1,4 +1,4 @@
-(* -------------------------------------------------------------------- *)
+(* ==================================================================== *)
 require import AllCore List Ring IntDiv BitEncoding.
 require import StdRing StdOrder QFABV.
 
@@ -8,7 +8,9 @@ import BS2Int.
 
 require import JWordExtra.
 
-(* -------------------------------------------------------------------- *)
+import BitChunking.
+
+(* ==================================================================== *)
 op bool2bits (b : bool) : bool list = [b].
 op bits2bool (b: bool list) : bool = List.nth false b 0.
 
@@ -44,8 +46,7 @@ realize bvorP by move=> * @/bool2bits /#.
 bind op bool Bool.(^^) "xor".
 realize bvxorP by move=> * @/bool2bits /#.
 
-
-(* -------------------------------------------------------------------- *)
+(* ==================================================================== *)
 theory BSW8.
   bind bitstring W8.w2bits W8.bits2w W8.to_uint W8.to_sint W8.of_int W8.t 8.
 
@@ -128,7 +129,7 @@ theory BSW8.
   qed.
 end BSW8.
 
-(* -------------------------------------------------------------------- *)
+(* ==================================================================== *)
 abstract theory BSW.
   op size : int.
 
@@ -215,37 +216,7 @@ abstract theory BSW.
   proof. by move=> w1 w2; rewrite to_sint_sar // #smt:(W8.to_uint_cmp). qed.
 end BSW.
 
-(* -------------------------------------------------------------------- *)
-clone BSW as BSW16 with
-  op     size <- 16,
-  theory W    <- W16  { rename "_XX" as "_16" },
-  theory WE   <- WE16 { rename "_XX" as "_16" }.
-
-(* -------------------------------------------------------------------- *)
-clone BSW as BSW32 with
-  op     size <- 32,
-  theory W    <- W32  { rename "_XX" as "_32" },
-  theory WE   <- WE32 { rename "_XX" as "_32" }.
-
-(* -------------------------------------------------------------------- *)
-clone BSW as BSW64 with
-  op     size <- 64,
-  theory W    <- W64  { rename "_XX" as "_64" },
-  theory WE   <- WE64 { rename "_XX" as "_64" }.
-
-(* -------------------------------------------------------------------- *)
-clone BSW as BSW128 with
-  op     size <- 128,
-  theory W    <- W128  { rename "_XX" as "_128" },
-  theory WE   <- WE128 { rename "_XX" as "_128" }.
-
-(* -------------------------------------------------------------------- *)
-clone BSW as BSW256 with
-  op     size <- 256,
-  theory W    <- W256  { rename "_XX" as "_256" },
-  theory WE   <- WE256 { rename "_XX" as "_256" }.
-
-(* -------------------------------------------------------------------- *)
+(* ==================================================================== *)
 abstract theory BS_WB_WS.
   op sizeS : int.
   op sizeB : int.
@@ -308,7 +279,7 @@ abstract theory BS_WB_WS.
   qed.
 end BS_WB_WS.
 
-(* -------------------------------------------------------------------- *)
+(* ==================================================================== *)
 abstract theory BSA.
   op size : int.
 
@@ -326,7 +297,7 @@ abstract theory BSA.
   realize get_out  by smt(A.get_out).
 end BSA.
 
-(* -------------------------------------------------------------------- *)
+(* ==================================================================== *)
 abstract theory BSWA.
   op asize : int.
   op bsize : int.
@@ -358,7 +329,142 @@ abstract theory BSWA.
   qed.
 end BSWA.
 
-(* -------------------------------------------------------------- *)
+(* ==================================================================== *)
+abstract theory BSWAS.
+  op asize : int.
+  op bsize : int.
+  op ssize : int.
+
+  axiom le_size : ssize <= bsize * asize.
+
+  clone import PolyArray as A  with op size <- asize.
+  clone import BitWordSH as WB with op size <- bsize.
+  clone import BitWordSH as WS with op size <- ssize.
+
+  clone WE as WEB with
+        op size <- bsize,
+    theory W    <- WB.
+
+  clone import BSW as BSWB with 
+        op size <- bsize,
+    theory W    <- WB,
+    theory WE   <- WEB.
+
+  clone WE as WES with
+        op size <- ssize,
+    theory W    <- WS.
+
+  clone import BSW as BSWS with 
+        op size <- ssize,
+    theory W    <- WS,
+    theory WE   <- WES.
+
+  clone BSA with
+        op size <- asize,
+    theory A    <- A.
+
+  clone BSWA with
+        op asize <- asize,
+        op bsize <- bsize,
+    theory W     <- WB,
+    theory WE    <- WEB,
+    theory BSW   <- BSWB,
+    theory A     <- A,
+    theory BSA   <- BSA.
+
+  op tobits (a : WB.t A.t) : bool list =
+    flatten (List.map WB.w2bits (A.to_list a)).
+
+  op ofbits (a : bool list) : WB.t A.t =
+    A.of_list witness (List.map WB.bits2w (chunk bsize a)).
+
+  lemma size_tobits a : size (tobits a) = bsize * asize.
+  proof.
+  rewrite /tobits (size_flatten_ctt bsize).
+  - by move=> bs /mapP[w] [_ ->].
+  - by rewrite size_map size_to_list.
+  qed.
+
+  hint simplify size_tobits.
+
+  lemma ofbitsK (bs : bool list) :
+    size bs = bsize * asize => tobits (ofbits bs) = bs.
+  proof.
+  move=> eq @/tobits @/ofbits; rewrite of_listK.
+  - by rewrite size_map size_chunk // eq; smt(WB.gt0_size).
+  rewrite -map_comp -(iffLR _ _ (eq_in_map idfun _ _)).
+  - move=> w /(in_chunk_size bsize _ _ WB.gt0_size) ?.
+    by rewrite /idfun /(\o) WB.bits2wK.
+  by rewrite map_id chunkK // eq dvdz_mulr dvdzz.
+  qed.
+
+  op sliceget (a : WB.t A.t) (offset : int) : WS.t =
+    WS.bits2w (take ssize (drop offset (tobits a))).
+
+  op sliceset (a : WB.t A.t) (offset : int) (w : WS.t) : WB.t A.t =
+    let pr = take offset (tobits a) in
+    let po = drop (offset + ssize) (tobits a) in
+    ofbits (pr ++ WS.w2bits w ++ po).
+
+  bind op [WB.t & WS.t & A.t] sliceget "asliceget".
+
+  realize le_size by exact: le_size.
+
+  realize bvaslicegetP.
+  proof. by move=> /= a off ? i ? @/sliceget; rewrite get_bits2w. qed.
+
+  bind op [WB.t & WS.t & A.t] sliceset "asliceset".
+
+  realize le_size by exact: le_size.
+
+  realize bvaslicesetP.
+  proof.
+  have ? := WS.ge0_size; have ? := WB.ge0_size.
+  move=> /= a off w ? i ?; rewrite -!/(tobits _) /sliceset /= ofbitsK.
+  - by rewrite !size_cat /= size_take_condle 1:/# /= ifT 1:/# size_drop /#.
+  case: (i < off) => ?.
+  - rewrite ifF 1:/# -catA nth_cat ifT.
+    - by rewrite size_take_condle /#.
+    - by rewrite nth_take ~-1:/#.
+  rewrite -catA nth_cat ifF 1:size_take_condle ~-1:/#.
+  rewrite size_take_condle 1:/# /= ifT 1:/# /=.
+  case: (off + ssize <= i) => ?.
+  - by rewrite ifF 1:/# nth_cat /= ifF 1:/# nth_drop /#.
+  by rewrite ifT 1:/# nth_cat ifT 1:/# get_w2bits.
+  qed.
+end BSWAS.
+
+(* ==================================================================== *)
+clone BSW as BSW16 with
+  op     size <- 16,
+  theory W    <- W16  { rename "_XX" as "_16" },
+  theory WE   <- WE16 { rename "_XX" as "_16" }.
+
+(* -------------------------------------------------------------------- *)
+clone BSW as BSW32 with
+  op     size <- 32,
+  theory W    <- W32  { rename "_XX" as "_32" },
+  theory WE   <- WE32 { rename "_XX" as "_32" }.
+
+(* -------------------------------------------------------------------- *)
+clone BSW as BSW64 with
+  op     size <- 64,
+  theory W    <- W64  { rename "_XX" as "_64" },
+  theory WE   <- WE64 { rename "_XX" as "_64" }.
+
+(* -------------------------------------------------------------------- *)
+clone BSW as BSW128 with
+  op     size <- 128,
+  theory W    <- W128  { rename "_XX" as "_128" },
+  theory WE   <- WE128 { rename "_XX" as "_128" }.
+
+(* -------------------------------------------------------------------- *)
+clone BSW as BSW256 with
+  op     size <- 256,
+  theory W    <- W256  { rename "_XX" as "_256" },
+  theory WE   <- WE256 { rename "_XX" as "_256" }.
+
+(* ==================================================================== *)
 clone BS_WB_WS as BS_W2u16 with
       op sizeS <-  16,
       op sizeB <-  32,
@@ -375,7 +481,7 @@ clone BS_WB_WS as BS_W2u16 with
                              "'S"    as "16"
                              "'B"    as "32" }.
 
-(* -------------------------------------------------------------- *)
+(* -------------------------------------------------------------------- *)
 clone BS_WB_WS as BS_W2u32 with
       op sizeS <-  32,
       op sizeB <-  64,
@@ -392,7 +498,7 @@ clone BS_WB_WS as BS_W2u32 with
                              "'S"    as "32"
                              "'B"    as "64" }.
 
-(* -------------------------------------------------------------- *)
+(* -------------------------------------------------------------------- *)
 clone BS_WB_WS as BS_W2u64 with
       op sizeS <-  64,
       op sizeB <- 128,
@@ -409,7 +515,7 @@ clone BS_WB_WS as BS_W2u64 with
                              "'S"    as "64"
                              "'B"    as "128" }.
 
-(* -------------------------------------------------------------- *)
+(* -------------------------------------------------------------------- *)
 clone BS_WB_WS as BS_W2u128 with
       op sizeS <- 128,
       op sizeB <- 256,
@@ -426,7 +532,7 @@ clone BS_WB_WS as BS_W2u128 with
                              "'S"    as "128"
                              "'B"    as "256" }.
 
-(* -------------------------------------------------------------- *)
+(* -------------------------------------------------------------------- *)
 clone BS_WB_WS as BS_W4u16 with
       op sizeS <-  16,
       op sizeB <-  64,
@@ -443,7 +549,7 @@ clone BS_WB_WS as BS_W4u16 with
                              "'S"    as "16"
                              "'B"    as "64" }.
 
-(* -------------------------------------------------------------- *)
+(* -------------------------------------------------------------------- *)
 clone BS_WB_WS as BS_W4u32 with
       op sizeS <-  32,
       op sizeB <- 128,
@@ -460,7 +566,7 @@ clone BS_WB_WS as BS_W4u32 with
                              "'S"    as "32"
                              "'B"    as "128" }.
 
-(* -------------------------------------------------------------- *)
+(* -------------------------------------------------------------------- *)
 clone BS_WB_WS as BS_W4u64 with
       op sizeS <-  64,
       op sizeB <- 256,
@@ -477,7 +583,7 @@ clone BS_WB_WS as BS_W4u64 with
                              "'S"    as "64"
                              "'B"    as "256" }.
 
-(* -------------------------------------------------------------- *)
+(* -------------------------------------------------------------------- *)
 clone BS_WB_WS as BS_W8u16 with
       op sizeS <-  16,
       op sizeB <- 128,
@@ -494,7 +600,7 @@ clone BS_WB_WS as BS_W8u16 with
                              "'S"    as "16"
                              "'B"    as "128" }.
 
-(* -------------------------------------------------------------- *)
+(* -------------------------------------------------------------------- *)
 clone BS_WB_WS as BS_W8u32 with
       op sizeS <-  32,
       op sizeB <- 256,
@@ -511,7 +617,7 @@ clone BS_WB_WS as BS_W8u32 with
                              "'S"    as "32"
                              "'B"    as "256" }.
 
-(* -------------------------------------------------------------- *)
+(* -------------------------------------------------------------------- *)
 clone BS_WB_WS as BS_W16u16 with
       op sizeS <-  16,
       op sizeB <- 256,

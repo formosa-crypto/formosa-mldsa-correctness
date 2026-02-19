@@ -286,13 +286,26 @@ abstract theory BS_WB_WS.
 
   realize le_size by smt(WS.gt0_size W_WS.gt0_r W_WS.sizeBrS).
 
-  realize bvtruncateP. admitted.
+  realize bvtruncateP.
+  proof.
+  move=> w @/truncateu'S @/w2bits; rewrite take_mkseq.
+  - by rewrite ge0_size le_size.
+  apply: eq_in_mkseq => i rgi /=; rewrite of_intwE rgi /=.
+  rewrite get_to_uint /int_bit /= modz_pow2_div 1:/#.
+  by rewrite modz_dvd -1:#smt:(le_size) (dvdz_exp2l _ 1) /#.
+  qed.
 
   bind op [WS.t & WB.t] zeroextu'B "zextend".
 
   realize le_size by smt(WS.gt0_size W_WS.gt0_r W_WS.sizeBrS).
 
-  realize bvzextendP. admitted.
+  realize bvzextendP.
+  proof.
+  have ? := WS.to_uint_cmp; move=> w @/zeroextu'B; rewrite of_uintK.
+  rewrite pmod_small //; split=> [/#|_].
+  apply: (IntOrder.ltr_le_trans WS.modulus) => [/#|].
+  by apply: IntOrder.ler_weexpn2l => //; smt(WS.gt0_size le_size).
+  qed.
 end BS_WB_WS.
 
 (* -------------------------------------------------------------------- *)

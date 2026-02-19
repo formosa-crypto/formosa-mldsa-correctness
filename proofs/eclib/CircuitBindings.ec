@@ -141,6 +141,7 @@ abstract theory BSW.
 
   op sar (w1 w2 : W.t) : W.t = w1 `|>>>` W.to_uint w2.
   op shr (w1 w2 : W.t) : W.t = w1  `>>>` W.to_uint w2.
+  op shl (w1 w2 : W.t) : W.t = w1  `<<<` W.to_uint w2.
 
   bind bitstring W.w2bits W.bits2w W.to_uint W.to_sint W.of_int W.t size.
 
@@ -165,6 +166,12 @@ abstract theory BSW.
   bind op W.t W.( * ) "mul".
   realize bvmulP by exact W.to_uintM. 
 
+  bind op W.t W.(\udiv) "udiv".
+  realize bvudivP by exact WE.to_uintUD.
+
+  bind op W.t W.(\umod) "urem".
+  realize bvuremP by exact WE.to_uintUM.
+
   bind op W.t W.andw "and".
   realize bvandP.
   proof.
@@ -183,6 +190,12 @@ abstract theory BSW.
   by move=> w1 w2; rewrite /w2bits zip_map /= zipss -!map_comp.
   qed.
 
+  bind op W.t W.invw "not".
+  realize bvnotP.
+  proof.
+  by move=> w; rewrite /invw /= eq_sym map_w2bits_w2bits.
+  qed.
+
   bind op [W.t] rol "rol".
   realize bvrolP.
   proof.
@@ -199,6 +212,10 @@ abstract theory BSW.
   realize bvashrP.
   proof. by move=> w1 w2; rewrite to_sint_sar // #smt:(to_uint_cmp). qed.
 
+  bind op [W.t] shl "shl".
+  realize bvshlP.
+  proof. by move=> w1 w2; rewrite to_uint_shl // #smt:(to_uint_cmp). qed.
+
   bind op [W.t] shr "shr".
   realize bvshrP.
   proof. by move=> w1 w2; rewrite to_uint_shr // #smt:(to_uint_cmp). qed.
@@ -214,6 +231,35 @@ abstract theory BSW.
   bind op [W.t & W8.t] W.(`|>>`) "ashrs".
   realize bvashrsP.
   proof. by move=> w1 w2; rewrite to_sint_sar // #smt:(W8.to_uint_cmp). qed.
+
+  (* FIXME \/: is this expected to just work? \/ *)
+  bind op [bool & W.t] W.(\ult) "ult".
+  realize bvultP by smt().
+
+  bind op [bool & W.t] W.(\ule) "ule".
+  realize bvuleP by smt().
+
+  bind op [bool & W.t] W.(\slt) "slt".
+  realize bvsltP by smt().
+
+  bind op [bool & W.t] W.(\sle) "sle".
+  realize bvsleP by smt().
+  (* FIXME /\: is this expected to just work? /\ *)
+
+  (* FIXME: uniformize type parameter order for bindings *)
+  (* FIXME: uniformize binding treatment of booleans     *)
+  (* FIXME: here BSW.size is required to be >= 1 
+  bind op [W.t & bool] W."_.[_]" "get".
+  realize bvgetP by smt().  
+  realize eq1_size by auto.
+  realize le_size.
+  *)
+  
+  bind op [bool & W.t] W.init "init".
+  realize size_1 by auto.
+  realize bvinitP by move=> f; rewrite init_bits2w bits2wK; 
+    1: rewrite size_map size_iota //=; 
+    1: rewrite /bool2bits flatten_mkseq1_map_iota.
 end BSW.
 
 (* ==================================================================== *)

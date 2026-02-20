@@ -1,6 +1,7 @@
 (* ==================================================================== *)
 require import AllCore List Ring IntDiv BitEncoding.
 require import StdRing StdOrder QFABV.
+require import ListExtra.
 
 from Jasmin require import JWord JArray.
 
@@ -232,7 +233,6 @@ abstract theory BSW.
   realize bvashrsP.
   proof. by move=> w1 w2; rewrite to_sint_sar // #smt:(W8.to_uint_cmp). qed.
 
-  (* FIXME \/: is this expected to just work? \/ *)
   bind op [bool & W.t] W.(\ult) "ult".
   realize bvultP by smt().
 
@@ -244,22 +244,25 @@ abstract theory BSW.
 
   bind op [bool & W.t] W.(\sle) "sle".
   realize bvsleP by smt().
-  (* FIXME /\: is this expected to just work? /\ *)
 
   (* FIXME: uniformize type parameter order for bindings *)
   (* FIXME: uniformize binding treatment of booleans     *)
-  (* FIXME: here BSW.size is required to be >= 1 
+  (* FIXME: here BSW.size is required to be >= 1         *)
   bind op [W.t & bool] W."_.[_]" "get".
-  realize bvgetP by smt().  
-  realize eq1_size by auto.
-  realize le_size.
-  *)
-  
+  realize bvgetP   by done.
+  realize eq1_size by done.
+  realize le_size  by smt(gt0_size).
+
   bind op [bool & W.t] W.init "init".
-  realize size_1 by auto.
-  realize bvinitP by move=> f; rewrite init_bits2w bits2wK; 
-    1: rewrite size_map size_iota //=; 
-    1: rewrite /bool2bits flatten_mkseq1_map_iota.
+
+  realize size_1 by done.
+
+  realize bvinitP.
+  proof.
+  move=> f; rewrite init_bits2w bits2wK.
+  - by rewrite size_map size_iota.
+  - by rewrite flatten_mkseq_seq1.
+  qed.
 end BSW.
 
 (* ==================================================================== *)

@@ -127,16 +127,6 @@ abstract theory WE.
   rewrite -divz_mulp ~-1:// 1:IntOrder.expr_gt0 ~-1://.
   by rewrite -IntID.exprSr.
   qed.
-
-  lemma flatten_mkseq1_map_iota (f: int -> 'a) (n: int) :
-    flatten (mkseq (fun (i : int) => [f i]) n) = map f (iota_ 0 n).
-  proof.
-    elim/natind: n. smt(mkseq0 iota0).
-    move=> n n_gt0 IH. 
-    rewrite mkseqS; 1: by exact n_gt0.
-    rewrite iotaSr; 1: by exact n_gt0.
-    by rewrite flatten_rcons /= IH -cats1 map_cat map1.
-  qed.
 end WE.
 
 (* -------------------------------------------------------------------- *)

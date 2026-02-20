@@ -266,69 +266,6 @@ abstract theory BSW.
 end BSW.
 
 (* ==================================================================== *)
-abstract theory BS_WB_WS.
-  op sizeS : int.
-  op sizeB : int.
-  op r     : int.
-
-  clone import BitWordSH as WS with
-    op size <- sizeS.
-
-  clone WE as WSE with
-        op size <- sizeS,
-    theory W    <- WS.
-
-  clone import BitWordSH as WB with
-    op size <- sizeB.
-
-  clone WE as WBE with
-        op size <- sizeB,
-    theory W    <- WB.
-  
-  clone import W_WS with
-        op sizeS <- sizeS, 
-        op sizeB <- sizeB,
-        op r     <- r,
-    theory WS    <- WS,
-    theory WB    <- WB.
-
-  clone import BSW as BSWS with 
-        op size <- sizeS,
-    theory W    <- WS,
-    theory WE   <- WSE.
-
-  clone import BSW as BSWB with 
-        op size <- sizeB,
-    theory W    <- WB,
-    theory WE   <- WBE.
-
-  bind op [WB.t & WS.t] truncateu'S "truncate".
-
-  realize le_size by smt(WS.gt0_size W_WS.gt0_r W_WS.sizeBrS).
-
-  realize bvtruncateP.
-  proof.
-  move=> w @/truncateu'S @/w2bits; rewrite take_mkseq.
-  - by rewrite ge0_size le_size.
-  apply: eq_in_mkseq => i rgi /=; rewrite of_intwE rgi /=.
-  rewrite get_to_uint /int_bit /= modz_pow2_div 1:/#.
-  by rewrite modz_dvd -1:#smt:(le_size) (dvdz_exp2l _ 1) /#.
-  qed.
-
-  bind op [WS.t & WB.t] zeroextu'B "zextend".
-
-  realize le_size by smt(WS.gt0_size W_WS.gt0_r W_WS.sizeBrS).
-
-  realize bvzextendP.
-  proof.
-  have ? := WS.to_uint_cmp; move=> w @/zeroextu'B; rewrite of_uintK.
-  rewrite pmod_small //; split=> [/#|_].
-  apply: (IntOrder.ltr_le_trans WS.modulus) => [/#|].
-  by apply: IntOrder.ler_weexpn2l => //; smt(WS.gt0_size le_size).
-  qed.
-end BS_WB_WS.
-
-(* ==================================================================== *)
 abstract theory BS_WB_WS_U.
   op sizeS : int.
   op sizeB : int.
@@ -390,6 +327,61 @@ abstract theory BS_WB_WS_U.
   by apply: IntOrder.ler_weexpn2l => //; smt(WS.gt0_size le_size).
   qed.
 end BS_WB_WS_U.
+
+(* ==================================================================== *)
+abstract theory BS_WB_WS.
+  op sizeS : int.
+  op sizeB : int.
+  op r     : int.
+
+  clone import BitWordSH as WS with
+    op size <- sizeS.
+
+  clone WE as WSE with
+        op size <- sizeS,
+    theory W    <- WS.
+
+  clone import BitWordSH as WB with
+    op size <- sizeB.
+
+  clone WE as WBE with
+        op size <- sizeB,
+    theory W    <- WB.
+  
+  clone import W_WS with
+        op sizeS <- sizeS, 
+        op sizeB <- sizeB,
+        op r     <- r,
+    theory WS    <- WS,
+    theory WB    <- WB.
+
+  clone import BSW as BSWS with 
+        op size <- sizeS,
+    theory W    <- WS,
+    theory WE   <- WSE.
+
+  clone import BSW as BSWB with 
+        op size <- sizeB,
+    theory W    <- WB,
+    theory WE   <- WBE.
+
+  clone include BS_WB_WS_U with
+        op sizeS <- sizeS,
+        op sizeB <- sizeB,
+    theory WS    <- WS,
+    theory WSE   <- WSE,
+    theory WB    <- WB,
+    theory WBE   <- WBE,
+    theory BSWS  <- BSWS,
+    theory BSWB  <- BSWB,
+        op truncateu'S <- W_WS.truncateu'S,
+        op zeroextu'B  <- W_WS.zeroextu'B
+    rename [theory] "WS" as "WS_"
+           [theory] "WB" as "WB_"
+    proof *.
+
+    realize le_size by smt(WS.gt0_size W_WS.gt0_r W_WS.sizeBrS).
+end BS_WB_WS.
 
 (* ==================================================================== *)
 abstract theory BSA.

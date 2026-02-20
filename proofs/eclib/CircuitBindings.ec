@@ -326,6 +326,69 @@ abstract theory BS_WB_WS.
 end BS_WB_WS.
 
 (* ==================================================================== *)
+abstract theory BS_WB_WS_U.
+  op sizeS : int.
+  op sizeB : int.
+
+  axiom le_size : sizeS <= sizeB.
+
+  clone import BitWordSH as WS with
+    op size <- sizeS.
+
+  clone WE as WSE with
+        op size <- sizeS,
+    theory W    <- WS.
+
+  clone import BitWordSH as WB with
+    op size <- sizeB.
+
+  clone WE as WBE with
+        op size <- sizeB,
+    theory W    <- WB.
+
+  clone import BSW as BSWS with 
+        op size <- sizeS,
+    theory W    <- WS,
+    theory WE   <- WSE.
+
+  clone import BSW as BSWB with 
+        op size <- sizeB,
+    theory W    <- WB,
+    theory WE   <- WBE.
+
+  op truncateu'S (w : WB.t) : WS.t =
+    WS.of_int (WB.to_uint w).
+
+  op zeroextu'B (w : WS.t) : WB.t =
+    WB.of_int (WS.to_uint w).
+
+  bind op [WB.t & WS.t] truncateu'S "truncate".
+
+  realize le_size by apply: le_size.
+
+  realize bvtruncateP.
+  proof.
+  move=> w @/truncateu'S @/w2bits; rewrite take_mkseq.
+  - by rewrite ge0_size le_size.
+  apply: eq_in_mkseq => i rgi /=; rewrite of_intwE rgi /=.
+  rewrite get_to_uint /int_bit /= modz_pow2_div 1:/#.
+  by rewrite modz_dvd -1:#smt:(le_size) (dvdz_exp2l _ 1) /#.
+  qed.
+
+  bind op [WS.t & WB.t] zeroextu'B "zextend".
+
+  realize le_size by apply: le_size.
+
+  realize bvzextendP.
+  proof.
+  have ? := WS.to_uint_cmp; move=> w @/zeroextu'B; rewrite of_uintK.
+  rewrite pmod_small //; split=> [/#|_].
+  apply: (IntOrder.ltr_le_trans WS.modulus) => [/#|].
+  by apply: IntOrder.ler_weexpn2l => //; smt(WS.gt0_size le_size).
+  qed.
+end BS_WB_WS_U.
+
+(* ==================================================================== *)
 abstract theory BSA.
   op size : int.
 

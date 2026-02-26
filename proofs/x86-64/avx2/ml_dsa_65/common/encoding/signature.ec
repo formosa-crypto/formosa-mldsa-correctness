@@ -125,16 +125,16 @@ seq 1 2 : (#pre /\
      (forall jj, 0 <= jj < j{2} =>
   (kvec_unflatten256 hints{2}).[encoded_offset{2}].[jj] = W32.zero)) (n - j{2}); last first.
    + auto => /> &1 &2 ????????;split;1:smt().
-   move  => h2 j2;split;1:smt().
-   move => ??????H; do split.
-   + move => k kbl kbh.
-     split.
-     + by rewrite mapiE 1:/# get_setE 1:/# ifF 1:/#; smt(KArray.mapiE).
-     by smt(KArray.allP).
-   + rewrite get_setE 1:/# ifT 1:/# tP => k kb.
-    by  rewrite mapiE 1:/# /= Array256.initiE 1:/# /=  mapiE 1:/# /= H 1:/# /=.
-   + rewrite /wpoly_urng allP => k kb /=.
-     by rewrite H /#.
+      move  => h2 j2;split;1:smt().
+      move => ??????H; do split.
+      + move => k kbl kbh.
+        split.
+        + by rewrite mapiE 1:/# get_setE 1:/# ifF 1:/#; smt(KArray.mapiE).
+        by smt(KArray.allP).
+      + rewrite get_setE 1:/# ifT 1:/# tP => k kb.
+        by  rewrite mapiE 1:/# /= Array256.initiE 1:/# /=  mapiE 1:/# /= H 1:/# /=.
+      + rewrite /wpoly_urng allP => k kb /=.
+        by rewrite H /#.
  + move => &1 _z;auto => /> &2 ???? H H0 ?; do split; 1,2,5:smt().
    + move => k kbl kbh.
      have  := H k _;1:smt().
@@ -583,72 +583,65 @@ qed.
 (* ---------------------------------------------------------------- *)
 (*                  Full Signature Decode Lemma                      *)
 (* ---------------------------------------------------------------- *)
-(* 
-lemma signature_decode _signature :
-    w_hint = 55 =>
-    kvec = 6 =>
-    lvec = 5 =>
+import BytesSig.
+
+lemma signature_decode (_signature : W8.t Array3309.t) :
     equiv [ SigEncDec.sigDecode ~ M.signature____decode :
        arg{1} = BytesSig.init (fun i => _signature.[i])
-    /\ arg{2}.`1 = witness
-    /\ arg{2}.`2 = witness
     /\ arg{2}.`3 = _signature
        ==>
-       (res{1}.`1 = init (fun i => _signature.[i])) /\
-       (res{1}.`2 = decode_z_unflatten res{2}.`1) /\
-       ((res{1}.`3 = None /\ res{2}.`3 = -W64.one) \/
-        (res{1}.`3 <> None /\ res{2}.`3 = W64.zero /\
-         liftu_wpolykvec (kvec_unflatten256 res{2}.`2) = oget res{1}.`3 /\
-         wpolykvec_urng (kvec_unflatten256 res{2}.`2) 2))
+       res{1}.`1 = init (fun i => _signature.[i])
+    /\ lifts_wpolylvec (lvec_unflatten256 res{2}.`1) = res{1}.`2
+    /\ (res{1}.`3 = None  => res{2}.`3 = -W64.one)
+    /\ (res{1}.`3 <> None =>
+          res{2}.`3 = W64.zero
+       /\ liftu_wpolykvec (kvec_unflatten256 res{2}.`2) = oget res{1}.`3
+       /\ wpolykvec_urng (kvec_unflatten256 res{2}.`2) 2)
    ].
 proof.
-move => w_hint_eq kvec_eq lvec_eq.
+have lambda_eq := mldsa65_lambda.
+have w_hint_eq := mldsa65_w_hint.
+have lvec_eq := mldsa65_lvec.
+have kvec_eq := mldsa65_kvec.
+have gamma1_eq := mldsa65_gamma1.
 proc => /=.
 
 (* Extract commitment hash (ct) from beginning of signature *)
-seq 1 0 : (#{/~arg{1}}pre
+seq 3 0 : (#pre
    /\ ct{1} = init (fun ii => sigma{1}.[ii])
-   /\ i{1} = 0); first by auto => /> &2; rewrite tP => k kb; rewrite !initiE.
+   /\ i{1} = 0); 1: by auto.
 
-(* Decode gamma1 (signer response z) in loop *)
-seq 1 1 : (#pre
-   /\ i{1} = lvec
-   /\ z{1} = decode_z_unflatten signer_response{2}
-   /\ (forall k, 0 <= k < lvec =>
-        z{1}.[k] = BitUnpack
-                     (mkseq (fun ii => sigma{1}.[lambda %/ 4 + (n * gamma1_bits) %/ 8 * k + ii]) n)
-                     (gamma1 - 1) gamma1)).
-+ while {1} (0 <= i{1} <= lvec
-     /\ sigma{1} = BytesSig.init (fun i => _signature.[i])
-     /\ ct{1} = init (fun ii => sigma{1}.[ii])
-     /\ z{1} = witness
-     /\ (forall k, 0 <= k < i{1} =>
-          z{1}.[k] = BitUnpack
-                       (mkseq (fun ii => sigma{1}.[lambda %/ 4 + (n * gamma1_bits) %/ 8 * k + ii]) n)
-                       (gamma1 - 1) gamma1)); last by auto => />; smt().
-  wp; auto => /> &hr *; do split; smt().
-  admit. (* Connecting to M.gamma1____decode on right side requires more detail *)
+ecall (decode_hint).
+wp; ecall {2} (gamma1_decode_ph (Array3200.init  (fun (i0 : int) => signature_encoded{2}.[48 + i0]))).
+conseq (: _ ==> forall k, 0 <= k < lvec =>
+    z{1}.[k] = BitUnpack
+     (mkseq (fun (ii : int) =>  sigma{1}.[lambda %/ w1_bits +
+               640 * k + ii]) 640) (gamma1 - 1) gamma1).
++ auto => /> z1 Hz1 rr0 H1; split.
+  + apply (eq_from_nth W8.zero);
+     1: by  rewrite size_take 1:/# size_drop 1:/# !size_to_list /= /#.
+    move => k; rewrite size_take 1:/# size_drop 1:/# !size_to_list /= => kb.
+    rewrite nth_take 1,2:/# nth_drop 1,2:/# get_to_list initiE 1:/#.
+    rewrite (nth_change_dfl witness); 1:smt(Array61.size_to_list).
+    by rewrite get_to_list initiE 1:/# /= /#.
+  move => H2 rr1 rr2 ? ?; do split.
+  + by apply BytesCT.tP => k kb; rewrite !initiE /#.
+  + rewrite H1 tP => k kb; rewrite mapiE 1:/# /= Hz1 1:/# /lvec_unflatten640.
+    congr.
+    apply (eq_from_nth W8.zero); 1: by rewrite size_to_list size_mkseq //=.
+    move => i; rewrite size_to_list => ib.
+    rewrite (nth_change_dfl witness);1:smt(Array640.size_to_list).
+    rewrite get_to_list initiE 1:/# /= initiE 1:/# /= nth_mkseq 1:/# /= initiE 1:/# /=.
+    rewrite nth_mkseq 1:/# /= BytesSig.initiE /#. 
 
-(* Decode hint *)
-ecall {1} (decode_hint w_hint_eq kvec_eq).
-wp.
-
-(* Inline hint decode on the right side *)
-inline {2} M.signature____decode_hint.
-wp.
-
-auto => /> *.
-split.
-+ (* Commitment hash matches *)
-  by rewrite tP => k kb; rewrite !initiE.
-split.
-+ (* z matches *)
-  by smt().
-(* Hint result *)
-case (res_R = None) => ?.
-+ (* Decoding failed *)
-  by left; smt().
-+ (* Decoding succeeded *)
-  right; do split; smt().
+while{1} (0 <= i{1} <= lvec /\
+  forall (k : int),
+    0 <= k < i{1} =>
+    z{1}.[k] =
+    BitUnpack (mkseq (fun (ii : int) => sigma{1}.[lambda %/ w1_bits + 640 * k + ii]) 640) (gamma1 - 1) gamma1) (lvec - i{1}); last by auto => /#.
+move => ??; auto => /> &hr ????;split;last by smt().
+do split; 1,2:smt().
+move => k ??.
+case (i{hr} = k); 1: by move => Hi; rewrite Hi get_setE 1:/# /=.
+by move => ?; rewrite get_setE /= /#.
 qed.
-*)

@@ -5918,6 +5918,18 @@ module M = {
     ill_formed_hint <- (- ill_formed_hint);
     return (hints, ill_formed_hint);
   }
+  proc signature____decode (signer_response:BArray5120.t, hints:BArray6144.t,
+                            signature_encoded:BArray3309.t) : BArray5120.t *
+                                                              BArray6144.t *
+                                                              W64.t = {
+    var result:W64.t;
+    signer_response <@ gamma1____decode (signer_response,
+    (SBArray3309_3200.get_sub8 signature_encoded 48));
+    (hints, result) <@ signature____decode_hint (hints,
+    (SBArray3309_61.get_sub8 signature_encoded (48 + (5 * ((20 * 256) %/ 8)))
+    ));
+    return (signer_response, hints, result);
+  }
   proc s1____encode (encoded:BArray640.t, s1:BArray5120.t) : BArray640.t = {
     var aux:BArray128.t;
     var i:int;
@@ -7245,11 +7257,8 @@ module M = {
     reconstructed_signer_commitment <- witness;
     signer_response <- witness;
     verification_key_hash <- witness;
-    signer_response <@ gamma1____decode (signer_response,
-    (SBArray3309_3200.get_sub8 signature_encoded 48));
-    (hints, result) <@ signature____decode_hint (hints,
-    (SBArray3309_61.get_sub8 signature_encoded (48 + (5 * ((20 * 256) %/ 8)))
-    ));
+    (signer_response, hints, result) <@ signature____decode (signer_response,
+    hints, signature_encoded);
     if ((result = (W64.of_int 0))) {
       (* Erased call to spill *)
       (* Erased call to spill *)

@@ -351,3 +351,24 @@ have -> : k = i{hr} by smt().
 rewrite mapiE 1:/# /= initiE 1:/# /= tP => ii iib.
 rewrite !mapiE 1,2:/# /= initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.
 qed.
+
+lemma gamma2_decode_to_polynomial_ll : islossless M.gamma1____decode_to_polynomial.
+proc.
+while (0 <= output_offset <= 1024 /\ output_offset %% 32 = 0) (1024 - output_offset); 1: by auto => /> /#.
+by auto => /> /#.
+qed.
+
+lemma gamma1_decode_ll : islossless  M.gamma1____decode.
+proc;unroll for ^while.
+by do 5!(wp;call gamma2_decode_to_polynomial_ll).
+qed.
+
+
+lemma gamma1_decode_ph _a :
+    phoare [ M.gamma1____decode :
+       encoded = _a
+     ==>
+       lifts_wpolylvec (lvec_unflatten256 res) =
+           LArray.map (fun p => BitUnpack (to_list p) (gamma1-1) gamma1) (lvec_unflatten640 _a)
+   ] = 1%r
+ by conseq gamma1_decode_ll (gamma1_decode _a).

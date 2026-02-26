@@ -172,7 +172,7 @@ module SigEncDec = {
      ct <- BytesCT.init(fun ii => sigma.[ii]);
      i <- 0;
      while (i < lvec) {
-       zi <- BitUnpack (mkseq (fun ii => sigma.[lambda %/ 4 + (n * gamma1_bits) %/ 8 * i + ii]) n) (gamma1 - 1) gamma1;
+       zi <- BitUnpack (mkseq (fun ii => sigma.[lambda %/ 4 + (n * gamma1_bits) %/ 8 * i + ii]) ((n * gamma1_bits) %/ 8)) (gamma1 - 1) gamma1;
        z <- z.[i <- zi];
        i <- i + 1;
     }

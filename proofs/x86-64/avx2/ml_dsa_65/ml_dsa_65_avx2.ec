@@ -6601,6 +6601,19 @@ module M = {
     ill_formed_hint <- (- ill_formed_hint);
     return (hints, ill_formed_hint);
   }
+  proc signature____decode (signer_response:W32.t Array1280.t,
+                            hints:W32.t Array1536.t,
+                            signature_encoded:W8.t Array3309.t) : W32.t Array1280.t *
+                                                                  W32.t Array1536.t *
+                                                                  W64.t = {
+    var result:W64.t;
+    signer_response <@ gamma1____decode (signer_response,
+    (Array3200.init (fun i => signature_encoded.[(48 + i)])));
+    (hints, result) <@ signature____decode_hint (hints,
+    (Array61.init
+    (fun i => signature_encoded.[((48 + (5 * ((20 * 256) %/ 8))) + i)])));
+    return (signer_response, hints, result);
+  }
   proc s1____encode (encoded:W8.t Array640.t, s1:W32.t Array1280.t) : 
   W8.t Array640.t = {
     var aux:W8.t Array128.t;
@@ -8356,11 +8369,8 @@ module M = {
     reconstructed_signer_commitment <- witness;
     signer_response <- witness;
     verification_key_hash <- witness;
-    signer_response <@ gamma1____decode (signer_response,
-    (Array3200.init (fun i => signature_encoded.[(48 + i)])));
-    (hints, result) <@ signature____decode_hint (hints,
-    (Array61.init
-    (fun i => signature_encoded.[((48 + (5 * ((20 * 256) %/ 8))) + i)])));
+    (signer_response, hints, result) <@ signature____decode (signer_response,
+    hints, signature_encoded);
     if ((result = (W64.of_int 0))) {
       (* Erased call to spill *)
       (* Erased call to spill *)

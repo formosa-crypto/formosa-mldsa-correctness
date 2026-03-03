@@ -232,14 +232,13 @@ op  decoded_unflatten(a : 'a Array1536.t) =
      KArray.init (fun i => Array256.of_list witness (sub a (256*i) 256)).
 
 lemma t0_decode _a  :
-    kvec = 6 =>
     hoare [ M.t0__decode : 
        encoded = _a 
      ==>
        lifts_wpolykvec (decoded_unflatten res) = 
            KArray.map (fun p => BitUnpack (to_list p) (dpow-1) dpow) (encoded_unflatten _a)
    ].
-move => Hkvec.
+have Hkvec := mldsa65_kvec.
 proc => /=.
 while (0 <= i <= 6 /\ encoded = _a /\
        forall k, 0 <= k < i =>
@@ -272,17 +271,33 @@ rewrite mapiE 1:/# /= initiE 1:/# /= tP => ii iib.
 rewrite !mapiE 1,2:/# /= initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.
 qed.
 
+
+lemma t0_decode_ll : islossless  M.t0__decode.
+proof.
+proc => /=.
+inline *;while (0<=i<=6) (6-i);auto; last by smt().
+conseq(_: _ ==> true);1:smt().
+while (0 <= input_offset <=  d * n %/ 8 - d /\ input_offset %% d = 0) (d * n %/ 8 - d - input_offset); auto => /> /#.
+qed.
+
+lemma t0_decode_ph _a  :
+    phoare [ M.t0__decode : 
+       encoded = _a 
+     ==>
+       lifts_wpolykvec (decoded_unflatten res) = 
+           KArray.map (fun p => BitUnpack (to_list p) (dpow-1) dpow) (encoded_unflatten _a)
+    ] = 1%r by conseq t0_decode_ll (t0_decode _a).
+
+
 lemma t0_encode _a  :
-    kvec = 6 =>
     hoare [ M.t0____encode : 
        t0 = _a /\
-       forall k, 0 <= k < kvec =>
-         (wpoly_srng (dpow - 1) dpow (decoded_unflatten _a).[k])
+       wpolykvec_srng (decoded_unflatten _a) (dpow - 1) dpow 
      ==>
       encoded_unflatten res = 
            KArray.map (fun p => (Array416.of_list W8.zero (BitPack p (dpow-1) dpow))) (lifts_wpolykvec (decoded_unflatten _a))
    ].
-move => Hkvec.
+have Hkvec := mldsa65_kvec.
 proc => /=.
 while (0 <= j <= 6 /\ t0 = _a /\
        (forall k, 0 <= k < kvec =>
@@ -292,7 +307,7 @@ while (0 <= j <= 6 /\ t0 = _a /\
          (KArray.map (fun (p : poly) => Array416.of_list W8.zero (BitPack p (dpow - 1) dpow))
           (lifts_wpolykvec (decoded_unflatten _a))).[k]));
        last first.
-       + auto => /> &hr *;do split;1: smt().
+       + auto => /> &hr; rewrite /wpolykvec_srng allP => *;do split; 1,2: smt().
          move => i0 t00 *;rewrite tP => k kb; smt().
 wp; ecall (t0_encode_polynomial (Array256.init (fun (i : int) => t0.[n * j + i]))).
 auto => /> &hr ?? H H0 ?; split.
@@ -321,3 +336,20 @@ have -> : k = j{hr} by smt().
     rewrite /encoded_unflatten initiE 1:/# /= tP => i ib.
 by rewrite get_of_list // nth_sub // initiE 1:/# /= /#. 
 qed.
+
+lemma t0_encode_ll : islossless  M.t0____encode.
+proof.
+proc => /=.
+inline *;while (0<=j<=6) (6-j);auto; last by smt().
+unroll for 28;wp.
+conseq(_: _ ==> true);1:smt().
+while (0 <= input_offset <=  n * 32 %/ 8 - 32 /\ input_offset %% 32 = 0) (n * 32 %/ 8 - 32 - input_offset); auto => /> /#.
+qed.
+
+lemma t0_encode_ph _a  :
+    phoare [ M.t0____encode : 
+       t0 = _a /\
+       wpolykvec_srng (decoded_unflatten _a) (dpow - 1) dpow 
+     ==>
+      encoded_unflatten res = 
+           KArray.map (fun p => (Array416.of_list W8.zero (BitPack p (dpow-1) dpow))) (lifts_wpolykvec (decoded_unflatten _a)) ] = 1%r by conseq t0_encode_ll (t0_encode _a).

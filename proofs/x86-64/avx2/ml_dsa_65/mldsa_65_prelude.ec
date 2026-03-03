@@ -2,7 +2,7 @@ require import AllCore List IntDiv RealExp StdBigop.
 
 from Spec require import GFq Rq Serialization Conversion Parameters VecMat MLDSA_W32_Rep.
 
-from JazzEC require import Array1280 Array640 Array1536 Array768 Array256 Array128 Array3200.
+from JazzEC require import Array1280 Array640 Array1536 Array768 Array256 Array128 Array3200 Array7680.
 
 import LArray KArray.
 
@@ -11,18 +11,20 @@ axiom mldsa65_kvec: kvec = 6.
 axiom mldsa65_w_hint : w_hint = 55.
 axiom mldsa65_lambda : lambda = 192.
 axiom mldsa65_gamma1 : gamma1 = 524288. (* 2**19 *) 
-
-
+axiom mldsa65_Eta : Eta = 4.
 
 op  lvec_unflatten640(a : 'a Array3200.t) =
      LArray.init (fun i => Array640.of_list witness (sub a (640*i) 640)).
+
 op  lvec_unflatten256(a : 'a Array1280.t) =
      LArray.init (fun i => Array256.of_list witness (sub a (256*i) 256)).
+
 op  lvec_unflatten128(a : 'a Array640.t) =
      LArray.init (fun i => Array128.of_list witness (sub a (128*i) 128)).
 
 op  kvec_unflatten256(a : 'a Array1536.t) =
      KArray.init (fun i => Array256.of_list witness (sub a (256*i) 256)).
+
 op  kvec_unflatten128(a : 'a Array768.t) =
      KArray.init (fun i => Array128.of_list witness (sub a (128*i) 128)).
 
@@ -52,3 +54,7 @@ have := Hjj j _; 1:smt().
 rewrite mapiE 1:/# /= mapiE 1:/# /= initiE 1:/# initiE 1:/# /=.
 by rewrite  /= !nth_sub /#. 
 qed.
+
+op mat_unflatten256(a : 'a Array7680.t) =
+     KLMatrix.init (fun i => Array256.of_list witness (sub a (256*i) 256)).
+     

@@ -485,13 +485,13 @@ wp.
 
 (* Copy commitment hash to beginning of signature *)
 seq 1 2 : (#pre /\ sigbytes{1} = to_list ct{1} /\
-      forall k, 0<=k<48 => nth W8.zero sigbytes{1} k =
+      forall k, 0<=k<48 => nth witness sigbytes{1} k =
             signature{2}.[k]).
 + sp 1 0;while {2} (#pre /\ 0 <= i{2} <= 48 /\ i{2} %% 16 = 0 /\
-         forall k, 0<=k<i{2} => nth W8.zero sigbytes{1} k =
+         forall k, 0<=k<i{2} => nth witness sigbytes{1} k =
             signature{2}.[k]).
   + move => &1;auto => /> &2 ??????H?;do split;1..3:smt().
-    move => k kbl kbh;rewrite initiE 1:/# initiE 1:/#.
+    move => k kbl kbh;rewrite initiE 1:/# /=  initiE 1:/#.
     rewrite WArray3309.get8_set128_directE 1,2:/#.
     case (i{2} <= k < i{2} + 16).
     + by move => ?; rewrite get128E W16u8.pack16bE 1:/# initiE 1:/# /init8 /= WArray48.initiE /#.
@@ -502,7 +502,7 @@ seq 1 2 : (#pre /\ sigbytes{1} = to_list ct{1} /\
   auto => /> &2 ???;split;1:smt().
   move => i2 s2 ???? H k kbl kbh.
   have := H k _;1:smt().
-  by rewrite initiE 1:/# => ->. 
+  by rewrite initiE 1:/# /=.
   
 
 ecall  (encode_hint signature{2} (liftu_wpolykvec (kvec_unflatten256 _hint))).
@@ -548,11 +548,9 @@ move => ii; rewrite !size_cat => iib.
 case (0 <= ii < 48) => ?.
 + rewrite nth_cat ifT; 1:smt(size_cat).
   rewrite nth_cat ifT; 1:smt(size_cat).
-  rewrite get_to_list.
   have := Hrr2;rewrite /touch_hint => Hth.
-  rewrite -Hth 1:/# initiE 1:/# /= ifF 1:/#.
-  rewrite /ll1 (nth_change_dfl W8.zero) 1:/# BytesCT.get_to_list.
-  by smt().
+  rewrite get_to_list /= -Hth 1:/# initiE 1:/# /= initiE 1:/# /=  ifF 1:/#.
+  by rewrite -Hc // BytesCT.initiE 1:/# /=.
 
   
 case (3309 - hint_bytes <= ii < 3309) => ?.
@@ -618,12 +616,11 @@ conseq (: _ ==> forall k, 0 <= k < lvec =>
      (mkseq (fun (ii : int) =>  sigma{1}.[lambda %/ w1_bits +
                640 * k + ii]) 640) (gamma1 - 1) gamma1).
 + auto => /> z1 Hz1 rr0 H1; split.
-  + apply (eq_from_nth W8.zero);
+  + apply (eq_from_nth witness);
      1: by  rewrite size_take 1:/# size_drop 1:/# !size_to_list /= /#.
     move => k; rewrite size_take 1:/# size_drop 1:/# !size_to_list /= => kb.
     rewrite nth_take 1,2:/# nth_drop 1,2:/# get_to_list initiE 1:/#.
-    rewrite (nth_change_dfl witness); 1:smt(Array61.size_to_list).
-    by rewrite get_to_list initiE 1:/# /= /#.
+    by rewrite initiE /#. 
   move => H2 rr1 rr2 ? ?; do split.
   + by apply BytesCT.tP => k kb; rewrite !initiE /#.
   + rewrite H1 tP => k kb; rewrite mapiE 1:/# /= Hz1 1:/# /lvec_unflatten640.

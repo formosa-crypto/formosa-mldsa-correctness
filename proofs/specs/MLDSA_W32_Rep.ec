@@ -5,7 +5,7 @@ from Jasmin require import JWord.
 require import GFq Rq VecMat.
 require import Array256.
 
-import CDR Round Zq PolyLVec PolyKVec.
+import CDR Round Zq PolyLVec PolyKVec PolyMat.
 
 (******************************************************)
 (* Representations of polys as 32-bit word arrays     *)
@@ -60,3 +60,18 @@ op polykvec_srng(p : polykvec, bl bh : int) = all (poly_srng bl bh) p.
 op wpolykvec_urng(pw : wpolykvec, b : int) = all (wpoly_urng b) pw.
 op wpolykvec_srng(pw : wpolykvec, bl bh : int) = all (wpoly_srng bl bh) pw.
 
+type wpolymat = wpoly KLMatrix.t.
+
+op liftu_wpolymat(wv : wpolymat) : polymat =
+  map liftu_wpoly wv.
+
+op lifts_wpolymat (wv : wpolymat) : polymat =
+  map lifts_wpoly wv.
+
+op unlift_polymat (v : polymat) : wpolymat = map unlift_poly v.
+
+op polymat_urng(p : polymat, b : int) = all (poly_urng b) p.
+op polymat_srng(p : polymat, bl bh : int) = all (poly_srng bl bh) p.
+
+op wpolymat_urng(pw : wpolymat, b : int) = all (wpoly_urng b) pw.
+op wpolymat_srng(pw : wpolymat, bl bh : int) = all (wpoly_srng bl bh) pw.

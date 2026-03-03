@@ -69,6 +69,26 @@ module RejNTTPoly(XOF : XOF_RejNTTPoly) = {
   }
 }.
 
+(*************** Begin RejNTTPoly CORRECTNESS BRIDGE ****************)
+
+(* TO DO COMPLETE SPECIFICATION *)
+module MLDSA_XOFA : XOF_RejNTTPoly = {
+  proc init(rho : Bytes34.t) : unit= {} 
+  
+  proc next() : Bytes3.t = { return witness; }
+}.
+
+
+op rejNTTPoly : Bytes34.t ->  poly.
+
+
+phoare RejNTTPoly_correct _rho :
+   [ RejNTTPoly(MLDSA_XOFA).sample : arg = _rho ==> res = rejNTTPoly _rho] = 1%r.
+admitted.
+   
+(*************** End RejNTTPoly CORRECTNESS BRIDGE ****************)
+
+
 module RejBoundedPoly(XOF : XOF_RejBPoly) = {
   proc sample(rho : Bytes66.t) : poly = {
     var j,z,z0,z1;
@@ -86,6 +106,25 @@ module RejBoundedPoly(XOF : XOF_RejBPoly) = {
     return a;
   }
 }.
+
+(*************** Begin RejBoundedPoly CORRECTNESS BRIDGE ****************)
+
+(* TO DO COMPLETE SPECIFICATION *)
+module MLDSA_XOFS : XOF_RejBPoly = {
+  proc init(rho : Bytes66.t) : unit= {} 
+  
+  proc next() : W8.t = { return witness; }
+}.
+
+
+op rejBoundedPoly : Bytes66.t ->  poly.
+
+
+phoare RejBoundedPoly_correct _rho :
+   [ RejBoundedPoly(MLDSA_XOFS).sample : arg = _rho ==> res = rejBoundedPoly _rho] = 1%r.
+admitted.
+   
+(*************** End RejBoundedPoly CORRECTNESS BRIDGE ****************)
 
 module ExpandA(XOF : XOF_RejNTTPoly) = {
    proc sample(rho : Bytes32.t) : polymat = {
@@ -106,6 +145,17 @@ module ExpandA(XOF : XOF_RejNTTPoly) = {
       return aa;
    }
 }.
+
+(*************** Begin ExpandA CORRECTNESS BRIDGE ****************)
+
+op expandA : Bytes32.t ->  polymat.
+
+
+phoare ExpandA_correct _rho :
+   [ ExpandA(MLDSA_XOFA).sample : arg = _rho ==> res = expandA _rho] = 1%r.
+admitted.
+   
+(*************** End ExpandA CORRECTNESS BRIDGE ****************)
 
 module ExpandS(XOF : XOF_RejBPoly) = {
    proc sample(rho : Bytes64.t) : polylvec * polykvec = {
@@ -131,6 +181,18 @@ module ExpandS(XOF : XOF_RejBPoly) = {
    }
 }.
 
+(*************** Begin ExpandS CORRECTNESS BRIDGE ****************)
+
+op expandS : Bytes64.t -> polylvec * polykvec.
+
+
+phoare ExpandS_correct _rho :
+   [ ExpandS(MLDSA_XOFS).sample : arg = _rho ==> res = expandS _rho] = 1%r.
+admitted.
+   
+(*************** End ExpandS CORRECTNESS BRIDGE ****************)
+
+
 module ExpandMask = {
    proc sample(rho : Bytes64.t, mu : int) : polylvec = {
      var r, rhop, v,si;
@@ -147,3 +209,15 @@ module ExpandMask = {
      return s;
    }
 }.
+
+(*************** Begin ExpandMask CORRECTNESS BRIDGE ****************)
+
+op expandMask : Bytes64.t -> int -> polylvec.
+
+
+phoare ExpandMask_correct _rho _mu :
+   [ ExpandMask.sample : arg = (_rho,_mu) ==> res = expandMask _rho _mu] = 1%r.
+admitted.
+   
+(*************** End ExpandMask CORRECTNESS BRIDGE ****************)
+

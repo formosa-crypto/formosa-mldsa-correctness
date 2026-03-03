@@ -53,13 +53,13 @@ lemma key_sizes : (sk_bytes, pk_bytes, sig_bytes) \in [ (* (2560,1312,2420); *)
   by  have /= H:= param_sets;elim H =>  [#] ?->??-> ->->-> /=. 
 
 
-clone import ByteArray as Bytes32 with op size <= 32.
-clone import ByteArray as Bytes64 with op size <= 64.
-clone import ByteArray as BytesSK with op size <= sk_bytes.
-clone import ByteArray as BytesPK with op size <= pk_bytes.
-clone import ByteArray as BytesSig with op size <= sig_bytes.
-clone import ByteArray as BytesCT with op size <= lambda %/ 4.
-clone import ByteArray as BytesW1 with op size <= w1_bytes.
+clone import JArray.MonoArray as Bytes32 with op size <= 32, type elem <= W8.t, op dfl <= witness.
+clone import JArray.MonoArray as Bytes64 with op size <= 64, type elem <= W8.t, op dfl <= witness.
+clone import JArray.MonoArray as BytesSK with op size <= sk_bytes, type elem <= W8.t, op dfl <= witness.
+clone import JArray.MonoArray as BytesPK with op size <= pk_bytes, type elem <= W8.t, op dfl <= witness.
+clone import JArray.MonoArray as BytesSig with op size <= sig_bytes, type elem <= W8.t, op dfl <= witness.
+clone import JArray.MonoArray as BytesCT with op size <= lambda %/ 4, type elem <= W8.t, op dfl <= witness.
+clone import JArray.MonoArray as BytesW1 with op size <= w1_bytes, type elem <= W8.t, op dfl <= witness.
 
 module PkEncDec = {
   proc pkEncode(rho : Bytes32.t, t1 : polykvec) : BytesPK.t = {
@@ -67,8 +67,9 @@ module PkEncDec = {
     pkbytes <- to_list rho;
     i <- 0;
     while (i < kvec) {
-      ti <- SimpleBitPack t1.[i] 10;
-      pkbytes <- pkbytes ++ ti; 
+      ti <- SimpleBitPack t1.[i] (2^((q_bits-d)) - 1) ;
+      pkbytes <- pkbytes ++ ti;
+      i <- i + 1;
     }
     pk <- BytesPK.of_list pkbytes;
     return pk;
@@ -83,17 +84,30 @@ module PkEncDec = {
     while (i < kvec) {
       ti <- SimpleBitUnpack (take ((n * (q_bits-d)) %/ 8) (drop 32 (to_list pk))) (2^(q_bits - d)-1);
       t <- t.[i <- ti];
+      i <- i + 1;
     }
     return (rho,t);
   }
 
 }.
 
+lemma pkEncode_corr _rho _t1 :
+    phoare [ PkEncDec.pkEncode : arg = (_rho,_t1) ==>
+              res = BytesPK.of_list (Bytes32.to_list _rho ++ (flatten (map (fun p => SimpleBitPack p (2^((q_bits-d)) - 1)) (to_list _t1)))) ] = 1%r.
+admitted.
+
+lemma pkDecode_corr _pk :
+    phoare [ PkEncDec.pkDecode : arg = _pk ==>
+            res.`1 = Bytes32.of_list (take 32 (to_list _pk))
+         /\ res.`2 = KArray.init (fun i =>
+                SimpleBitUnpack (take ((n * (q_bits-d)) %/ 8) (drop 32 (to_list _pk))) (2^(q_bits - d)-1))] = 1%r.
+admitted.
+
 module SkEncDec = {
   proc skEncode(rho k : Bytes32.t, tr : Bytes64.t, s1 : polylvec, s2 t0 : polykvec)
     : BytesSK.t = {
     var i, skbytes, ski,sk; 
-    skbytes <- to_list rho ++ to_list tr;
+    skbytes <- to_list rho ++ to_list k ++ to_list tr;
     i <- 0;
     while (i < lvec) {
       ski <- BitPack s1.[i] Eta Eta;
@@ -147,6 +161,28 @@ module SkEncDec = {
     return (rho,k,tr,s1,s2,t0);  
   }
 }.
+
+lemma skEncode_corr _rho _k _tr _s1 _s2 _t0 :
+    phoare [ SkEncDec.skEncode : arg = (_rho,_k,_tr,_s1,_s2,_t0) ==>
+              res = BytesSK.of_list
+              (Bytes32.to_list _rho ++ Bytes32.to_list _k ++ Bytes64.to_list _tr
+              ++  (flatten (map (fun p => BitPack p Eta Eta) (to_list _s1)))
+              ++  (flatten (map (fun p => BitPack p Eta Eta) (to_list _s2)))
+              ++  (flatten (map (fun p => BitPack p  (2^(d-1)) (2^(d-1))) (to_list _t0))))
+              ] = 1%r.
+admitted.
+
+lemma skDecode_corr _sk :
+    phoare [ SkEncDec.skDecode : arg = _sk ==>
+            res.`1 = Bytes32.of_list (take 32 (to_list _sk))
+         /\ res.`2 = Bytes32.of_list (take 32 (drop 32 (to_list _sk)))
+         /\ res.`3 = Bytes64.of_list (take 64 (drop 64 (to_list _sk)))
+         /\ res.`4 = LArray.init (fun i => BitUnpack (take ((n * noise_bits) %/ 8) (drop 128 (to_list _sk))) Eta Eta)
+         /\ res.`5 = KArray.init (fun i => BitUnpack (take ((n * noise_bits) %/ 8) (drop (128 + s1_bytes) (to_list _sk))) Eta Eta)
+         /\ res.`6 = KArray.init (fun i => BitUnpack (take ((n * d) %/ 8) (drop (128 + s1_bytes + s2_bytes) (to_list _sk))) (2^(d-1)-1) (2^(d-1)))
+          ] = 1%r.
+admitted.
+
 
 module SigEncDec = {
   proc sigEncode(ct : BytesCT.t, z : polylvec, h : polykvec) : BytesSig.t = {

@@ -16,8 +16,6 @@ require import Array640 Array1280.
 
 require import Error_polynomial.
 
-abbrev Eta = Error_polynomial.Eta.
-
 import VecMat PolyLVec.
 
 lemma s1_encode _a :
@@ -27,6 +25,7 @@ lemma s1_encode _a :
        lvec_unflatten128 res =
            LArray.map (fun (p : poly) => Array128.of_list witness (BitPack p Eta Eta)) (lifts_wpolylvec (lvec_unflatten256 _a))
    ].
+have Eta_val := mldsa65_Eta.
 have Hlvec := mldsa65_lvec.
 proc => /=.
 while (0 <= i <= 5 /\ s1 = _a /\ wpolylvec_srng (lvec_unflatten256 _a) Eta Eta  /\
@@ -67,6 +66,25 @@ rewrite initiE 1:/# /= tP => ii iib.
 rewrite  initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.
 qed.
 
+
+lemma s1_encode_ll : islossless M.s1____encode.
+proof.
+proc.
+inline *;while (0<=i<=6) (6-i);auto; last by smt().
+conseq(_: _ ==> true);1:smt().
+while (0 <= output_offset <=  128 /\ output_offset %% 32 = 0) (128 - output_offset);  auto => /> /#.
+qed.
+
+lemma s1_encode_ph _a :
+    phoare [  M.s1____encode :
+       s1 = _a /\ wpolylvec_srng (lvec_unflatten256 _a) Eta Eta
+     ==>
+       lvec_unflatten128 res =
+           LArray.map (fun (p : poly) => Array128.of_list witness (BitPack p Eta Eta)) (lifts_wpolylvec (lvec_unflatten256 _a))
+   ] = 1%r by conseq s1_encode_ll (s1_encode _a).
+
+
+
 lemma s1_decode _a :
     hoare [ M.s1____decode :
        encoded = _a
@@ -74,6 +92,7 @@ lemma s1_decode _a :
        lifts_wpolylvec (lvec_unflatten256 res) =
            LArray.map (fun (bytes : W8.t Array128.t) => BitUnpack (to_list bytes) Eta Eta) (lvec_unflatten128 _a)
    ].
+have Eta_val := mldsa65_Eta.
 have Hlvec := mldsa65_lvec.
 proc => /=.
 while (0 <= i <= 5 /\ encoded = _a /\
@@ -107,3 +126,20 @@ rewrite mapiE 1:/# /= initiE 1:/# /= tP => ii iib.
 rewrite !mapiE 1,2:/# /= initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.
 qed.
 
+
+lemma s1_decode_ll : islossless M.s1____decode.
+proof.
+proc.
+inline *;while (0<=i<=6) (6-i);auto; last by smt().
+conseq(_: _ ==> true);1:smt().
+while (0 <= input_offset <=  128 /\ input_offset %% 16 = 0) (128 - input_offset); 2: by auto => /> /#.
+by move => *;unroll for ^while; auto => /> /#.
+qed.
+
+lemma s1_decode_ph _a :
+    phoare [ M.s1____decode :
+       encoded = _a
+     ==>
+       lifts_wpolylvec (lvec_unflatten256 res) =
+           LArray.map (fun (bytes : W8.t Array128.t) => BitUnpack (to_list bytes) Eta Eta) (lvec_unflatten128 _a)
+   ] = 1%r by conseq s1_decode_ll (s1_decode _a).

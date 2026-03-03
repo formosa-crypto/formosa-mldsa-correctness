@@ -46,11 +46,10 @@ qed.
 
 (* Circuit spec *)
 
-op Eta = 4.
-lemma ilog_Eta : ilog 2 (Eta + Eta) = 3 by rewrite /Eta /=.
+lemma ilog_Eta : ilog 2 (Eta + Eta) = 3 by rewrite mldsa65_Eta /=.
 
 op error_polynomial_encode_lane(c : W32.t) : W4.t = 
-    truncateu32_4 (W32_sub (W32.of_int Eta) c).
+    truncateu32_4 (W32_sub (W32.of_int 4) c).
 
 lemma BitPack_liftE (p : wpoly) :
   wpoly_srng Eta Eta p =>
@@ -58,12 +57,13 @@ lemma BitPack_liftE (p : wpoly) :
   = to_list (let mapped = init_256_4 (fun i => error_polynomial_encode_lane p.[i]) in
              init_128_8 (fun i => W8.init (fun j => mapped.[(i*8+j) %/ 4].[(i*8+j) %% 4]))).
 proof.
+have Eta_val := mldsa65_Eta.
 move=> h @/BitPack; (pose l := ilog 2 _) => /=.
 have Hlog := ilog_Eta.
 have ? : size
   (flatten (map (fun (x : W32.t) => IntegerToBits (Eta - as_sint (incoeff (to_sint x))) (l + 1)) (to_list p))) = 256*4.
 +  rewrite  (size_flatten_ctt (l+1)).
-  +  by move => x; rewrite mapP => Hx;elim Hx => xw /= [? ->]; rewrite /IntegerToBits BS2Int.size_int2bs //.
+  +  by move => x; rewrite mapP => Hx;elim Hx => xw /= [? ->]; rewrite  /IntegerToBits BS2Int.size_int2bs /#.
   by rewrite size_map /= size_to_list  /l /= Hlog //=.
 
 rewrite /BitsToBytes !array256_mapE /=.
@@ -75,7 +75,7 @@ rewrite wordP => j jb.
 rewrite !initiE //= initiE 1:/# /= get_bits2w // nth_take // 1:/# nth_drop;2: by smt().
 + rewrite nth_iota /#. 
 rewrite (nth_flatten false (l+1)).
-+ by rewrite allP => x;rewrite mapP => Hx;elim Hx => xw /= [? ->]; rewrite /IntegerToBits BS2Int.size_int2bs //.
++ by rewrite allP => x;rewrite mapP => Hx;elim Hx => xw /= [? ->]; rewrite /IntegerToBits BS2Int.size_int2bs /#.
 rewrite nth_iota 1:/#  (nth_map witness) /=; 1: by rewrite size_to_list /= /#. 
 rewrite /error_polynomial_encode_lane .
 pose v:=p.[(i * 8 + j) %/ 4].
@@ -85,18 +85,18 @@ move: h => @/wpoly_srng /array256_allP /(_ v _) //= /=.
 move => h. 
 rewrite incoeffK_sint_small 1:/# /W32_sub truncateu_32_4E get_bits2w 1:/#.
 rewrite nth_take 1,2:/# w2bitsE. 
-have  -> := BS2Int.int2bs_cat 4 32 (to_uint (W32.of_int Eta - v)) _;1:smt().
+have  -> := BS2Int.int2bs_cat 4 32 (to_uint (W32.of_int 4 - v)) _;1:smt().
 rewrite /IntegerToBits nth_cat ifT;1: by rewrite BS2Int.size_int2bs /#.
 congr;2:smt().
 congr;1:smt(). 
 have := (W32.of_uintK (Eta- to_sint v)).
 rewrite modz_small;1:by smt().
 move => <-; rewrite -W32.of_intD';congr.
-rewrite W32.of_intN;congr. 
+rewrite W32.of_intN;congr;1:smt(). 
 rewrite /to_sint /smod /=.
 case (2147483648 <= to_uint v) => ?;last by smt(W32.to_uintK pow2_32).
 move : h; rewrite /to_sint /smod ifT //= => ?.
-congr;rewrite to_uint_eq of_uintK /=;smt(W32.to_uint_cmp pow2_32). 
+congr;rewrite to_uint_eq /= of_uintK /=;smt(W32.to_uint_cmp pow2_32). 
 qed. 
 
 lemma error_polynomial_encode _a :
@@ -105,6 +105,7 @@ lemma error_polynomial_encode _a :
      ==>
        to_list res = BitPack (lifts_wpoly _a) Eta Eta
    ].
+have Eta_val := mldsa65_Eta.
 proc;inline * => /=.
 proc change 1 : { temp <- W64.of_int 4097;}; 1: by auto.
 proc change 2 : { shift <- zeroextu256 temp; }.
@@ -152,12 +153,12 @@ conseq (:
   rewrite to_sintK_small //=.
   by rewrite of_sintK /= /smod /= /#.
 
-+ by move => &hr [<- Hrng] ? /= => ->;rewrite BitPack_liftE //=.
++ by move => &hr [<- Hrng] ? /= => ->;rewrite BitPack_liftE /#.
 
 qed.
 
 op error_polynomial_decode_lane(c : W4.t) : W32.t = 
-    (W32_sub (W32.of_int Eta) (zeroextu4_32 c)).
+    (W32_sub (W32.of_int 4) (zeroextu4_32 c)).
 
 lemma BitUnack_liftE (bytes : W8.t Array128.t) :
     BitUnpack (to_list bytes) Eta Eta
@@ -168,6 +169,7 @@ lemma BitUnack_liftE (bytes : W8.t Array128.t) :
            error_polynomial_decode_lane
              (W4.init (fun (j : int) => bytes.[(4 * i + j) %/ 8].[(4 * i + j) %% 8]))))).
 proof.
+have Eta_val := mldsa65_Eta.
 move=>  @/BitUnpack /=; rewrite tP => i ib.
 rewrite initiE 1:// mapiE //= initiE 1:/# /=.
 pose l1 := List.map _ _.

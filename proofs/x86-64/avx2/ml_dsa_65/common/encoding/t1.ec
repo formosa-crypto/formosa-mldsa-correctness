@@ -172,14 +172,13 @@ op  output_unflatten(a : 'a Array1920.t) =
      KArray.init (fun i => Array320.of_list witness (sub a (320*i) 320)).
 
 lemma t1_encode _a :
-    kvec = 6 =>
     hoare [ M.t1____encode :
        t1 = _a /\ wpolykvec_urng (input_unflatten _a) b_t1 
      ==>
        output_unflatten res = 
            KArray.map (fun (p : poly) => Array320.of_list witness (SimpleBitPack  p b_t1)) (liftu_wpolykvec (input_unflatten _a))
    ].
-move => Hkvec.
+have Hkvec := mldsa65_kvec.
 proc => /=.
 while (0 <= j <= 6 /\ t1 = _a /\ wpolykvec_urng (input_unflatten _a) b_t1  /\
        forall k, 0 <= k < j =>
@@ -219,3 +218,19 @@ rewrite initiE 1:/# /= tP => ii iib.
 rewrite  initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.
 qed.
 
+
+lemma t1_encode_ll : islossless  M.t1____encode.
+proof.
+proc => /=.
+inline *;while (0<=j<=6) (6-j);auto; last by smt().
+unroll for 24;wp.
+conseq(_: _ ==> true);1:smt().
+while (0 <= input_offset <=  n * 32 %/ 8 - 32 /\ input_offset %% 32 = 0) (n * 32 %/ 8 - 32 - input_offset); auto => /> /#.
+qed.
+
+lemma t1_encode_ph _a  :
+    phoare [ M.t1____encode :
+       t1 = _a /\ wpolykvec_urng (input_unflatten _a) b_t1 
+     ==>
+       output_unflatten res = 
+           KArray.map (fun (p : poly) => Array320.of_list witness (SimpleBitPack  p b_t1)) (liftu_wpolykvec (input_unflatten _a)) ] = 1%r by conseq t1_encode_ll (t1_encode _a).

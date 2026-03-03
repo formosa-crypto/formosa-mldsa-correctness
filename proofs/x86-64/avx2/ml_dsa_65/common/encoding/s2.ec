@@ -16,8 +16,6 @@ require import Array768 Array1536.
 
 require import Error_polynomial.
 
-abbrev Eta = Error_polynomial.Eta.
-
 import VecMat PolyLVec.
 
 lemma s2_encode _a :
@@ -27,6 +25,7 @@ lemma s2_encode _a :
        kvec_unflatten128 res =
            KArray.map (fun (p : poly) => Array128.of_list witness (BitPack p Eta Eta)) (lifts_wpolykvec (kvec_unflatten256 _a))
    ].
+have Eta_val := mldsa65_Eta.
 have Hkvec := mldsa65_kvec.
 proc => /=.
 while (0 <= i <= 6 /\ s2 = _a /\ wpolykvec_srng (kvec_unflatten256 _a) Eta Eta  /\
@@ -68,6 +67,23 @@ rewrite  initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.
 qed.
 
 
+lemma s2_encode_ll : islossless M.s2____encode.
+proof.
+proc.
+inline *;while (0<=i<=6) (6-i);auto; last by smt().
+conseq(_: _ ==> true);1:smt().
+while (0 <= output_offset <=  128 /\ output_offset %% 32 = 0) (128 - output_offset);  auto => /> /#.
+qed.
+
+lemma s2_encode_ph _a :
+    phoare [  M.s2____encode :
+       s2 = _a /\ wpolykvec_srng (kvec_unflatten256 _a) Eta Eta
+     ==>
+       kvec_unflatten128 res =
+           KArray.map (fun (p : poly) => Array128.of_list witness (BitPack p Eta Eta)) (lifts_wpolykvec (kvec_unflatten256 _a))
+   ] = 1%r by conseq s2_encode_ll (s2_encode _a).
+
+
 lemma s2_decode _a :
     hoare [ M.s2____decode :
        encoded = _a
@@ -75,6 +91,7 @@ lemma s2_decode _a :
        lifts_wpolykvec (kvec_unflatten256 res) =
            KArray.map (fun (bytes : W8.t Array128.t) => BitUnpack (to_list bytes) Eta Eta) (kvec_unflatten128 _a)
    ].
+have Eta_val := mldsa65_Eta.
 have Hkvec := mldsa65_kvec.
 proc => /=.
 while (0 <= i <= 6 /\ encoded = _a /\
@@ -108,3 +125,19 @@ rewrite mapiE 1:/# /= initiE 1:/# /= tP => ii iib.
 rewrite !mapiE 1,2:/# /= initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.
 qed.
 
+lemma s2_decode_ll : islossless M.s2____decode.
+proof.
+proc.
+inline *;while (0<=i<=6) (6-i);auto; last by smt().
+conseq(_: _ ==> true);1:smt().
+while (0 <= input_offset <=  128 /\ input_offset %% 16 = 0) (128 - input_offset); 2: by auto => /> /#.
+by move => *;unroll for ^while; auto => /> /#.
+qed.
+
+lemma s2_decode_ph _a :
+    phoare [ M.s2____decode :
+       encoded = _a
+     ==>
+       lifts_wpolykvec (kvec_unflatten256 res) =
+           KArray.map (fun (bytes : W8.t Array128.t) => BitUnpack (to_list bytes) Eta Eta) (kvec_unflatten128 _a)
+   ] = 1%r by conseq s2_decode_ll (s2_decode _a).

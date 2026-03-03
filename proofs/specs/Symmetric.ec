@@ -9,11 +9,11 @@ abbrev gamma1m1_bits = 19.
 lemma gamma1_bitlen :  2^(gamma1m1_bits-1) < gamma1-1 (* signed range *) <= 2^(gamma1m1_bits)
   by  have/= H := param_sets; elim H => /> ??->???? /=.
 
-clone import ByteArray as Bytes66 with op size <= 66.
-clone import ByteArray as Bytes34 with op size <= 34.
-clone import ByteArray as Bytes8 with op size <= 8.
-clone import ByteArray as Bytes3 with op size <= 3.
-clone import ByteArray as BytesV with op size <= n * (gamma1m1_bits + 1) %/ 8.
+clone import JArray.MonoArray as Bytes66 with op size <= 66, type elem <= W8.t, op dfl <= witness.
+clone import JArray.MonoArray as Bytes34 with op size <= 34, type elem <= W8.t, op dfl <= witness.
+clone import JArray.MonoArray as Bytes8 with op size <= 8, type elem <= W8.t, op dfl <= witness.
+clone import JArray.MonoArray as Bytes3 with op size <= 3, type elem <= W8.t, op dfl <= witness.
+clone import JArray.MonoArray as BytesV with op size <= n * (gamma1m1_bits + 1) %/ 8, type elem <= W8.t, op dfl <= witness.
 
 (*  H = SHAKE256, G = SHAKE128 *)
 
@@ -35,7 +35,7 @@ module type XOF_RejBPoly = {  (* SHAKE256 on 66 bytes input *)
 }.
 
 op H_seed : Bytes34.t -> Bytes32.t * Bytes64.t * Bytes32.t. (* SHAKE256 on 34 byte input,
-              but first 32 bytes are secret (PRG) *)
+                                                               but first 32 bytes are secret (PRG) *)
 
 op H_tr : BytesPK.t -> Bytes64.t. (* shake256 on PKbytes input *)
 

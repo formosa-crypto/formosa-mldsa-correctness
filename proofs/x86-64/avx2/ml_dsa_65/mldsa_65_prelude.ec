@@ -2,7 +2,7 @@ require import AllCore List IntDiv RealExp StdBigop.
 
 from Spec require import GFq Rq Serialization Conversion Parameters VecMat MLDSA_W32_Rep.
 
-from JazzEC require import Array1280 Array640 Array1536 Array768 Array256 Array128 Array3200 Array7680.
+from JazzEC require import Array320 Array416 Array1280 Array640 Array1536 Array768 Array256 Array128 Array1920 Array3200 Array7680 Array2496.
 
 import LArray KArray.
 
@@ -27,6 +27,56 @@ op  kvec_unflatten256(a : 'a Array1536.t) =
 
 op  kvec_unflatten128(a : 'a Array768.t) =
      KArray.init (fun i => Array128.of_list witness (sub a (128*i) 128)).
+
+op  kvec_unflatten320(a : 'a Array1920.t) =
+     KArray.init (fun i => Array320.of_list witness (sub a (320*i) 320)).
+
+op  kvec_unflatten416(a : 'a Array2496.t) =
+     KArray.init (fun i => Array416.of_list witness (sub a (416*i) 416)).
+
+lemma lvec_unflatten640iE (v : 'a Array3200.t) i :
+   0 <= i < 3200 => v.[i] = (lvec_unflatten640 v).[i %/ 640].[i %% 640].
+move => Hi; rewrite initiE /=; 1: smt(mldsa65_lvec).
+rewrite get_of_list 1:/# /= nth_sub /#.
+qed.
+
+lemma lvec_unflatten256iE (v : 'a Array1280.t) i :
+   0 <= i < 1280 => v.[i] = (lvec_unflatten256 v).[i %/ 256].[i %% 256].
+move => Hi; rewrite initiE /=; 1: smt(mldsa65_lvec).
+rewrite get_of_list 1:/# /= nth_sub /#.
+qed.
+
+lemma lvec_unflatten128iE (v : 'a Array640.t) i :
+   0 <= i < 640 => v.[i] = (lvec_unflatten128 v).[i %/ 128].[i %% 128].
+move => Hi; rewrite initiE /=; 1: smt(mldsa65_lvec).
+rewrite get_of_list 1:/# /= nth_sub /#.
+qed.
+
+lemma kvec_unflatten256iE (v : 'a Array1536.t) i :
+   0 <= i < 1536 => v.[i] = (kvec_unflatten256 v).[i %/ 256].[i %% 256].
+move => Hi; rewrite initiE /=; 1: smt(mldsa65_kvec).
+rewrite get_of_list 1:/# /= nth_sub /#.
+qed.
+
+lemma kvec_unflatten128iE (v : 'a Array768.t) i :
+   0 <= i < 768 => v.[i] = (kvec_unflatten128 v).[i %/ 128].[i %% 128].
+move => Hi; rewrite initiE /=; 1: smt(mldsa65_kvec).
+rewrite get_of_list 1:/# /= nth_sub /#.
+qed.
+
+lemma kvec_unflatten320iE (v : 'a Array1920.t) i :
+   0 <= i < 1920 => v.[i] = (kvec_unflatten320 v).[i %/ 320].[i %% 320].
+move => Hi; rewrite initiE /=; 1: smt(mldsa65_kvec).
+rewrite get_of_list 1:/# /= nth_sub /#.
+qed.
+
+lemma kvec_unflatten416iE (v : 'a Array2496.t) i :
+   0 <= i < 2496 => v.[i] = (kvec_unflatten416 v).[i %/ 416].[i %% 416].
+move => Hi; rewrite initiE /=; 1: smt(mldsa65_kvec).
+rewrite get_of_list 1:/# /= nth_sub /#.
+qed.
+
+
 
 lemma kvec_unflatten256E i j (h : 'a Array1536.t) (P : 'a -> bool) :
    0 <= i < kvec =>

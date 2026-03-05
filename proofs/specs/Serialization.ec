@@ -154,7 +154,7 @@ module SkEncDec = {
     }
     i <- 0;
     while (i < kvec) {
-      ski <- BitUnpack (take ((n * d) %/ 8) (drop (128 + s1_bytes + s2_bytes) (to_list sk))) (2^(d-1)-1) (2^(d-1));
+      ski <- BitUnpack (take ((n * d) %/ 8) (drop (128 + s1_bytes + s2_bytes) (to_list sk))) (2^(d-1)-1) (2^(d-1)-1);
       t0 <- t0.[i <- ski];
       i <- i + 1;
     }
@@ -168,7 +168,7 @@ lemma skEncode_corr _rho _k _tr _s1 _s2 _t0 :
               (Bytes32.to_list _rho ++ Bytes32.to_list _k ++ Bytes64.to_list _tr
               ++  (flatten (map (fun p => BitPack p Eta Eta) (to_list _s1)))
               ++  (flatten (map (fun p => BitPack p Eta Eta) (to_list _s2)))
-              ++  (flatten (map (fun p => BitPack p  (2^(d-1)) (2^(d-1))) (to_list _t0))))
+              ++  (flatten (map (fun p => BitPack p  (2^(d-1)-1) (2^(d-1))) (to_list _t0))))
               ] = 1%r.
 admitted.
 

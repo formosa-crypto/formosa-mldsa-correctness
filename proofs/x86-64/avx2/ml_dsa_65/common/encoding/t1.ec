@@ -164,26 +164,21 @@ qed.
 
 import VecMat PolyKVec.
 
-require import Array1920 Array1536.
-
-op  input_unflatten(a : 'a Array1536.t) =
-     KArray.init (fun i => Array256.of_list witness (sub a (256*i) 256)).
-op  output_unflatten(a : 'a Array1920.t) =
-     KArray.init (fun i => Array320.of_list witness (sub a (320*i) 320)).
+require import Array256 Array320 Array1536 Array1920.
 
 lemma t1_encode _a :
     hoare [ M.t1____encode :
-       t1 = _a /\ wpolykvec_urng (input_unflatten _a) b_t1 
+       t1 = _a /\ wpolykvec_urng (kvec_unflatten256 _a) b_t1 
      ==>
-       output_unflatten res = 
-           KArray.map (fun (p : poly) => Array320.of_list witness (SimpleBitPack  p b_t1)) (liftu_wpolykvec (input_unflatten _a))
+       kvec_unflatten320 res = 
+           KArray.map (fun (p : poly) => Array320.of_list witness (SimpleBitPack  p b_t1)) (liftu_wpolykvec (kvec_unflatten256 _a))
    ].
 have Hkvec := mldsa65_kvec.
 proc => /=.
-while (0 <= j <= 6 /\ t1 = _a /\ wpolykvec_urng (input_unflatten _a) b_t1  /\
+while (0 <= j <= 6 /\ t1 = _a /\ wpolykvec_urng (kvec_unflatten256 _a) b_t1  /\
        forall k, 0 <= k < j =>
-       (output_unflatten encoded).[k] =
-       (map (fun (p : poly) => Array320.of_list witness (SimpleBitPack  p b_t1)) (liftu_wpolykvec (input_unflatten _a))).[k]);
+       (kvec_unflatten320 encoded).[k] =
+       (map (fun (p : poly) => Array320.of_list witness (SimpleBitPack  p b_t1)) (liftu_wpolykvec (kvec_unflatten256 _a))).[k]);
        last first.
        + auto => /> &hr *;do split;1: smt().
          move => r0 j0 *;rewrite tP => k kb; smt().
@@ -198,15 +193,15 @@ move => ?? rr Hrr; do split;1,2: smt().
 move => k kbl kbh.
 case(0<=k<j{hr}) => *.
 + 
-   have -> : (output_unflatten
+   have -> : (kvec_unflatten320
    (Array1920.init
       (fun (i : int) => if j{hr} * 320 <= i < j{hr} * 320 + 320 then rr.[i - j{hr} * 320] else encoded{hr}.[i]))).[k] =
-    ((output_unflatten encoded{hr})).[k]; last by smt().
+    ((kvec_unflatten320 encoded{hr})).[k]; last by smt().
   rewrite !initiE 1..2:/# /= /of_list /= tP => kk kkb.
   rewrite !initiE 1,2:/# !nth_sub 1,2:/# initiE 1:/# /= /#.
 have -> : k = j{hr} by smt().
 + have -> : 
-   (output_unflatten
+   (kvec_unflatten320
    (Array1920.init
       (fun (i : int) => if j{hr} * 320 <= i < j{hr} * 320 + 320 then rr.[i - j{hr} * 320] else encoded{hr}.[i]))).[j{hr}]  =
     (rr); last first.
@@ -230,7 +225,7 @@ qed.
 
 lemma t1_encode_ph _a  :
     phoare [ M.t1____encode :
-       t1 = _a /\ wpolykvec_urng (input_unflatten _a) b_t1 
+       t1 = _a /\ wpolykvec_urng (kvec_unflatten256 _a) b_t1 
      ==>
-       output_unflatten res = 
-           KArray.map (fun (p : poly) => Array320.of_list witness (SimpleBitPack  p b_t1)) (liftu_wpolykvec (input_unflatten _a)) ] = 1%r by conseq t1_encode_ll (t1_encode _a).
+       kvec_unflatten320 res = 
+           KArray.map (fun (p : poly) => Array320.of_list witness (SimpleBitPack  p b_t1)) (liftu_wpolykvec (kvec_unflatten256 _a)) ] = 1%r by conseq t1_encode_ll (t1_encode _a).

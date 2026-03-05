@@ -19,5 +19,5 @@ require import WArray32 WArray1952 WArray4032.
 lemma hash_verification_key_correct _pk :
     phoare [ M.hash_verification_key :
          arg.`2 = _pk ==>
-         to_list res = Bytes64.to_list (H_tr (BytesPK.of_list (to_list _pk))) ] = 1%r.
+         res = Array64.of_list witness (Bytes64.to_list (H_tr (BytesPK.of_list (to_list _pk)))) ] = 1%r.
 admitted.

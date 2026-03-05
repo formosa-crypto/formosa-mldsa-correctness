@@ -224,26 +224,21 @@ qed.
 
 import VecMat PolyLVec.
 
-require import Array1536 Array2496.
-
-op  encoded_unflatten(a : 'a Array2496.t) =
-     KArray.init (fun i => Array416.of_list witness (sub a (416*i) 416)).
-op  decoded_unflatten(a : 'a Array1536.t) =
-     KArray.init (fun i => Array256.of_list witness (sub a (256*i) 256)).
+require import Array416 Array1536 Array256 Array2496.
 
 lemma t0_decode _a  :
     hoare [ M.t0__decode : 
        encoded = _a 
      ==>
-       lifts_wpolykvec (decoded_unflatten res) = 
-           KArray.map (fun p => BitUnpack (to_list p) (dpow-1) dpow) (encoded_unflatten _a)
+       lifts_wpolykvec (kvec_unflatten256 res) = 
+           KArray.map (fun p => BitUnpack (to_list p) (dpow-1) dpow) (kvec_unflatten416 _a)
    ].
 have Hkvec := mldsa65_kvec.
 proc => /=.
 while (0 <= i <= 6 /\ encoded = _a /\
        forall k, 0 <= k < i =>
-       (lifts_wpolykvec (decoded_unflatten t0)).[k] =
-       (map (fun (p : W8.t Array416.t) => BitUnpack (to_list p) (Top.dpow - 1) Top.dpow) (encoded_unflatten _a)).[k]);
+       (lifts_wpolykvec (kvec_unflatten256 t0)).[k] =
+       (map (fun (p : W8.t Array416.t) => BitUnpack (to_list p) (Top.dpow - 1) Top.dpow) (kvec_unflatten416 _a)).[k]);
        last first.
        + auto => /> &hr *;do split;1: smt().
          move => i0 t00 *;rewrite tP => k kb; smt().
@@ -253,15 +248,15 @@ move => ? rr Hrr;do split;1,2:smt().
 move => k kbl kbh.
 case(0<=k<i{hr}) => *.
 + have -> : (lifts_wpolykvec
-   (decoded_unflatten
+   (kvec_unflatten256
       (Array1536.init
          (fun (i_0 : int) => if i{hr} * n <= i_0 < i{hr} * n + n then rr.[i_0 - i{hr} * n] else t0{hr}.[i_0])))).[k] =
-    (lifts_wpolykvec (decoded_unflatten t0{hr})).[k]; last by smt().
+    (lifts_wpolykvec (kvec_unflatten256 t0{hr})).[k]; last by smt().
   rewrite !mapiE 1..2:/# initiE 1:/# /= initiE 1:/# /= tP =>  ii iib.
   rewrite mapiE 1:/# /= initiE 1:/# /= mapiE 1:/# /= initiE 1:/# /= !nth_sub 1,2:/# initiE 1:/# /= /#.
 have -> : k = i{hr} by smt().
 + have -> : (lifts_wpolykvec
-   (decoded_unflatten
+   (kvec_unflatten256
       (Array1536.init
          (fun (i_0 : int) => if i{hr} * n <= i_0 < i{hr} * n + n then rr.[i_0 - i{hr} * n] else t0{hr}.[i_0])))).[i{hr}]  =
     (lifts_wpoly rr); last first.
@@ -284,28 +279,28 @@ lemma t0_decode_ph _a  :
     phoare [ M.t0__decode : 
        encoded = _a 
      ==>
-       lifts_wpolykvec (decoded_unflatten res) = 
-           KArray.map (fun p => BitUnpack (to_list p) (dpow-1) dpow) (encoded_unflatten _a)
+       lifts_wpolykvec (kvec_unflatten256 res) = 
+           KArray.map (fun p => BitUnpack (to_list p) (dpow-1) dpow) (kvec_unflatten416 _a)
     ] = 1%r by conseq t0_decode_ll (t0_decode _a).
 
 
 lemma t0_encode _a  :
     hoare [ M.t0____encode : 
        t0 = _a /\
-       wpolykvec_srng (decoded_unflatten _a) (dpow - 1) dpow 
+       wpolykvec_srng (kvec_unflatten256 _a) (dpow - 1) dpow 
      ==>
-      encoded_unflatten res = 
-           KArray.map (fun p => (Array416.of_list W8.zero (BitPack p (dpow-1) dpow))) (lifts_wpolykvec (decoded_unflatten _a))
+      kvec_unflatten416 res = 
+           KArray.map (fun p => (Array416.of_list witness (BitPack p (dpow-1) dpow))) (lifts_wpolykvec (kvec_unflatten256 _a))
    ].
 have Hkvec := mldsa65_kvec.
 proc => /=.
 while (0 <= j <= 6 /\ t0 = _a /\
        (forall k, 0 <= k < kvec =>
-           wpoly_srng (dpow - 1) dpow (decoded_unflatten _a).[k]) /\
+           wpoly_srng (dpow - 1) dpow (kvec_unflatten256 _a).[k]) /\
        (forall k, 0 <= k < j =>
-        (encoded_unflatten encoded).[k] =
-         (KArray.map (fun (p : poly) => Array416.of_list W8.zero (BitPack p (dpow - 1) dpow))
-          (lifts_wpolykvec (decoded_unflatten _a))).[k]));
+        (kvec_unflatten416 encoded).[k] =
+         (KArray.map (fun (p : poly) => Array416.of_list witness (BitPack p (dpow - 1) dpow))
+          (lifts_wpolykvec (kvec_unflatten256 _a))).[k]));
        last first.
        + auto => /> &hr; rewrite /wpolykvec_srng allP => *;do split; 1,2: smt().
          move => i0 t00 *;rewrite tP => k kb; smt().
@@ -320,19 +315,19 @@ move => ? rr Hrr;do split;1,2:smt().
 move => k kbl kbh.
 case(0<=k<j{hr}) => *.
 + have -> : 
-   ((encoded_unflatten
+   ((kvec_unflatten416
    (Array2496.init
-      (fun (i : int) => if j{hr} * 416 <= i < j{hr} * 416 + 416 then rr.[i - j{hr} * 416] else encoded{hr}.[i]))).[k] = (encoded_unflatten encoded{hr}).[k]); last by smt().
+      (fun (i : int) => if j{hr} * 416 <= i < j{hr} * 416 + 416 then rr.[i - j{hr} * 416] else encoded{hr}.[i]))).[k] = (kvec_unflatten416 encoded{hr}).[k]); last by smt().
   rewrite initiE 1:/# /= initiE 1:/# /= tP =>  ii iib.
   by rewrite !get_of_list // !nth_sub // initiE 1:/# /= ifF 1:/#.
 have -> : k = j{hr} by smt().
 + have -> : (
-   ((encoded_unflatten
+   ((kvec_unflatten416
    (Array2496.init
       (fun (i : int) => if j{hr} * 416 <= i < j{hr} * 416 + 416 then rr.[i - j{hr} * 416] else encoded{hr}.[i]))).[j{hr}]  =
     rr)); last first.
-  + have <-:= (Array416.to_listK W8.zero rr).
-    rewrite Hrr mapiE 1:/# /=; congr;congr;rewrite /decoded_unflatten mapiE 1:/# /= initiE 1:/# /=;congr;rewrite tP => ??;rewrite get_of_list 1:/# /= initiE 1:/# /= nth_sub /#.
+  + have <-:= (Array416.to_listK witness rr).
+    rewrite Hrr mapiE 1:/# /=; congr;congr;rewrite  mapiE 1:/# /= initiE 1:/# /=;congr;rewrite tP => ??;rewrite get_of_list 1:/# /= initiE 1:/# /= nth_sub /#.
     rewrite /encoded_unflatten initiE 1:/# /= tP => i ib.
 by rewrite get_of_list // nth_sub // initiE 1:/# /= /#. 
 qed.
@@ -349,7 +344,7 @@ qed.
 lemma t0_encode_ph _a  :
     phoare [ M.t0____encode : 
        t0 = _a /\
-       wpolykvec_srng (decoded_unflatten _a) (dpow - 1) dpow 
+       wpolykvec_srng (kvec_unflatten256 _a) (dpow - 1) dpow 
      ==>
-      encoded_unflatten res = 
-           KArray.map (fun p => (Array416.of_list W8.zero (BitPack p (dpow-1) dpow))) (lifts_wpolykvec (decoded_unflatten _a)) ] = 1%r by conseq t0_encode_ll (t0_encode _a).
+      kvec_unflatten416 res = 
+           KArray.map (fun p => (Array416.of_list witness (BitPack p (dpow-1) dpow))) (lifts_wpolykvec (kvec_unflatten256 _a)) ] = 1%r by conseq t0_encode_ll (t0_encode _a).

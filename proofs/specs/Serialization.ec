@@ -82,7 +82,7 @@ module PkEncDec = {
     rho <- Bytes32.of_list (take 32 (to_list pk));
     i <- 0;
     while (i < kvec) {
-      ti <- SimpleBitUnpack (take ((n * (q_bits-d)) %/ 8) (drop 32 (to_list pk))) (2^(q_bits - d)-1);
+      ti <- SimpleBitUnpack (take ((n * (q_bits-d)) %/ 8) (drop (((n * (q_bits-d)) %/ 8)*i + 32) (to_list pk))) (2^(q_bits - d)-1);
       t <- t.[i <- ti];
       i <- i + 1;
     }
@@ -94,14 +94,35 @@ module PkEncDec = {
 lemma pkEncode_corr _rho _t1 :
     phoare [ PkEncDec.pkEncode : arg = (_rho,_t1) ==>
               res = BytesPK.of_list (Bytes32.to_list _rho ++ (flatten (map (fun p => SimpleBitPack p (2^((q_bits-d)) - 1)) (to_list _t1)))) ] = 1%r.
-admitted.
+proof.
+proc.
+have /= pars:= param_sets.
+wp; while (0 <= i <= kvec /\ t1 = _t1 /\
+       pkbytes = to_list _rho ++ (flatten (map (fun (p : poly) => SimpleBitPack p (2 ^ (q_bits - d) - 1)) (take i (to_list _t1))))) (kvec - i); last first.
++ auto => />;split;1: smt(take0 flatten_nil cats0).
+  by smt(KArray.size_to_list take_oversize).
+move => z; auto => /> &hr *; do split;1,2,4:smt().
+rewrite (take_nth witness) /=;1: by rewrite size_to_list /#.
+by rewrite -cats1 map_cat flatten_cat map1 flatten1 /= !catA.
+qed.
 
 lemma pkDecode_corr _pk :
     phoare [ PkEncDec.pkDecode : arg = _pk ==>
             res.`1 = Bytes32.of_list (take 32 (to_list _pk))
          /\ res.`2 = KArray.init (fun i =>
-                SimpleBitUnpack (take ((n * (q_bits-d)) %/ 8) (drop 32 (to_list _pk))) (2^(q_bits - d)-1))] = 1%r.
-admitted.
+                SimpleBitUnpack (take ((n * (q_bits-d)) %/ 8) (drop (((n * (q_bits-d)) %/ 8)*i + 32) (to_list _pk))) (2^(q_bits - d)-1))] = 1%r.
+proc.
+have /= pars:= param_sets.
+while (0 <= i <= kvec /\ pk = _pk /\
+    forall k, 0 <= k < i =>
+     t.[k] = SimpleBitUnpack (take ((n * (q_bits-d)) %/ 8) (drop (((n * (q_bits-d)) %/ 8)*k + 32) (to_list _pk))) (2 ^ (q_bits - d) - 1)) (kvec - i); last first.
++ auto => />; do split;1,2:smt().
+  + move => i t; do split;1:smt().
+  move => ??? H;rewrite tP => k kb.
+  by rewrite initiE 1:/# /= /#.
+move => z;auto => /> &hr *;do split;1,2,4:smt().
+by move => k kbl kbh;rewrite get_setE /#.
+qed.
 
 module SkEncDec = {
   proc skEncode(rho k : Bytes32.t, tr : Bytes64.t, s1 : polylvec, s2 t0 : polykvec)
@@ -122,7 +143,7 @@ module SkEncDec = {
     }
     i <- 0;
     while (i < kvec) {
-      ski <- BitPack t0.[i] (2^(d-1)) (2^(d-1));
+      ski <- BitPack t0.[i] (2^(d-1)-1) (2^(d-1));
       skbytes <- skbytes ++ ski;
       i <- i + 1;
     }
@@ -142,19 +163,19 @@ module SkEncDec = {
     tr <- Bytes64.of_list (take 64 (drop 64 (to_list sk)));
     i <- 0;
     while (i < lvec) {
-      ski <- BitUnpack (take ((n * noise_bits) %/ 8) (drop 128 (to_list sk))) Eta Eta;
+      ski <- BitUnpack (take ((n * noise_bits) %/ 8) (drop (128 + i*((n * noise_bits) %/ 8)) (to_list sk))) Eta Eta;
       s1 <- s1.[i <- ski];
       i <- i + 1;
     }
     i <- 0;
     while (i < kvec) {
-      ski <- BitUnpack (take ((n * noise_bits) %/ 8) (drop (128 + s1_bytes) (to_list sk))) Eta Eta;
+      ski <- BitUnpack (take ((n * noise_bits) %/ 8) (drop (128 + s1_bytes + i*((n * noise_bits) %/ 8)) (to_list sk))) Eta Eta;
       s2 <- s2.[i <- ski];
       i <- i + 1;
     }
     i <- 0;
     while (i < kvec) {
-      ski <- BitUnpack (take ((n * d) %/ 8) (drop (128 + s1_bytes + s2_bytes) (to_list sk))) (2^(d-1)-1) (2^(d-1)-1);
+      ski <- BitUnpack (take ((n * d) %/ 8) (drop (128 + s1_bytes + s2_bytes + i*(n * d) %/ 8) (to_list sk))) (2^(d-1)-1) (2^(d-1));
       t0 <- t0.[i <- ski];
       i <- i + 1;
     }
@@ -170,19 +191,143 @@ lemma skEncode_corr _rho _k _tr _s1 _s2 _t0 :
               ++  (flatten (map (fun p => BitPack p Eta Eta) (to_list _s2)))
               ++  (flatten (map (fun p => BitPack p  (2^(d-1)-1) (2^(d-1))) (to_list _t0))))
               ] = 1%r.
-admitted.
+proof.
+proc.
+have /= pars:= param_sets.
+
+wp; while (0 <= i <= kvec /\ t0 = _t0 /\
+       skbytes = to_list _rho ++ to_list _k ++ to_list _tr ++ flatten (map (fun (p : poly) => BitPack p Eta Eta) (to_list _s1)) ++
+     flatten (map (fun (p : poly) => BitPack p Eta Eta) (to_list _s2)) ++
+     flatten (map (fun (p : poly) => BitPack p 4095 4096) (take i (to_list _t0)))) (kvec - i).
++ move => z; auto => /> &hr *; do split;1,2,4:smt().
+  rewrite (take_nth witness) /=;1: by rewrite size_to_list /#.
+  by rewrite -cats1 map_cat flatten_cat map1 flatten1 /= !catA.
+
+wp;conseq (: _ ==> 
+   skbytes =
+   to_list _rho ++ to_list _k ++ to_list _tr ++ flatten (map (fun (p : poly) => BitPack p Eta Eta) (to_list _s1)) ++
+   flatten (map (fun (p : poly) => BitPack p Eta Eta) (to_list _s2))).
++ auto => />; do split;1,2:smt(take0 cats0).
+  + by rewrite take0 /= flatten_nil cats0.
+  move => i; do split;1:smt().
+  by move => *;rewrite take_oversize ?size_to_list /#.
+
+wp; while (0 <= i <= kvec /\ s2 = _s2 /\
+       skbytes = to_list _rho ++ to_list _k ++ to_list _tr ++ flatten (map (fun (p : poly) => BitPack p Eta Eta) (to_list _s1)) ++
+     flatten (map (fun (p : poly) => BitPack p Eta Eta) (take i (to_list _s2)))) (kvec - i).
++ move => z; auto => /> &hr *; do split;1,2,4:smt().
+  rewrite (take_nth witness) /=;1: by rewrite size_to_list /#.
+  by rewrite -cats1 map_cat flatten_cat map1 flatten1 /= !catA.
+
+  wp;conseq (: _ ==> 
+   skbytes =
+   to_list _rho ++ to_list _k ++ to_list _tr ++ flatten (map (fun (p : poly) => BitPack p Eta Eta) (to_list _s1))).
++ auto => />; do split;1,2:smt(take0 cats0).
+  + by rewrite take0 /= flatten_nil cats0.
+  move => i; do split;1:smt().
+  by move => *;rewrite take_oversize ?size_to_list /#.
+
+wp; while (0 <= i <= kvec /\ s1 = _s1 /\
+       skbytes = to_list _rho ++ to_list _k ++ to_list _tr ++ flatten (map (fun (p : poly) => BitPack p Eta Eta) (take i (to_list _s1)))) (kvec - i).
++ move => z; auto => /> &hr *; do split;1,2,4:smt().
+  rewrite (take_nth witness) /=;1: by rewrite size_to_list /#.
+  by rewrite -cats1 map_cat flatten_cat map1 flatten1 /= !catA.
+
+auto => />; do split;1,2:smt(take0 cats0).
+move => *; do split;1:smt().
+by move => *;rewrite take_oversize ?size_to_list /#.
+qed.
 
 lemma skDecode_corr _sk :
     phoare [ SkEncDec.skDecode : arg = _sk ==>
             res.`1 = Bytes32.of_list (take 32 (to_list _sk))
          /\ res.`2 = Bytes32.of_list (take 32 (drop 32 (to_list _sk)))
          /\ res.`3 = Bytes64.of_list (take 64 (drop 64 (to_list _sk)))
-         /\ res.`4 = LArray.init (fun i => BitUnpack (take ((n * noise_bits) %/ 8) (drop 128 (to_list _sk))) Eta Eta)
-         /\ res.`5 = KArray.init (fun i => BitUnpack (take ((n * noise_bits) %/ 8) (drop (128 + s1_bytes) (to_list _sk))) Eta Eta)
-         /\ res.`6 = KArray.init (fun i => BitUnpack (take ((n * d) %/ 8) (drop (128 + s1_bytes + s2_bytes) (to_list _sk))) (2^(d-1)-1) (2^(d-1)))
+         /\ res.`4 = LArray.init (fun i => BitUnpack (take ((n * noise_bits) %/ 8) (drop (128 + i * (n * noise_bits) %/ 8) (to_list _sk))) Eta Eta)
+         /\ res.`5 = KArray.init (fun i => BitUnpack (take ((n * noise_bits) %/ 8) (drop (128 + s1_bytes + i*((n * noise_bits) %/ 8)) (to_list _sk))) Eta Eta)
+         /\ res.`6 = KArray.init (fun i => BitUnpack (take ((n * d) %/ 8) (drop (128 + s1_bytes + s2_bytes + i*((n * d) %/ 8)) (to_list _sk))) (2^(d-1)-1) (2^(d-1)))
           ] = 1%r.
-admitted.
+proc.
+have /= pars:= param_sets.
+seq 3 : #pre;[1,2,5:by auto | 4: by hoare;auto].
 
+while (0 <= i <= kvec /\ sk = _sk /\
+ rho = Bytes32.of_list (take 32 (to_list _sk)) /\
+  k = Bytes32.of_list (take 32 (drop 32 (to_list _sk))) /\
+  tr = Bytes64.of_list (take 64 (drop 64 (to_list _sk))) /\
+  s1 =
+  LArray.init
+    (fun (i0 : int) =>
+       BitUnpack (take ((n * noise_bits) %/ 8) (drop (128 + i0 * (n * noise_bits) %/ 8) (to_list _sk))) Eta Eta) /\
+  s2 =
+  KArray.init
+    (fun (i0 : int) =>
+       BitUnpack (take ((n * noise_bits) %/ 8) (drop (128 + s1_bytes + i0 * ((n * noise_bits) %/ 8)) (to_list _sk)))
+         Eta Eta) /\
+    forall k, 0 <= k < i =>
+     t0.[k] = BitUnpack (take 416 (drop (128 + s1_bytes + s2_bytes + k * ((n * d) %/ 8)) (to_list _sk))) 4095 4096) (kvec - i).
++ move => z;auto => /> &hr *;do split;1,2,4:smt().
+  by move => k kbl kbh;rewrite get_setE /#.
+
+wp;conseq (: _ ==>
+   rho = Bytes32.of_list (take 32 (to_list _sk)) /\
+  k = Bytes32.of_list (take 32 (drop 32 (to_list _sk))) /\
+  tr = Bytes64.of_list (take 64 (drop 64 (to_list _sk))) /\
+  s1 =
+  LArray.init
+    (fun (i0 : int) =>
+       BitUnpack (take ((n * noise_bits) %/ 8) (drop (128 + i0 * (n * noise_bits) %/ 8) (to_list _sk))) Eta Eta) /\
+  s2 =
+  KArray.init
+    (fun (i0 : int) =>
+       BitUnpack (take ((n * noise_bits) %/ 8) (drop (128 + s1_bytes + i0 * ((n * noise_bits) %/ 8)) (to_list _sk)))
+         Eta Eta)).
++ auto => /> &hr; do split;1,2:smt().
+  move => i t0;do split;1:smt().
+  move => *;rewrite tP => k kb.
+  by rewrite initiE 1:/# /= /#.
+
+while (0 <= i <= kvec /\ sk = _sk /\
+ rho = Bytes32.of_list (take 32 (to_list _sk)) /\
+  k = Bytes32.of_list (take 32 (drop 32 (to_list _sk))) /\
+  tr = Bytes64.of_list (take 64 (drop 64 (to_list _sk))) /\
+  s1 =
+  LArray.init
+    (fun (i0 : int) =>
+       BitUnpack (take ((n * noise_bits) %/ 8) (drop (128 + i0 * (n * noise_bits) %/ 8) (to_list _sk))) Eta Eta) /\
+    forall k, 0 <= k < i =>
+     s2.[k] = BitUnpack (take ((n * noise_bits) %/ 8) (drop (128 + s1_bytes + k * ((n * noise_bits) %/ 8)) (to_list _sk))) Eta Eta) (kvec - i).
++ move => z;auto => /> &hr *;do split;1,2,4:smt().
+  by move => k kbl kbh;rewrite get_setE /#.
+
+wp;conseq (: _ ==>
+   rho = Bytes32.of_list (take 32 (to_list _sk)) /\
+  k = Bytes32.of_list (take 32 (drop 32 (to_list _sk))) /\
+  tr = Bytes64.of_list (take 64 (drop 64 (to_list _sk))) /\
+  s1 =
+  LArray.init
+    (fun (i0 : int) =>
+       BitUnpack (take ((n * noise_bits) %/ 8) (drop (128 + i0 * (n * noise_bits) %/ 8) (to_list _sk))) Eta Eta) ).
++ auto => /> &hr; do split;1,2:smt().
+  move => i s2;do split;1:smt().
+  move => *;rewrite tP => k kb.
+  by rewrite initiE 1:/# /= /#.
+
+while (0 <= i <= lvec /\ sk = _sk /\
+ rho = Bytes32.of_list (take 32 (to_list _sk)) /\
+  k = Bytes32.of_list (take 32 (drop 32 (to_list _sk))) /\
+  tr = Bytes64.of_list (take 64 (drop 64 (to_list _sk))) /\
+    forall k, 0 <= k < i =>
+     s1.[k] = BitUnpack (take ((n * noise_bits) %/ 8) (drop (128 + k * (n * noise_bits) %/ 8) (to_list _sk))) Eta Eta) (kvec - i).
++ move => z;auto => /> &hr *;do split;1,2,4:smt().
+  by move => k kbl kbh;rewrite get_setE /#.
+
+auto => /> &hr; do split;1,2:smt().
+move => i s1;do split;1:smt().
+move => *;rewrite tP => k kb.
+by rewrite initiE 1:/# /= /#.
+
+qed.
 
 module SigEncDec = {
   proc sigEncode(ct : BytesCT.t, z : polylvec, h : polykvec) : BytesSig.t = {

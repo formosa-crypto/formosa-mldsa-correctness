@@ -218,5 +218,5 @@ seq 2 7 : (#pre
       by rewrite Bytes32.get_to_list /#.
     by rewrite ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/# get256_init_32_8 1:/# initiE 1:/# /=.
     
-admit. (* Algebra *)
+admit. (* ToDo: Algebra *)
 qed.

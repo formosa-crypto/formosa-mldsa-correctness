@@ -39,14 +39,14 @@ theory PolyLVec.
 type polylvec = poly LArray.t.
 type apolylvec  = vector.
 
-op polylvec2alg(v : polylvec) : apolylvec. (* Write me *)
-op alg2polylvec(v : apolylvec) : polylvec. (* Write me *)
+op polylvec2alg(v : polylvec) : apolylvec. (* Write me: PY *)
+op alg2polylvec(v : apolylvec) : polylvec. (* Write me: PY *)
 
 lemma polylvec2algK : cancel alg2polylvec polylvec2alg.
-admitted.
+admitted. (* FIXME: PY *)
 
 lemma alg2polylvecK : cancel polylvec2alg alg2polylvec.
-admitted.
+admitted. (* FIXME: PY *)
 
 op nttv v = LArray.map ntt v.
 op invnttv v = LArray.map invntt v. 
@@ -67,14 +67,14 @@ theory PolyKVec.
 type polykvec = poly KArray.t.
 type apolykvec  = vector.
 
-op polykvec2alg(v : polykvec) : apolykvec. (* Write me *)
-op alg2polykvec(v : apolykvec) : polykvec. (* Write me *)
+op polykvec2alg(v : polykvec) : apolykvec. (* Write me: PY *)
+op alg2polykvec(v : apolykvec) : polykvec. (* Write me: PY *)
 
 lemma polykvec2algK : cancel alg2polykvec polykvec2alg.
-admitted.
+admitted. (* FIXME: PY *)
 
 lemma alg2polykvecK : cancel polykvec2alg alg2polykvec.
-admitted.
+admitted. (* FIXME: PY *)
 
 
 op nttv v = KArray.map ntt v.

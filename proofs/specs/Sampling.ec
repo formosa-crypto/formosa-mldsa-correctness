@@ -79,12 +79,12 @@ module MLDSA_XOFA : XOF_RejNTTPoly = {
 }.
 
 
-op rejNTTPoly : Bytes34.t ->  poly.
+op rejNTTPoly : Bytes34.t ->  poly. (* Write me: PY *)
 
 
 phoare RejNTTPoly_correct _rho :
    [ RejNTTPoly(MLDSA_XOFA).sample : arg = _rho ==> res = rejNTTPoly _rho] = 1%r.
-admitted.
+admitted. (* FIXME : PY *)
    
 (*************** End RejNTTPoly CORRECTNESS BRIDGE ****************)
 
@@ -117,12 +117,12 @@ module MLDSA_XOFS : XOF_RejBPoly = {
 }.
 
 
-op rejBoundedPoly : Bytes66.t ->  poly.
+op rejBoundedPoly : Bytes66.t ->  poly. (* Write Me: PY *)
 
 
 phoare RejBoundedPoly_correct _rho :
    [ RejBoundedPoly(MLDSA_XOFS).sample : arg = _rho ==> res = rejBoundedPoly _rho] = 1%r.
-admitted.
+admitted. (* FIXME : PY *)
    
 (*************** End RejBoundedPoly CORRECTNESS BRIDGE ****************)
 
@@ -148,12 +148,12 @@ module ExpandA(XOF : XOF_RejNTTPoly) = {
 
 (*************** Begin ExpandA CORRECTNESS BRIDGE ****************)
 
-op expandA : Bytes32.t ->  polymat.
+op expandA : Bytes32.t ->  polymat. (* Write me: PY *)
 
 
 phoare ExpandA_correct _rho :
    [ ExpandA(MLDSA_XOFA).sample : arg = _rho ==> res = expandA _rho] = 1%r.
-admitted.
+admitted. (* FIXME: PY *)
    
 (*************** End ExpandA CORRECTNESS BRIDGE ****************)
 
@@ -183,12 +183,12 @@ module ExpandS(XOF : XOF_RejBPoly) = {
 
 (*************** Begin ExpandS CORRECTNESS BRIDGE ****************)
 
-op expandS : Bytes64.t -> polylvec * polykvec.
+op expandS : Bytes64.t -> polylvec * polykvec. (* WRITE ME: PY *)
 
 
 phoare ExpandS_correct _rho :
    [ ExpandS(MLDSA_XOFS).sample : arg = _rho ==> res = expandS _rho] = 1%r.
-admitted.
+admitted. (* FIXME: PY *)
    
 (*************** End ExpandS CORRECTNESS BRIDGE ****************)
 
@@ -212,12 +212,12 @@ module ExpandMask = {
 
 (*************** Begin ExpandMask CORRECTNESS BRIDGE ****************)
 
-op expandMask : Bytes64.t -> int -> polylvec.
+op expandMask : Bytes64.t -> int -> polylvec. (* WRITE ME : PY *)
 
 
 phoare ExpandMask_correct _rho _mu :
    [ ExpandMask.sample : arg = (_rho,_mu) ==> res = expandMask _rho _mu] = 1%r.
-admitted.
+admitted. (* FIXME: PY *)
    
 (*************** End ExpandMask CORRECTNESS BRIDGE ****************)
 

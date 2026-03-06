@@ -19,4 +19,4 @@ phoare matrix_A_correct _rho :
     [ M.sample____matrix_A : arg = _rho ==>
         liftu_wpolymat (mat_unflatten256 res) = expandA (Bytes32.of_list (to_list _rho))
      /\ wpolymat_urng (mat_unflatten256 res) 1] = 1%r.
-admitted.
+admitted. (* FIXME: PY *)

@@ -61,7 +61,7 @@ have Eta_val := mldsa65_Eta.
 move=> h @/BitPack; (pose l := ilog 2 _) => /=.
 have Hlog := ilog_Eta.
 have ? : size
-  (flatten (map (fun (x : W32.t) => IntegerToBits (Eta - as_sint (incoeff (to_sint x))) (l + 1)) (to_list p))) = 256*4.
+  (flatten (map (fun (x : W32.t) => IntegerToBits (Eta - crepr (incoeff (to_sint x))) (l + 1)) (to_list p))) = 256*4.
 +  rewrite  (size_flatten_ctt (l+1)).
   +  by move => x; rewrite mapP => Hx;elim Hx => xw /= [? ->]; rewrite  /IntegerToBits BS2Int.size_int2bs /#.
   by rewrite size_map /= size_to_list  /l /= Hlog //=.
@@ -83,7 +83,7 @@ have -> : p.[(8 * i + j) %/ (l + 1)] = v by smt().
 move: h => @/wpoly_srng /array256_allP /(_ v _) //= /=.
 + rewrite /to_list /mkseq mapP; exists ((i * 8 + j) %/ 4); smt(mem_iota).
 move => h. 
-rewrite incoeffK_sint_small 1:/# /W32_sub truncateu_32_4E get_bits2w 1:/#.
+rewrite incoeffK_centered 1,2:/# /W32_sub truncateu_32_4E get_bits2w 1:/#.
 rewrite nth_take 1,2:/# w2bitsE. 
 have  -> := BS2Int.int2bs_cat 4 32 (to_uint (W32.of_int 4 - v)) _;1:smt().
 rewrite /IntegerToBits nth_cat ifT;1: by rewrite BS2Int.size_int2bs /#.

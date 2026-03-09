@@ -60,7 +60,7 @@ proof.
 move=> h @/BitPack; (pose l := ilog 2 _) => /=.
 have Hlog := ilog_gamma1.
 have ? : size
-  (flatten (map (fun (x : W32.t) => IntegerToBits (Top.gamma1 - as_sint (incoeff (to_sint x))) (l + 1)) (to_list p))) = 256*20.
+  (flatten (map (fun (x : W32.t) => IntegerToBits (Top.gamma1 - crepr (incoeff (to_sint x))) (l + 1)) (to_list p))) = 256*20.
 +  rewrite  (size_flatten_ctt (l+1)).
   +  by move => x; rewrite mapP => Hx;elim Hx => xw /= [? ->]; rewrite /IntegerToBits BS2Int.size_int2bs //.
   by rewrite size_map /= size_to_list  /l /= /#.

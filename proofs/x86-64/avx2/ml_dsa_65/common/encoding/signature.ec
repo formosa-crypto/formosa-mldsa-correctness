@@ -528,7 +528,7 @@ have Hbp : forall i0, 0 <= i0 < kvec => size (ll2 i0) = 640.
 + move => i0 i0b; rewrite /ll2 /= /BitPack /=.
   pose p := (lifts_wpolylvec (lvec_unflatten256 _signer_response)).[i0].
   pose l := (ilog 2 (gamma1 - 1 + gamma1)).
-  pose lli := (flatten (map (fun (wi : coeff) => IntegerToBits (gamma1 - as_sint wi) (l + 1)) (to_list p))).
+  pose lli := (flatten (map (fun (wi : coeff) => IntegerToBits (gamma1 - crepr wi) (l + 1)) (to_list p))).
   have ? : size lli = 256*20.
 +  rewrite /lli (size_flatten_ctt (l+1)).
   +  move => x; rewrite mapP => Hx;elim Hx => xw /= [? ->]; rewrite /IntegerToBits BS2Int.size_int2bs //;smt(ilog_gamma1). 

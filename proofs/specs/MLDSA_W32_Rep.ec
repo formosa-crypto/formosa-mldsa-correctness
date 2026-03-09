@@ -22,7 +22,7 @@ op lifts_wpoly (pw : wpoly) : poly =
 op unlift_poly (p : poly) : wpoly = map (fun c => W32.of_int (asint c)) p.
 
 op poly_urng(b : int, p : poly) = all (fun i => 0 <= asint i < b) p.
-op poly_srng(bl bh : int, p : poly) = all (fun i => -bl <= as_sint i <= bh) p.
+op poly_srng(bl bh : int, p : poly) = all (fun i => -bl <= crepr i <= bh) p.
 
 op wpoly_urng(b : int, pw : wpoly) = all (fun i => 0 <= W32.to_uint i < b) pw.
 op wpoly_srng(bl bh : int, pw : wpoly) = all (fun i => -bl <= W32.to_sint i <= bh) pw.

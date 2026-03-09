@@ -14,9 +14,10 @@ clone import ConcreteDRing as CDR with
   (* FIXME: three axioms left unproven from poly reduce in proof *. *)
 
 import Round Zq.
+
 (* Signed representation *)
 
-op smod(n d : int) : int = if (d %/2 < n %% d) then n %% d - d else n %% d.
+op smod(n d : int) : int = if ((d + 1) %/2 <= n %% d) then n %% d - d else n %% d.
 
 op Power2Round(x : coeff) : coeff * coeff = 
     let rplus = asint x in

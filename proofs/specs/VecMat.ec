@@ -56,7 +56,7 @@ op (+) (v1 v2 : polylvec) : polylvec = alg2polylvec ((polylvec2alg v1) + (polylv
 op ntt_smul(p : poly, v : polylvec) : polylvec = map (fun p' => basemul p' p) v.
 
 op infnorm(v : polylvec, bound : int) : bool = 
-  all (fun ii => all (fun jj => absZq v.[ii].[jj] < bound) (iota_ 0 256)) (iota_ 0 lvec).
+  all (fun ii => all (fun jj => `|v.[ii].[jj]| < bound) (iota_ 0 256)) (iota_ 0 lvec).
 
 op mods(v : polylvec, md : int) : polylvec = 
   map (fun (vi : poly) => map (fun c => incoeff (smod (asint c) md)) vi) v.
@@ -99,7 +99,7 @@ op MakeHint(v1 : polykvec, v2 : polykvec) : polykvec =
     map2 poly_MakeHint v1 v2.
 
 op infnorm(v : polykvec, bound : int) : bool = 
-  all (fun ii => all (fun jj => absZq v.[ii].[jj] < bound) (iota_ 0 256)) (iota_ 0 kvec).
+  all (fun ii => all (fun jj => `|v.[ii].[jj]| < bound) (iota_ 0 256)) (iota_ 0 kvec).
 
 op hammw(v : polykvec, bound : int) : bool = 
   all (fun ii => count (fun jj => v.[ii].[jj] <> Zq.zero) (iota_ 0 256) <= bound) (iota_ 0 lvec).

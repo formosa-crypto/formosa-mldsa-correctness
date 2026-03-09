@@ -59,7 +59,7 @@ proof.
 move=> h @/BitPack; (pose l := ilog 2 _) => /=.
 have Hlog := ilog_dpow.
 have ? : size
-  (flatten (map (fun (x : W32.t) => IntegerToBits (Top.dpow - as_sint (incoeff (to_sint x))) (l + 1)) (to_list p))) = 256*13.
+  (flatten (map (fun (x : W32.t) => IntegerToBits (Top.dpow - crepr (incoeff (to_sint x))) (l + 1)) (to_list p))) = 256*13.
 +  rewrite  (size_flatten_ctt (l+1)).
   +  by move => x; rewrite mapP => Hx;elim Hx => xw /= [? ->]; rewrite /IntegerToBits BS2Int.size_int2bs //.
   by rewrite size_map /= size_to_list  /l /= /#.
@@ -81,7 +81,7 @@ have -> : p.[(8 * i + j) %/ (l + 1)] = v by smt().
 move: h => @/wpoly_srng /array256_allP /(_ v _) //= /=.
 + rewrite /to_list /mkseq mapP; exists ((i * 8 + j) %/ d); smt(mem_iota).
 move => h. 
-rewrite incoeffK_sint_small 1:/# /W32_sub truncateu_32_13E get_bits2w 1:/#.
+rewrite incoeffK_centered 1,2:/# /W32_sub truncateu_32_13E get_bits2w 1:/#.
 rewrite nth_take 1,2:/# w2bitsE. 
 have  -> := BS2Int.int2bs_cat 13 32 (to_uint (W32.of_int dpow - v)) _;1:smt().
 rewrite /IntegerToBits nth_cat ifT;1: by rewrite BS2Int.size_int2bs /#.

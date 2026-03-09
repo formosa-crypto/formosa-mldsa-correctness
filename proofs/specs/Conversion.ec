@@ -37,7 +37,7 @@ op SimpleBitPack(w : poly, b : int) : W8.t list =
 
 op BitPack(w : poly, a b : int) : W8.t list = 
    let blen_ab = ilog 2 (a + b) + 1 in
-     BitsToBytes (flatten (map (fun wi => IntegerToBits (b - as_sint wi) blen_ab) (to_list w))).
+     BitsToBytes (flatten (map (fun wi => IntegerToBits (b - crepr wi) blen_ab) (to_list w))).
 
 op SimpleBitUnpack(v : W8.t list, b : int) : poly =
    let c = ilog 2 b + 1 in

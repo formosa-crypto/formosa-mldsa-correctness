@@ -17,3 +17,23 @@ lemma flatten_mkseq_seq1 ['a] (f : int -> 'a) (n : int) :
   flatten (mkseq (fun i => [f i]) n) = mkseq f n.
 proof. by apply: flatten_map_seq1. qed.
 (* *)
+
+(* -------------------------------------------------------------------- *)
+lemma take_mkseqE ['a] (x0 : 'a) (s : 'a list) (i : int) : 0 <= i <= size s =>
+  take i s = mkseq (fun j => nth x0 s j) i.
+proof.
+move=> ?; apply/eq_sym/(eq_from_nth x0).
+- by rewrite size_take ~-1:/# size_mkseq /#.
+rewrite size_mkseq lez_maxr 1:/# => j rgj.
+by rewrite nth_mkseq //= nth_take //#.
+qed.
+
+(* -------------------------------------------------------------------- *)
+lemma drop_mkseqE ['a] (x0 : 'a) (s : 'a list) (i : int) : 0 <= i <= size s =>
+  drop i s = mkseq (fun j => nth x0 s (i + j)) (size s - i).
+proof.
+move=> ?; apply/eq_sym/(eq_from_nth x0).
+- by rewrite size_drop ~-1:/# size_mkseq /#.
+rewrite size_mkseq lez_maxr 1:/# => j rgj.
+by rewrite nth_mkseq //= nth_drop //#.
+qed.

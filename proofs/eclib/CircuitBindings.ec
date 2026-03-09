@@ -12,6 +12,7 @@ require import JWordExtra.
 import BitChunking.
 
 (* ==================================================================== *)
+theory T.
 op bool2bits (b : bool) : bool list = [b].
 op bits2bool (b: bool list) : bool = List.nth false b 0.
 
@@ -37,7 +38,8 @@ proof.
 move=> b @/bool2bits.
 by rewrite bs2int_cons bs2int_nil.
 qed.
-    
+end T.
+
 bind op bool (/\) "and".
 realize bvandP by move=> * @/bool2bits /#.
 
@@ -163,6 +165,9 @@ abstract theory BSW.
 
   bind op W.t W.( + ) "add".
   realize bvaddP by exact W.to_uintD.
+
+  bind op W.t W.([-]) "opp".
+  realize bvoppP by admit.      (* FIXME *)
 
   bind op W.t W.( * ) "mul".
   realize bvmulP by exact W.to_uintM. 
@@ -302,6 +307,9 @@ abstract theory BS_WB_WS_U.
   op zeroextu'B (w : WS.t) : WB.t =
     WB.of_int (WS.to_uint w).
 
+  op sigextu'B (w : WS.t) : WB.t =
+    WB.of_int (WS.to_sint w).
+
   bind op [WB.t & WS.t] truncateu'S "truncate".
 
   realize le_size by apply: le_size.
@@ -326,6 +334,14 @@ abstract theory BS_WB_WS_U.
   apply: (IntOrder.ltr_le_trans WS.modulus) => [/#|].
   by apply: IntOrder.ler_weexpn2l => //; smt(WS.gt0_size le_size).
   qed.
+
+  bind op [WS.t & WB.t] sigextu'B "sextend".
+
+  realize le_size by apply: le_size.
+
+  realize bvsextendP.
+  proof.
+  admitted.
 end BS_WB_WS_U.
 
 (* ==================================================================== *)
@@ -375,12 +391,19 @@ abstract theory BS_WB_WS.
     theory BSWS  <- BSWS,
     theory BSWB  <- BSWB,
         op truncateu'S <- W_WS.truncateu'S,
-        op zeroextu'B  <- W_WS.zeroextu'B
+        op zeroextu'B  <- W_WS.zeroextu'B,
+        op sigextu'B   <- W_WS.sigextu'B
     rename [theory] "WS" as "WS_"
            [theory] "WB" as "WB_"
     proof *.
 
     realize le_size by smt(WS.gt0_size W_WS.gt0_r W_WS.sizeBrS).
+
+  bind op [WB.t & WS.t] (\bits'S) "aextract".
+
+  realize dvd_size by apply: size_div.
+
+  realize bvaextractP by admit.
 end BS_WB_WS.
 
 (* ==================================================================== *)
@@ -418,7 +441,7 @@ abstract theory BSWA.
     theory W    <- W,
     theory WE   <- WE.
 
-  clone import BSA with
+   clone import BSA with
         op size <- asize,
     theory  A   <- A.
 
@@ -542,31 +565,31 @@ end BSWAS.
 clone BSW as BSW16 with
   op     size <- 16,
   theory W    <- W16  { rename "_XX" as "_16" },
-  theory WE   <- WE16 { rename "_XX" as "_16" }.
+  theory WE   <- WE16.
 
 (* -------------------------------------------------------------------- *)
 clone BSW as BSW32 with
   op     size <- 32,
   theory W    <- W32  { rename "_XX" as "_32" },
-  theory WE   <- WE32 { rename "_XX" as "_32" }.
+  theory WE   <- WE32.
 
 (* -------------------------------------------------------------------- *)
 clone BSW as BSW64 with
   op     size <- 64,
   theory W    <- W64  { rename "_XX" as "_64" },
-  theory WE   <- WE64 { rename "_XX" as "_64" }.
+  theory WE   <- WE64.
 
 (* -------------------------------------------------------------------- *)
 clone BSW as BSW128 with
   op     size <- 128,
   theory W    <- W128  { rename "_XX" as "_128" },
-  theory WE   <- WE128 { rename "_XX" as "_128" }.
+  theory WE   <- WE128.
 
 (* -------------------------------------------------------------------- *)
 clone BSW as BSW256 with
   op     size <- 256,
   theory W    <- W256  { rename "_XX" as "_256" },
-  theory WE   <- WE256 { rename "_XX" as "_256" }.
+  theory WE   <- WE256.
 
 (* ==================================================================== *)
 clone BS_WB_WS as BS_W2u16 with
@@ -574,9 +597,9 @@ clone BS_WB_WS as BS_W2u16 with
       op sizeB <-  32,
       op r     <-   2,
   theory WS    <- W16   { rename "_XX" as "_16" },
-  theory WSE   <- WE16  { rename "_XX" as "_16" },
   theory WB    <- W32   { rename "_XX" as "_32" },
-  theory WBE   <- WE32  { rename "_XX" as "_32" },
+  theory WSE   <- WE16,
+  theory WBE   <- WE32,
   theory BSWS  <- BSW16,
   theory BSWB  <- BSW32,
   theory W_WS  <- W2u16
@@ -591,9 +614,9 @@ clone BS_WB_WS as BS_W2u32 with
       op sizeB <-  64,
       op r     <-   2,
   theory WS    <- W32   { rename "_XX" as "_32" },
-  theory WSE   <- WE32  { rename "_XX" as "_32" },
   theory WB    <- W64   { rename "_XX" as "_64" },
-  theory WBE   <- WE64  { rename "_XX" as "_64" },
+  theory WSE   <- WE32,
+  theory WBE   <- WE64,
   theory BSWS  <- BSW32,
   theory BSWB  <- BSW64,
   theory W_WS  <- W2u32
@@ -608,9 +631,9 @@ clone BS_WB_WS as BS_W2u64 with
       op sizeB <- 128,
       op r     <-   2,
   theory WS    <- W64   { rename "_XX" as "_64" },
-  theory WSE   <- WE64  { rename "_XX" as "_64" },
   theory WB    <- W128  { rename "_XX" as "_128" },
-  theory WBE   <- WE128 { rename "_XX" as "_128" },
+  theory WSE   <- WE64,
+  theory WBE   <- WE128,
   theory BSWS  <- BSW64,
   theory BSWB  <- BSW128,
   theory W_WS  <- W2u64
@@ -625,9 +648,9 @@ clone BS_WB_WS as BS_W2u128 with
       op sizeB <- 256,
       op r     <-   2,
   theory WS    <- W128  { rename "_XX" as "_128" },
-  theory WSE   <- WE128 { rename "_XX" as "_128" },
   theory WB    <- W256  { rename "_XX" as "_256" },
-  theory WBE   <- WE256 { rename "_XX" as "_256" },
+  theory WSE   <- WE128,
+  theory WBE   <- WE256,
   theory BSWS  <- BSW128,
   theory BSWB  <- BSW256,
   theory W_WS  <- W2u128
@@ -642,9 +665,9 @@ clone BS_WB_WS as BS_W4u16 with
       op sizeB <-  64,
       op r     <-   4,
   theory WS    <- W16   { rename "_XX" as "_16" },
-  theory WSE   <- WE16  { rename "_XX" as "_16" },
   theory WB    <- W64   { rename "_XX" as "_64" },
-  theory WBE   <- WE64  { rename "_XX" as "_64" },
+  theory WSE   <- WE16,
+  theory WBE   <- WE64,
   theory BSWS  <- BSW16,
   theory BSWB  <- BSW64,
   theory W_WS  <- W4u16
@@ -659,9 +682,9 @@ clone BS_WB_WS as BS_W4u32 with
       op sizeB <- 128,
       op r     <-   4,
   theory WS    <- W32   { rename "_XX" as "_32" },
-  theory WSE   <- WE32  { rename "_XX" as "_32" },
   theory WB    <- W128  { rename "_XX" as "_128" },
-  theory WBE   <- WE128 { rename "_XX" as "_128" },
+  theory WSE   <- WE32,
+  theory WBE   <- WE128,
   theory BSWS  <- BSW32,
   theory BSWB  <- BSW128,
   theory W_WS  <- W4u32
@@ -676,9 +699,9 @@ clone BS_WB_WS as BS_W4u64 with
       op sizeB <- 256,
       op r     <-   4,
   theory WS    <- W64   { rename "_XX" as "_64" },
-  theory WSE   <- WE64  { rename "_XX" as "_64" },
   theory WB    <- W256  { rename "_XX" as "_256" },
-  theory WBE   <- WE256 { rename "_XX" as "_256" },
+  theory WSE   <- WE64,
+  theory WBE   <- WE256,
   theory BSWS  <- BSW64,
   theory BSWB  <- BSW256,
   theory W_WS  <- W4u64
@@ -693,9 +716,9 @@ clone BS_WB_WS as BS_W8u16 with
       op sizeB <- 128,
       op r     <-   8,
   theory WS    <- W16   { rename "_XX" as "_16" },
-  theory WSE   <- WE16  { rename "_XX" as "_16" },
   theory WB    <- W128  { rename "_XX" as "_128" },
-  theory WBE   <- WE128 { rename "_XX" as "_128" },
+  theory WSE   <- WE16,
+  theory WBE   <- WE128,
   theory BSWS  <- BSW16,
   theory BSWB  <- BSW128,
   theory W_WS  <- W8u16
@@ -710,9 +733,9 @@ clone BS_WB_WS as BS_W8u32 with
       op sizeB <- 256,
       op r     <-   8,
   theory WS    <- W32   { rename "_XX" as "_32" },
-  theory WSE   <- WE32  { rename "_XX" as "_32" },
   theory WB    <- W256  { rename "_XX" as "_256" },
-  theory WBE   <- WE256 { rename "_XX" as "_256" },
+  theory WSE   <- WE32,
+  theory WBE   <- WE256,
   theory BSWS  <- BSW32,
   theory BSWB  <- BSW256,
   theory W_WS  <- W8u32
@@ -727,9 +750,9 @@ clone BS_WB_WS as BS_W16u16 with
       op sizeB <- 256,
       op r     <-  16,
   theory WS    <- W16   { rename "_XX" as "_16" },
-  theory WSE   <- WE16  { rename "_XX" as "_16" },
   theory WB    <- W256  { rename "_XX" as "_256" },
-  theory WBE   <- WE256 { rename "_XX" as "_256" },
+  theory WSE   <- WE16,
+  theory WBE   <- WE256,
   theory BSWS  <- BSW16,
   theory BSWB  <- BSW256,
   theory W_WS  <- W16u16
@@ -737,3 +760,58 @@ clone BS_WB_WS as BS_W16u16 with
                              "'R"    as "16"
                              "'S"    as "16"
                              "'B"    as "256" }.
+
+(* -------------------------------------------------------------------- *)
+(*
+clone PolyArray as Array24 with
+  op size <- 24
+  proof ge0_size by done.
+
+clone BSA as BSA24 with
+      op size <- 24,
+  theory A    <- Array24
+
+  proof gt0_size by done.
+
+clone BSWA as BSWA_24u32 with
+      op asize <- 24,
+      op bsize <- 32,
+  theory A     <- Array24,
+  theory BSA   <- BSA24,
+  theory W     <- W32 { rename "_XX" as "_32" },
+  theory WE    <- WE32,
+  theory BSW   <- BSW32.
+
+clone BitWordSH as W20 with
+      op size <- 20
+
+  rename "_XX" as "_20"
+
+  proof gt0_size    by done
+  proof size_le_256 by done.
+
+clone WE as WE20 with
+      op size <- 20,
+  theory W    <- W20 { rename "_XX" as "_20" }.
+
+clone BSW as BSW20 with
+      op size <- 20,
+  theory W    <- W20  { rename "_XX" as "_20" },
+  theory WE   <- WE20.
+
+clone BSWAS as BSWAS_24u32_20 with
+      op asize   <- 24,
+      op bsize   <- 32,
+      op ssize   <- 20,
+  theory A       <- Array24,
+  theory BSA     <- BSA24,
+  theory WB      <- W32  { rename "_XX" as "_32" },
+  theory WEB     <- WE32,
+  theory BSWB    <- BSW32,
+  theory WS      <- W20  { rename "_XX" as "_20" },
+  theory WES     <- WE20,
+  theory BSWS    <- BSW20,
+  theory BSWA    <- BSWA_24u32
+
+  proof le_size by done.
+*)

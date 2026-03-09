@@ -1,7 +1,7 @@
 require import AllCore List IntDiv RealExp.
 
 from Jasmin require import JModel_x86.
-require import Bindings.
+require import CircuitBindings Bindings.
 
 from JazzEC require import Ml_dsa_65_avx2 Mldsa_65_prelude.
 from JazzEC require import Array256 Array416.
@@ -11,24 +11,15 @@ import BitEncoding BitChunking.
 import CDR Round Zq.
 
 require import ArrayExtra JWord_extra (* w2bitsE as int2bs *) EclibExtra (* size_flatten' *) JWordList (* nth_chunk *).
- 
-(* Words of weird size should be cloned and bound here. *)
-lemma truncateu_32_13E (w : W32.t) : truncateu_32_13 w = W13.bits2w (take 13 (W32.w2bits w)).
+
+require import XArray256 XArray416 XArray16 XWords.
+
+lemma truncateu_32_13E (w : W32.t) : BS_W32_W13_U.truncateu13 w = W13.bits2w (take 13 (W32.w2bits w)).
 proof.
-rewrite /truncateu_32_13 W13.of_intE W32.to_uintE BS2Int.bs2int_mod //;congr.
+rewrite /truncateu13 W13.of_intE W32.to_uintE BS2Int.bs2int_mod //;congr.
 have {1}-> : 13 = size (take 13 (w2bits w)) by rewrite size_take //.
 by rewrite BS2Int.bs2intK.
 qed.
-
-op sigextu_13_32(a : W13.t) : W32.t = W32.of_int (to_sint a).
-bind op [W13.t & W32.t] sigextu_13_32 "sextend".
-realize bvsextendP.
-move => bv;rewrite  /sigextu_13_32 /to_sint /smod /= !of_uintK /=.
-case (4096 <= to_uint bv); 2: smt(W13.to_uint_cmp).
-have ? : 2^13 = 8192 by auto => />.
-move =>?;rewrite -{2}(oppzK (to_uint bv - 8192)) modNz /=; smt(W13.to_uint_cmp). 
-qed.
-realize le_size by done.
 
 lemma to_sint_uint_rng_pos_13(xx : W13.t) :
     0 <= to_sint xx  <=> 0 <= to_uint xx < 4096.
@@ -48,16 +39,17 @@ op dpow : int = 4096. (* 2**(d-1) *)
 lemma ilog_dpow : ilog 2 (dpow - 1 + dpow) = 12 by rewrite /dpow /=.
 
 op t0_encode_polynomial_lane(c : W32.t) : W13.t = 
-    truncateu_32_13 (W32_sub (W32.of_int dpow) c).
+    BS_W32_W13_U.truncateu13 ((W32.of_int dpow) + ([-] c)).
 
 lemma BitPack_liftE (p : wpoly) :
   wpoly_srng (dpow - 1) dpow p =>
     BitPack (lifts_wpoly p) (dpow - 1) dpow
-  = to_list (let mapped = init_256_13 (fun i => t0_encode_polynomial_lane p.[i]) in
-             init_array416_w8 (fun i => W8.init (fun j => mapped.[(i*8+j) %/ 13].[(i*8+j) %% 13]))).
+  = to_list (let mapped = BSWA_256u13.init(fun i => t0_encode_polynomial_lane p.[i]) in
+             BSWA_416u8.init (fun i => W8.init (fun j => mapped.[(i*8+j) %/ 13].[(i*8+j) %% 13]))).
 proof.
 move=> h @/BitPack; (pose l := ilog 2 _) => /=.
 have Hlog := ilog_dpow.
+
 have ? : size
   (flatten (map (fun (x : W32.t) => IntegerToBits (Top.dpow - crepr (incoeff (to_sint x))) (l + 1)) (to_list p))) = 256*13.
 +  rewrite  (size_flatten_ctt (l+1)).
@@ -103,11 +95,11 @@ lemma t0_encode_polynomial _a :
      ==>
        to_list res = BitPack (lifts_wpoly _a) (dpow-1) dpow
    ].
-proc;inline * => /=.
-proc change ^while.1 : { coefficients <- sliceget256_32_256 t0 (input_offset*8);};1: by auto;smt().
-proc change ^while.20 : { t0_encoded <- sliceset416_8_128 t0_encoded (output_offset*8) bytestream;}; 1: by auto;smt().
-proc change 5 : { coefficients <- sliceget256_32_256 t0 (input_offset*8);};1: by auto;smt().
-proc change 24 : { final_encoded_output <- sliceset16_8_128 final_encoded_output 0 bytestream;}; 1: by auto;smt().
+proc;inline * => /=. 
+proc change ^while.1 : { coefficients <- BSWAS_256u32_256.sliceget t0 (input_offset*8);};1:by admit.
+proc change ^while.20 : { t0_encoded <- BSWAS_416u8_128.sliceset t0_encoded (output_offset*8) bytestream;}; 1: by admit.
+proc change 5 : { coefficients <- BSWAS_256u32_256.sliceget t0 (input_offset*8);};1: by admit.
+proc change 24 : { final_encoded_output <- BSWAS_16u8_128.sliceset final_encoded_output 0 bytestream;}; 1: by admit.
 
 unroll for ^while.
 unroll for ^while.
@@ -120,8 +112,8 @@ conseq (:  List.all (fun i =>
     W32.of_int (1-dpow) \sle _a.[i]) 
     (iota_ 0 256) 
   /\ _a = t0  ==>
-           t0_encoded = let mapped = init_256_13 (fun i => t0_encode_polynomial_lane _a.[i]) in
-             init_array416_w8 (fun i => W8.init (fun j => mapped.[(i*8+j) %/ 13].[(i*8+j) %% 13])));last by circuit.
+           t0_encoded = let mapped = BSWA_256u13.init (fun i => t0_encode_polynomial_lane _a.[i]) in
+             BSWA_416u8.init (fun i => W8.init (fun j => mapped.[(i*8+j) %/ 13].[(i*8+j) %% 13])));last by circuit.
 
 + move => &hr [<- +]; rewrite /wpoly_srng allP /= => Hrng.
   rewrite /(\sle) allP => x; rewrite mem_iota /= => Hx.

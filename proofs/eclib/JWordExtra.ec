@@ -7,10 +7,10 @@ from Jasmin require import JWord.
 import BS2Int.
 
 (* -------------------------------------------------------------------- *)
-abstract theory BWE.
+abstract theory WE.
   op size : int.
 
-  clone import BitWord as BaseW with op size <- size.
+  clone import BitWord as W with op size <- size.
 
   lemma msbE (w : t): msb w <=> w.[size - 1].
   proof.
@@ -21,24 +21,17 @@ abstract theory BWE.
   - by rewrite lez_addr bs2int_ge0.
   - by rewrite lezNgt.
   qed.
-end BWE.
-
-(* -------------------------------------------------------------------- *)
-abstract theory WE.
-  op size : int.
-
-  clone import BitWordSH as W with op size <- size.
-  clone export BWE with op size <- size, theory BaseW <- W.
 
   lemma to_uintUD (w1 w2: W.t) : to_uint w2 <> 0 =>
     to_uint (w1 \udiv w2) = to_uint w1 %/ to_uint w2.
-  proof. by move=> w2_ne0; rewrite /(\udiv) /ulift2; smt(to_uint_cmp to_uint_small). qed.
-  (* FIXME: using #smt(to_uint_cmp to_uint_small) above should also work (?) *)
+  proof. move=> @/(\udiv) @/ulift2; smt(to_uint_cmp to_uint_small). qed.
 
   lemma to_uintUM (w1 w2: W.t) : 
     to_uint (w1 \umod w2) = to_uint w1 %% to_uint w2.
-  proof. by rewrite /(\umod) /ulift2; apply to_uint_small; 
-    smt(to_uint_cmp to_uint_small JUtils.modz_cmp modz0). qed.
+  proof.
+  rewrite /(\umod) /ulift2; apply to_uint_small.
+  smt(to_uint_cmp to_uint_small JUtils.modz_cmp modz0).
+  qed.
 
   lemma set_get (w : W.t) (i : int) : w.[i <- w.[i]] = w.
   proof. by apply/ext_eq=> j ?; rewrite get_set_if /#. qed.
@@ -130,9 +123,9 @@ abstract theory WE.
 end WE.
 
 (* -------------------------------------------------------------------- *)
-clone BWE as BWE8
-  with op     size  <- 8,
-       theory BaseW <- W8 { rename "_XX" as "_8" }.
+clone WE as WE8 with
+  op     size <- 8,
+  theory W    <- W8 { rename "_XX" as "_8" }.
 
 (* -------------------------------------------------------------------- *)
 clone WE as WE16 with

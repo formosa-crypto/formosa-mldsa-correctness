@@ -50,108 +50,25 @@ bind op bool Bool.(^^) "xor".
 realize bvxorP by move=> * @/bool2bits /#.
 
 (* ==================================================================== *)
-theory BSW8.
-  bind bitstring W8.w2bits W8.bits2w W8.to_uint W8.to_sint W8.of_int W8.t 8.
-
-  realize gt0_size    by done.
-  realize size_tolist by done.
-  realize tolistP     by exact: W8.w2bitsK.
-  realize oflistP     by exact: W8.bits2wK.
-  realize touintP     by move=> @/W8.to_uint.
-
-  realize tosintP.
-  proof.
-  have [# ??]: 2^7 = 128 /\ 2^8 = 256 by done.
-  move=> w; apply/implyNb=> sz_ne1 /= @/msb.
-  by rewrite -W8.get_bits2w 1:/# W8.w2bitsK -BWE8.msbE /#.
-  qed.
-
-  realize ofintP.
-  proof. by move=> i @/of_int; rewrite int2bs_mod. qed.
-
-  bind op [bool & W8.t] W8.init "init".
-  realize size_1 by done.
-
-  realize bvinitP.
-  proof.
-  move=> f; apply/(eq_from_nth false) => /=.
-  - rewrite (size_flatten_ctt 1) ?size_mkseq //.
-    by move=> bs /mkseqP[i] [_ ->].
-  move=> i rgi; rewrite (BitChunking.nth_flatten false 1) /=.
-  - by apply/List.allP=> bs /mkseqP[j] [_ ->].
-  by rewrite nth_mkseq //= initiE.
-  qed.
-
-  bind op W8.t W8.( + ) "add".
-  realize bvaddP by exact W8.to_uintD.
-
-  bind op W8.t W8.( * ) "mul".
-  realize bvmulP by exact W8.to_uintM. 
-
-  bind op W8.t W8.andw "and".
-  realize bvandP.
-  proof.
-  by move=> w1 w2; rewrite /w2bits zip_map /= zipss -!map_comp.
-  qed.
-
-  bind op W8.t W8.orw "or".
-  realize bvorP.
-  proof.
-  by move=> w1 w2; rewrite /w2bits zip_map /= zipss -!map_comp.
-  qed.
-
-  bind op W8.t W8.(+^) "xor".
-  realize bvxorP.
-  proof.
-  by move=> w1 w2; rewrite /w2bits zip_map /= zipss -!map_comp.
-  qed.
-
-  bind op [W8.t & W8.t] W8.(`>>`) "shrs".
-
-  realize bvshrsP.
-  proof.
-  move=> w1 w2 @/(`>>`).
-  by rewrite W8.to_uint_shr // #smt:(W8.to_uint_cmp).
-  qed.
-
-  op srl_8 (w1 w2 : W8.t) : W8.t = w1 `>>>` W8.to_uint w2.
-
-  bind op [W8.t] srl_8 "shr".
-  realize bvshrP.
-  proof.
-  move=> w1 w2 @/shr_8.
-  by rewrite W8.to_uint_shr // #smt:(W8.to_uint_cmp).
-  qed.
-
-  op sll_8 (w1 w2 : W8.t) : W8.t = w1 `<<<` to_uint w2.
-
-  bind op [W8.t] sll_8 "shl".
-  realize bvshlP.
-  move=> w1 w2 @/shl_8.
-  by rewrite W8.to_uint_shl // #smt:(W8.to_uint_cmp).
-  qed.
-end BSW8.
-
-(* ==================================================================== *)
-abstract theory BSW.
+abstract theory BSBW.
   op size : int.
 
-  clone import BitWordSH as W with op size <- size.
-  clone import WE as WE with op size <- size, theory W <- W.
+  clone import BitWord as BW with op size <- size.
+  clone import WE as WE with op size <- size, theory W <- BW.
 
-  op rol (w1 w2 : W.t) = w1 `|<<<|` to_uint w2.
-  op ror (w1 w2 : W.t) = w1 `|>>>|` to_uint w2.
+  op rol (w1 w2 : BW.t) = w1 `|<<<|` to_uint w2.
+  op ror (w1 w2 : BW.t) = w1 `|>>>|` to_uint w2.
 
-  op sar (w1 w2 : W.t) : W.t = w1 `|>>>` W.to_uint w2.
-  op shr (w1 w2 : W.t) : W.t = w1  `>>>` W.to_uint w2.
-  op shl (w1 w2 : W.t) : W.t = w1  `<<<` W.to_uint w2.
+  op sar (w1 w2 : BW.t) : BW.t = w1 `|>>>` BW.to_uint w2.
+  op shr (w1 w2 : BW.t) : BW.t = w1  `>>>` BW.to_uint w2.
+  op shl (w1 w2 : BW.t) : BW.t = w1  `<<<` BW.to_uint w2.
 
-  bind bitstring W.w2bits W.bits2w W.to_uint W.to_sint W.of_int W.t size.
+  bind bitstring BW.w2bits BW.bits2w BW.to_uint BW.to_sint BW.of_int BW.t size.
 
   realize gt0_size    by done.
   realize size_tolist by done.
-  realize tolistP     by exact: W.w2bitsK.
-  realize oflistP     by exact: W.bits2wK.
+  realize tolistP     by exact: BW.w2bitsK.
+  realize oflistP     by exact: BW.bits2wK.
   realize touintP     by move=> @/to_uint.
 
   realize tosintP.
@@ -163,68 +80,118 @@ abstract theory BSW.
   realize ofintP.
   proof. by move=> i @/of_int; rewrite int2bs_mod. qed.
 
-  bind op W.t W.( + ) "add".
-  realize bvaddP by exact W.to_uintD.
+  bind op BW.t BW.( + ) "add".
+  realize bvaddP by exact BW.to_uintD.
 
-  bind op W.t W.([-]) "opp".
+  bind op BW.t BW.([-]) "opp".
   realize bvoppP by admit.      (* FIXME *)
 
-  bind op W.t W.( * ) "mul".
-  realize bvmulP by exact W.to_uintM. 
+  bind op BW.t BW.( * ) "mul".
+  realize bvmulP by exact BW.to_uintM. 
 
-  bind op W.t W.(\udiv) "udiv".
+  bind op BW.t BW.(\udiv) "udiv".
   realize bvudivP by exact WE.to_uintUD.
 
-  bind op W.t W.(\umod) "urem".
+  bind op BW.t BW.(\umod) "urem".
   realize bvuremP by exact WE.to_uintUM.
 
-  bind op W.t W.andw "and".
+  bind op BW.t BW.andw "and".
   realize bvandP.
   proof.
   by move=> w1 w2; rewrite /w2bits zip_map /= zipss -!map_comp.
   qed.
 
-  bind op W.t W.orw "or".
+  bind op BW.t BW.orw "or".
   realize bvorP.
   proof.
   by move=> w1 w2; rewrite /w2bits zip_map /= zipss -!map_comp.
   qed.
 
-  bind op W.t W.(+^) "xor".
+  bind op BW.t BW.(+^) "xor".
   realize bvxorP.
   proof.
   by move=> w1 w2; rewrite /w2bits zip_map /= zipss -!map_comp.
   qed.
 
-  bind op W.t W.invw "not".
+  bind op BW.t BW.invw "not".
   realize bvnotP.
   proof.
   by move=> w; rewrite /invw /= eq_sym map_w2bits_w2bits.
   qed.
 
-  bind op [W.t] rol "rol".
+  bind op [BW.t] rol "rol".
   realize bvrolP.
   proof.
   by move=> w1 w2 i ?; rewrite !get_w2bits /rol initE ifT.
   qed.
 
-  bind op [W.t] ror "ror".
+  bind op [BW.t] ror "ror".
   realize bvrorP.
   proof.
   by move=> w1 w2 i ?; rewrite !get_w2bits /ror initE ifT.
   qed.
 
-  bind op [W.t] sar "ashr".
+  bind op [BW.t] sar "ashr".
   realize bvashrP.
   proof. by move=> w1 w2; rewrite to_sint_sar // #smt:(to_uint_cmp). qed.
 
-  bind op [W.t] shl "shl".
+  bind op [BW.t] shl "shl".
   realize bvshlP.
   proof. by move=> w1 w2; rewrite to_uint_shl // #smt:(to_uint_cmp). qed.
 
-  bind op [W.t] shr "shr".
+  bind op [BW.t] shr "shr".
   realize bvshrP.
   proof. by move=> w1 w2; rewrite to_uint_shr // #smt:(to_uint_cmp). qed.
+
+  bind op [bool & BW.t] BW.(\ult) "ult".
+  realize bvultP by smt().
+
+  bind op [bool & BW.t] BW.(\ule) "ule".
+  realize bvuleP by smt().
+
+  bind op [bool & BW.t] BW.(\slt) "slt".
+  realize bvsltP by smt().
+
+  bind op [bool & BW.t] BW.(\sle) "sle".
+  realize bvsleP by smt().
+
+  (* FIXME: uniformize type parameter order for bindings *)
+  (* FIXME: uniformize binding treatment of booleans     *)
+  (* FIXME: here BSBW.size is required to be >= 1         *)
+  bind op [BW.t & bool] BW."_.[_]" "get".
+  realize bvgetP   by done.
+  realize eq1_size by done.
+  realize le_size  by smt(gt0_size).
+
+  bind op [bool & BW.t] BW.init "init".
+
+  realize size_1 by done.
+
+  realize bvinitP.
+  proof.
+  move=> f; rewrite init_bits2w bits2wK.
+  - by rewrite size_map size_iota.
+  - by rewrite flatten_mkseq_seq1.
+  qed.
+end BSBW.
+
+(* ==================================================================== *)
+clone BSBW as BSW8 with
+  op     size <- 8,
+  theory BW   <- W8  { rename "_XX" as "_8" },
+  theory WE   <- WE8.
+
+(* ==================================================================== *)
+abstract theory BSW.
+  op size : int.
+
+  clone import BitWordSH as W with op size <- size.
+
+  clone include BSBW with
+        op size <- size,
+    theory BW   <- W.
+
+  import WE.
 
   bind op [W.t & W8.t] W.(`<<`) "shls".
   realize bvshlsP.
@@ -237,37 +204,6 @@ abstract theory BSW.
   bind op [W.t & W8.t] W.(`|>>`) "ashrs".
   realize bvashrsP.
   proof. by move=> w1 w2; rewrite to_sint_sar // #smt:(W8.to_uint_cmp). qed.
-
-  bind op [bool & W.t] W.(\ult) "ult".
-  realize bvultP by smt().
-
-  bind op [bool & W.t] W.(\ule) "ule".
-  realize bvuleP by smt().
-
-  bind op [bool & W.t] W.(\slt) "slt".
-  realize bvsltP by smt().
-
-  bind op [bool & W.t] W.(\sle) "sle".
-  realize bvsleP by smt().
-
-  (* FIXME: uniformize type parameter order for bindings *)
-  (* FIXME: uniformize binding treatment of booleans     *)
-  (* FIXME: here BSW.size is required to be >= 1         *)
-  bind op [W.t & bool] W."_.[_]" "get".
-  realize bvgetP   by done.
-  realize eq1_size by done.
-  realize le_size  by smt(gt0_size).
-
-  bind op [bool & W.t] W.init "init".
-
-  realize size_1 by done.
-
-  realize bvinitP.
-  proof.
-  move=> f; rewrite init_bits2w bits2wK.
-  - by rewrite size_map size_iota.
-  - by rewrite flatten_mkseq_seq1.
-  qed.
 end BSW.
 
 (* ==================================================================== *)
@@ -277,28 +213,28 @@ abstract theory BS_WB_WS_U.
 
   axiom le_size : sizeS <= sizeB.
 
-  clone import BitWordSH as WS with
+  clone import BitWord as WS with
     op size <- sizeS.
 
   clone WE as WSE with
         op size <- sizeS,
     theory W    <- WS.
 
-  clone import BitWordSH as WB with
+  clone import BitWord as WB with
     op size <- sizeB.
 
   clone WE as WBE with
         op size <- sizeB,
     theory W    <- WB.
 
-  clone import BSW as BSWS with 
+  clone import BSBW as BSWS with 
         op size <- sizeS,
-    theory W    <- WS,
+    theory BW   <- WS,
     theory WE   <- WSE.
 
-  clone import BSW as BSWB with 
+  clone import BSBW as BSWB with 
         op size <- sizeB,
-    theory W    <- WB,
+    theory BW   <- WB,
     theory WE   <- WBE.
 
   op truncateu'S (w : WB.t) : WS.t =
@@ -430,15 +366,15 @@ abstract theory BSWA.
   op bsize : int.
 
   clone import PolyArray as A with op size <- asize.
-  clone import BitWordSH as W with op size <- bsize.
+  clone import BitWord   as W with op size <- bsize.
 
   clone WE with
         op size <- bsize,
     theory W    <- W.
 
-  clone import BSW with 
+  clone import BSBW as BSW with 
         op size <- bsize,
-    theory W    <- W,
+    theory BW   <- W,
     theory WE   <- WE.
 
    clone import BSA with
@@ -465,25 +401,25 @@ abstract theory BSWAS.
   axiom le_size : ssize <= bsize * asize.
 
   clone import PolyArray as A  with op size <- asize.
-  clone import BitWordSH as WB with op size <- bsize.
-  clone import BitWordSH as WS with op size <- ssize.
+  clone import BitWord   as WB with op size <- bsize.
+  clone import BitWord   as WS with op size <- ssize.
 
   clone WE as WEB with
         op size <- bsize,
     theory W    <- WB.
 
-  clone import BSW as BSWB with 
+  clone import BSBW as BSWB with 
         op size <- bsize,
-    theory W    <- WB,
+    theory BW   <- WB,
     theory WE   <- WEB.
 
   clone WE as WES with
         op size <- ssize,
     theory W    <- WS.
 
-  clone import BSW as BSWS with 
+  clone import BSBW as BSWS with 
         op size <- ssize,
-    theory W    <- WS,
+    theory BW   <- WS,
     theory WE   <- WES.
 
   clone BSA with
@@ -773,14 +709,14 @@ clone BSA as BSA24 with
 
   proof gt0_size by done.
 
-clone BSWA as BSWA_24u32 with
+clone BSWA as BSWA_24u8 with
       op asize <- 24,
-      op bsize <- 32,
+      op bsize <- 8,
   theory A     <- Array24,
   theory BSA   <- BSA24,
-  theory W     <- W32 { rename "_XX" as "_32" },
-  theory WE    <- WE32,
-  theory BSW   <- BSW32.
+  theory W     <- W8 { rename "_XX" as "_8" },
+  theory WE    <- WE8,
+  theory BSW   <- BSW8.
 
 clone BitWordSH as W20 with
       op size <- 20
@@ -799,19 +735,21 @@ clone BSW as BSW20 with
   theory W    <- W20  { rename "_XX" as "_20" },
   theory WE   <- WE20.
 
-clone BSWAS as BSWAS_24u32_20 with
+clone BSWAS as BSWAS_24u8_20 with
       op asize   <- 24,
-      op bsize   <- 32,
+      op bsize   <- 8,
       op ssize   <- 20,
   theory A       <- Array24,
   theory BSA     <- BSA24,
-  theory WB      <- W32  { rename "_XX" as "_32" },
-  theory WEB     <- WE32,
-  theory BSWB    <- BSW32,
+  theory WB      <- W8  { rename "_XX" as "_8" },
+  theory WEB     <- WE8,
+  theory BSWB    <- BSW8,
   theory WS      <- W20  { rename "_XX" as "_20" },
   theory WES     <- WE20,
   theory BSWS    <- BSW20,
-  theory BSWA    <- BSWA_24u32
+  theory BSWA    <- BSWA_24u8
 
   proof le_size by done.
+
+print BSWAS_24u8_20.
 *)

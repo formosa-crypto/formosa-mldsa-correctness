@@ -4,7 +4,7 @@
 *)
 
 (* -------------------------------------------------------------------- *)
-require import AllCore Utils List Ring IntDiv BitEncoding.
+require import AllCore CoreUtils List Ring IntDiv BitEncoding.
 require import StdRing StdOrder.
 
 import BitChunking.

@@ -84,7 +84,7 @@ abstract theory BSBW.
   realize bvaddP by exact BW.to_uintD.
 
   bind op BW.t BW.([-]) "opp".
-  realize bvoppP by admit.      (* FIXME *)
+  realize bvoppP by exact BW.to_uintN.
 
   bind op BW.t BW.( * ) "mul".
   realize bvmulP by exact BW.to_uintM. 
@@ -265,10 +265,9 @@ abstract theory BS_WB_WS_U.
 
   realize bvzextendP.
   proof.
-  have ? := WS.to_uint_cmp; move=> w @/zeroextu'B; rewrite of_uintK.
-  rewrite pmod_small //; split=> [/#|_].
-  apply: (IntOrder.ltr_le_trans WS.modulus) => [/#|].
-  by apply: IntOrder.ler_weexpn2l => //; smt(WS.gt0_size le_size).
+  have ? := WS.to_uint_cmp; move=> w @/zeroextu'B.
+  rewrite to_uintK_small //.
+  smt(WS.gt0_size le_size IntOrder.ler_weexpn2l).
   qed.
 
   bind op [WS.t & WB.t] sigextu'B "sextend".
@@ -277,7 +276,10 @@ abstract theory BS_WB_WS_U.
 
   realize bvsextendP.
   proof.
-  admitted.
+  move=> w @/sigextu'B; rewrite to_sintK_small //.
+  have [#] hlo hhi := WS.to_sint_cmp w.
+  smt(WS.gt0_size le_size IntOrder.ler_weexpn2l).
+  qed.
 end BS_WB_WS_U.
 
 (* ==================================================================== *)
@@ -339,7 +341,19 @@ abstract theory BS_WB_WS.
 
   realize dvd_size by apply: size_div.
 
-  realize bvaextractP by admit.
+  realize bvaextractP.
+  proof.
+  have ? := WS.gt0_size.
+  move=> bv base [#] ? lt; rewrite ltz_divRL in lt.
+  - by apply: WS.gt0_size. - by apply: dvd_size.
+  apply/eq_sym/(eq_from_nth false).
+  - rewrite size_take_condle // size_drop 1:/#.
+    rewrite !size_w2bits lez_maxr 1:/#.
+    by rewrite ifT // #smt:(dvd_size).
+  move=> i; rewrite size_w2bits => ?.
+  rewrite get_w2bits bits'SiE // nth_take ~-1://#.
+  by rewrite nth_drop //#.
+  qed.
 end BS_WB_WS.
 
 (* ==================================================================== *)

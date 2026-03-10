@@ -12,7 +12,7 @@ import CDR Round Zq.
 
 require import ArrayExtra JWord_extra (* w2bitsE as int2bs *) EclibExtra (* size_flatten' *) JWordList (* nth_chunk *).
 
-require import XArray256 XArray416 XArray16 XWords.
+require import XArray256 XArray416 XArray16 XWord13.
 
 lemma truncateu_32_13E (w : W32.t) : BS_W32_W13_U.truncateu13 w = W13.bits2w (take 13 (W32.w2bits w)).
 proof.
@@ -89,6 +89,8 @@ move : h; rewrite /to_sint /smod ifT //= => ?.
 congr;rewrite to_uint_eq of_uintK /=;smt(W32.to_uint_cmp pow2_32). 
 qed.
 
+require import WArray1024 WArray416 WArray16 Array16.
+
 lemma t0_encode_polynomial _a :
    hoare [ M.t0__encode_polynomial :
        t0 = _a /\ wpoly_srng (dpow-1) dpow _a
@@ -96,10 +98,26 @@ lemma t0_encode_polynomial _a :
        to_list res = BitPack (lifts_wpoly _a) (dpow-1) dpow
    ].
 proc;inline * => /=. 
-proc change ^while.1 : { coefficients <- BSWAS_256u32_256.sliceget t0 (input_offset*8);};1:by admit.
-proc change ^while.20 : { t0_encoded <- BSWAS_416u8_128.sliceset t0_encoded (output_offset*8) bytestream;}; 1: by admit.
-proc change 5 : { coefficients <- BSWAS_256u32_256.sliceget t0 (input_offset*8);};1: by admit.
-proc change 24 : { final_encoded_output <- BSWAS_16u8_128.sliceset final_encoded_output 0 bytestream;}; 1: by admit.
+proc change ^while.1 : { coefficients <- if (0 <= input_offset*8 <= 32*256-256)
+                                         then BSWAS_256u32_256.sliceget t0 (input_offset*8)
+                                         else get256_direct (WArray1024.init32 (fun (i_0 : int) => t0.[i_0])) input_offset ;}.
+                + auto => /> &2.
+                  case (0 <= input_offset{2} * 8 <= 7936); last by auto.
+                  by move => ?; rewrite BSWAS_256u32_256_slicegetE /#.
+proc change ^while.20 : { t0_encoded <- if (0 <= output_offset*8 <= 8*416-128)
+                                        then BSWAS_416u8_128.sliceset t0_encoded (output_offset*8) bytestream
+                                        else Array416.init (get8 (set128_direct (WArray416.init8 (fun (i_0 : int) => t0_encoded.[i_0])) output_offset bytestream));}.
+               + auto => /> &2.
+                 case (0 <= output_offset{2} * 8 <= 3200); last by auto.
+                 by move => ?; rewrite BSWAS_416u8_128_slicesetE /#.
+proc change 5 : { coefficients <- if (0 <= input_offset*8 <= 32*256-256)
+                                  then BSWAS_256u32_256.sliceget t0 (input_offset*8)
+                                  else get256_direct (WArray1024.init32 (fun (i_0 : int) => t0.[i_0])) input_offset;}.
+                + auto => /> &2.
+                  case (0 <= input_offset{2} * 8 <= 7936); last by auto.
+                  by move => ?; rewrite BSWAS_256u32_256_slicegetE /#.
+proc change 24 : { final_encoded_output <- BSWAS_16u8_128.sliceset final_encoded_output 0 bytestream;}. 
+               + by auto => /> &2;have  /= -> := BSWAS_16u8_128_slicesetE final_encoded_output{2} 0 bytestream{2} _;1:smt().
 
 unroll for ^while.
 unroll for ^while.

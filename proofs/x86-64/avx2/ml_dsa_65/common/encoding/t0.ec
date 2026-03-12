@@ -143,14 +143,13 @@ conseq (:  List.all (fun i =>
 qed.
 
 op t0_decode_to_polynomial_lane(c : W13.t) : W32.t = 
-    (W32_sub (W32.of_int dpow) (zeroextu13_32 c)).
-
+    ((W32.of_int dpow) + (- (BS_W32_W13_U.zeroextu32 c))).
 
 lemma BitUnack_liftE (bytes : W8.t Array416.t) :
     BitUnpack (to_list bytes) (dpow - 1) dpow
   =
   (map (fun (w : W32.t) => incoeff (to_sint w))
-     (init_256_32
+     (BSWA_256u32.init
         (fun (i : int) =>
            t0_decode_to_polynomial_lane
              (W13.init (fun (j : int) => bytes.[(d * i + j) %/ 8].[(d * i + j) %% 8]))))).
@@ -168,7 +167,7 @@ rewrite (nth_map []) /=.
   rewrite (EclibExtra.size_flatten' 8);1: by smt(mapP W8.size_w2bits).
   by rewrite size_map size_to_list /= /#.
 congr; rewrite  /t0_decode_to_polynomial_lane /W32_sub.
-rewrite ilog_dpow /= /zeroextu13_32. 
+rewrite ilog_dpow /= /zeroextu32. 
 rewrite nth_chunk // 1:/#.
 + rewrite /BytesToBits. 
   rewrite (EclibExtra.size_flatten' 8);1: by smt(mapP W8.size_w2bits).
@@ -209,10 +208,28 @@ lemma t0_decode_to_polynomial _a :
        lifts_wpoly res = BitUnpack (to_list _a) (dpow-1) dpow
    ].
 proc => /=;inline *.
-proc change ^while.1 : { bytestream <- sliceget416_8_128 t0_encoded (input_offset*8);};1: by auto;smt().
-proc change ^while.15 : {t0 <- sliceset256_32_256 t0 (output_offset*8) coefficients;}; 1: by auto;smt().
-proc change 4 : { bytestream <- sliceget416_8_128 t0_encoded (400*8);}; 1: by auto;smt().
-proc change 19 : {t0 <- sliceset256_32_256 t0 (output_offset*8) coefficients;}; 1: by auto;smt().
+print BSWAS_416u8_128_slicegetE.
+proc change ^while.1 : { bytestream <- if (0 <= input_offset*8 <= 416*8-128)
+                                       then BSWAS_416u8_128.sliceget t0_encoded (input_offset*8)
+                                       else get128_direct (WArray416.init8 (fun (i : int) => t0_encoded.[i])) input_offset ;}.
+                + auto => /> &2.
+                  case (0 <= input_offset{2} * 8 <= 3200); last by auto.
+                  by move => ?; rewrite -BSWAS_416u8_128_slicegetE /#.
+proc change ^while.15 : {t0 <- if (0 <= output_offset*8 <= 256*32-256)
+                               then BSWAS_256u32_256.sliceset t0 (output_offset*8) coefficients
+                               else Array256.init (fun (i : int) =>                                                                                              get32 (set256_direct (WArray1024.init32 (fun (i0 : int) => t0.[i0])) output_offset coefficients) i);}.
+               + auto => /> &2.
+                 case (0 <= output_offset{2} * 8 <= 7936); last by auto.
+                 by move => ?; rewrite BSWAS_256u32_256_slicesetE /#.
+proc change 4 : { bytestream <- BSWAS_416u8_128.sliceget t0_encoded (400*8); }.
+               + auto => /> &2.
+                 by have /# := BSWAS_416u8_128_slicegetE (400) t0_encoded{2} _.
+proc change 19 : {t0 <- if (0 <= output_offset*8 <= 256*32-256)
+                               then BSWAS_256u32_256.sliceset t0 (output_offset*8) coefficients
+                               else Array256.init (fun (i : int) =>                                                                                              get32 (set256_direct (WArray1024.init32 (fun (i0 : int) => t0.[i0])) output_offset coefficients) i);}.
+               + auto => /> &2.
+                 case (0 <= output_offset{2} * 8 <= 7936); last by auto.
+                 by move => ?; rewrite BSWAS_256u32_256_slicesetE /#.
 
 unroll for ^while.
 
@@ -220,7 +237,7 @@ cfold 1.
 cfold 466.
 wp -2.
 conseq (_: _ ==>
-    t0 = init_256_32 (fun i => t0_decode_to_polynomial_lane (W13.init (fun j =>
+    t0 = BSWA_256u32.init (fun i => t0_decode_to_polynomial_lane (W13.init (fun j =>
                _a.[(13*i+j) %/ 8].[(13*i+j) %% 8])))); last by circuit.
             
 (* Part 1 *)

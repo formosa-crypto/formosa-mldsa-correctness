@@ -1,7 +1,7 @@
 require import AllCore List IntDiv RealExp.
 
 from Jasmin require import JModel_x86.
-require import Bindings.
+require import CircuitBindings Bindings.
 
 from JazzEC require import Ml_dsa_65_avx2 Mldsa_65_prelude.
 from JazzEC require import Array256 Array128.

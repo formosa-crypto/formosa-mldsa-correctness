@@ -6,22 +6,22 @@ import SLH64.
 
 require import
 Array2 Array3 Array4 Array5 Array6 Array7 Array8 Array16 Array24 Array25
-Array32 Array48 Array61 Array64 Array128 Array136 Array168 Array256 Array272
-Array320 Array416 Array640 Array680 Array768 Array848 Array1280 Array1536
-Array1920 Array1952 Array2048 Array2496 Array3200 Array3309 Array4032
-Array7680 WArray8 WArray16 WArray32 WArray64 WArray96 WArray128 WArray160
-WArray192 WArray256 WArray512 WArray2048 BArray2 BArray8 BArray16 BArray32
-BArray40 BArray48 BArray61 BArray64 BArray96 BArray128 BArray136 BArray160
-BArray168 BArray192 BArray200 BArray224 BArray256 BArray272 BArray320
-BArray416 BArray512 BArray640 BArray680 BArray768 BArray800 BArray848
-BArray1024 BArray1920 BArray1952 BArray2048 BArray2496 BArray3200 BArray3309
-BArray4032 BArray5120 BArray6144 BArray30720 SBArray768_16 SBArray128_32
-SBArray1952_32 SBArray4032_32 SBArray1952_48 SBArray3309_48 SBArray3309_61
+Array26 Array32 Array48 Array61 Array64 Array66 Array128 Array136 Array168
+Array256 Array272 Array320 Array416 Array640 Array680 Array768 Array848
+Array1280 Array1536 Array1920 Array1952 Array2048 Array2496 Array3200
+Array3309 Array4032 Array7680 WArray8 WArray16 WArray32 WArray64 WArray96
+WArray128 WArray160 WArray192 WArray256 WArray512 WArray2048 BArray2 BArray8
+BArray16 BArray32 BArray48 BArray61 BArray64 BArray66 BArray96 BArray128
+BArray136 BArray160 BArray168 BArray192 BArray200 BArray208 BArray224
+BArray256 BArray272 BArray320 BArray416 BArray512 BArray640 BArray680
+BArray768 BArray800 BArray848 BArray1024 BArray1920 BArray1952 BArray2048
+BArray2496 BArray3200 BArray3309 BArray4032 BArray5120 BArray6144 BArray30720
+SBArray128_32 SBArray1952_32 SBArray4032_32 SBArray3309_48 SBArray3309_61
 SBArray128_64 SBArray4032_64 SBArray640_128 SBArray768_128 SBArray272_136
-SBArray680_136 SBArray768_136 SBArray1952_136 SBArray848_168 SBArray1920_320
-SBArray2496_416 SBArray680_640 SBArray3200_640 SBArray4032_640
-SBArray4032_768 SBArray5120_1024 SBArray6144_1024 SBArray30720_1024
-SBArray1952_1920 SBArray4032_2496 SBArray3309_3200 SBArray30720_5120.
+SBArray680_136 SBArray848_168 SBArray208_200 SBArray1920_320 SBArray2496_416
+SBArray680_640 SBArray3200_640 SBArray4032_640 SBArray4032_768
+SBArray5120_1024 SBArray6144_1024 SBArray30720_1024 SBArray1952_1920
+SBArray4032_2496 SBArray3309_3200 SBArray30720_5120.
 
 abbrev commitment__ENCODING_SHUFFLES =
 (W256.of_int
@@ -2141,41 +2141,6 @@ module M = {
     }
     return polynomial;
   }
-  proc keccakf1600_index (x:int, y:int) : int = {
-    var r:int;
-    r <- ((x %% 5) + (5 * (y %% 5)));
-    return r;
-  }
-  proc keccakf1600_rho_offsets (i:int) : int = {
-    var r:int;
-    var x:int;
-    var y:int;
-    var t:int;
-    var z:int;
-    r <- 0;
-    x <- 1;
-    y <- 0;
-    t <- 0;
-    while ((t < 24)) {
-      if ((i = (x + (5 * y)))) {
-        r <- ((((t + 1) * (t + 2)) %/ 2) %% 64);
-      } else {
-        
-      }
-      z <- (((2 * x) + (3 * y)) %% 5);
-      x <- y;
-      y <- z;
-      t <- (t + 1);
-    }
-    return r;
-  }
-  proc keccakf1600_rhotates (x:int, y:int) : int = {
-    var r:int;
-    var i:int;
-    i <@ keccakf1600_index (x, y);
-    r <@ keccakf1600_rho_offsets (i);
-    return r;
-  }
   proc __keccakf1600_pround_avx2 (state:BArray224.t) : BArray224.t = {
     var c00:W256.t;
     var c14:W256.t;
@@ -2927,6 +2892,309 @@ module M = {
     state <@ __keccakf1600_avx2 (state);
     return state;
   }
+  proc __stavx2_pack (st:BArray200.t) : BArray224.t = {
+    var state:BArray224.t;
+    var t128_1:W128.t;
+    var t128_0:W128.t;
+    var r:W64.t;
+    var t256_0:W256.t;
+    var t256_1:W256.t;
+    var t256_2:W256.t;
+    state <- witness;
+    state <-
+    (BArray224.set256 state 0
+    (VPBROADCAST_4u64 (BArray200.get64d st (8 * 0))));
+    state <- (BArray224.set256 state 1 (BArray200.get256d st (1 * 8)));
+    t128_1 <- (VMOV_64 (BArray200.get64 st 5));
+    state <- (BArray224.set256 state 3 (BArray200.get256d st (6 * 8)));
+    t128_0 <- (VMOV_64 (BArray200.get64 st 10));
+    state <- (BArray224.set256 state 4 (BArray200.get256d st (11 * 8)));
+    r <- (BArray200.get64 st 15);
+    t128_1 <- (VPINSR_2u64 t128_1 r (W8.of_int 1));
+    state <- (BArray224.set256 state 5 (BArray200.get256d st (16 * 8)));
+    r <- (BArray200.get64 st 20);
+    t128_0 <- (VPINSR_2u64 t128_0 r (W8.of_int 1));
+    t256_0 <- (zeroextu256 t128_0);
+    t256_0 <- (VINSERTI128 t256_0 t128_1 (W8.of_int 1));
+    state <- (BArray224.set256 state 2 t256_0);
+    state <- (BArray224.set256 state 6 (BArray200.get256d st (21 * 8)));
+    t256_0 <-
+    (VPBLEND_8u32 (BArray224.get256 state 3) (BArray224.get256 state 5)
+    (W8.of_int
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+    ));
+    t256_1 <-
+    (VPBLEND_8u32 (BArray224.get256 state 6) (BArray224.get256 state 4)
+    (W8.of_int
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+    ));
+    t256_2 <-
+    (VPBLEND_8u32 (BArray224.get256 state 4) (BArray224.get256 state 3)
+    (W8.of_int
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+    ));
+    state <-
+    (BArray224.set256 state 3
+    (VPBLEND_8u32 t256_0 t256_1
+    (W8.of_int
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+    )));
+    state <-
+    (BArray224.set256 state 4
+    (VPBLEND_8u32 t256_1 t256_0
+    (W8.of_int
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+    )));
+    t256_0 <-
+    (VPBLEND_8u32 (BArray224.get256 state 5) (BArray224.get256 state 6)
+    (W8.of_int
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+    ));
+    state <-
+    (BArray224.set256 state 5
+    (VPBLEND_8u32 t256_0 t256_2
+    (W8.of_int
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+    )));
+    state <-
+    (BArray224.set256 state 6
+    (VPBLEND_8u32 t256_2 t256_0
+    (W8.of_int
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+    )));
+    return state;
+  }
+  proc __stavx2_unpack (st:BArray200.t, state:BArray224.t) : BArray200.t = {
+    var t128_0:W128.t;
+    var t256_0:W256.t;
+    var t256_1:W256.t;
+    var t256_2:W256.t;
+    var t256_3:W256.t;
+    var t128_1:W128.t;
+    var t256_4:W256.t;
+    t128_0 <- (truncateu128 (BArray224.get256 state 0));
+    st <- (BArray200.set64 st 0 (VMOVLPD t128_0));
+    st <- (BArray200.set256d st (1 * 8) (BArray224.get256 state 1));
+    t256_0 <-
+    (VPBLEND_8u32 (BArray224.get256 state 3) (BArray224.get256 state 4)
+    (W8.of_int
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+    ));
+    t256_1 <-
+    (VPBLEND_8u32 (BArray224.get256 state 4) (BArray224.get256 state 3)
+    (W8.of_int
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+    ));
+    t256_2 <-
+    (VPBLEND_8u32 (BArray224.get256 state 5) (BArray224.get256 state 6)
+    (W8.of_int
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+    ));
+    t256_3 <-
+    (VPBLEND_8u32 (BArray224.get256 state 6) (BArray224.get256 state 5)
+    (W8.of_int
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+    ));
+    t128_1 <- (VEXTRACTI128 (BArray224.get256 state 2) (W8.of_int 1));
+    st <- (BArray200.set64 st 5 (VMOVLPD t128_1));
+    t256_4 <-
+    (VPBLEND_8u32 t256_0 t256_3
+    (W8.of_int
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+    ));
+    st <- (BArray200.set256d st (6 * 8) t256_4);
+    t128_0 <- (truncateu128 (BArray224.get256 state 2));
+    st <- (BArray200.set64 st 10 (VMOVLPD t128_0));
+    t256_4 <-
+    (VPBLEND_8u32 t256_3 t256_1
+    (W8.of_int
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+    ));
+    st <- (BArray200.set256d st (11 * 8) t256_4);
+    st <- (BArray200.set64 st 15 (VMOVHPD t128_1));
+    t256_4 <-
+    (VPBLEND_8u32 t256_2 t256_0
+    (W8.of_int
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+    ));
+    st <- (BArray200.set256d st (16 * 8) t256_4);
+    st <- (BArray200.set64 st 20 (VMOVHPD t128_0));
+    t256_4 <-
+    (VPBLEND_8u32 t256_1 t256_2
+    (W8.of_int
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((1 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) +
+    ((2 ^ 1) *
+    ((0 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+    ));
+    st <- (BArray200.set256d st (21 * 8) t256_4);
+    return st;
+  }
+  proc _keccakf1600_st25_avx2 (st25:BArray200.t) : BArray200.t = {
+    var state:BArray224.t;
+    state <- witness;
+    state <@ __stavx2_pack (st25);
+    state <@ __keccakf1600_avx2 (state);
+    st25 <@ __stavx2_unpack (st25, state);
+    return st25;
+  }
   proc __SHLQ (x:W64.t, shbytes:int) : W64.t = {
     
     if ((shbytes <> 0)) {
@@ -2953,6 +3221,59 @@ module M = {
       
     }
     return x;
+  }
+  proc __m_rlen_read_upto8 (buf:int, len:int) : int * W64.t = {
+    var w:W64.t;
+    var zf:bool;
+    var sh:W8.t;
+    var x:W64.t;
+    var  _0:bool;
+    var  _1:bool;
+    var  _2:bool;
+    var  _3:bool;
+    var  _4:bool;
+    var  _5:bool;
+    var  _6:bool;
+    var  _7:bool;
+    var  _8:bool;
+    var  _9:bool;
+    var  _10:bool;
+    var  _11:bool;
+    if ((8 <= len)) {
+      w <- (loadW64 Glob.mem buf);
+      buf <- (buf + 8);
+    } else {
+      ( _0,  _1,  _2,  _3, zf) <- (TEST_64 (W64.of_int len) (W64.of_int 4));
+      if ((! zf)) {
+        w <- (zeroextu64 (loadW32 Glob.mem buf));
+        buf <- (buf + 4);
+        sh <- (W8.of_int 32);
+      } else {
+        w <- (W64.of_int 0);
+        sh <- (W8.of_int 0);
+      }
+      ( _4,  _5,  _6,  _7, zf) <- (TEST_64 (W64.of_int len) (W64.of_int 2));
+      if ((! zf)) {
+        x <- (zeroextu64 (loadW16 Glob.mem buf));
+        x <- (x `<<` (sh `&` (W8.of_int 63)));
+        w <- (w + x);
+        buf <- (buf + 2);
+        sh <- (sh + (W8.of_int 16));
+      } else {
+        
+      }
+      ( _8,  _9,  _10,  _11, zf) <-
+      (TEST_64 (W64.of_int len) (W64.of_int 1));
+      if ((! zf)) {
+        x <- (zeroextu64 (loadW8 Glob.mem buf));
+        x <- (x `<<` (sh `&` (W8.of_int 63)));
+        w <- (w + x);
+        buf <- (buf + 1);
+      } else {
+        
+      }
+    }
+    return (buf, w);
   }
   proc __u64_to_u256 (x:W64.t, l:int) : W256.t = {
     var t256:W256.t;
@@ -3254,174 +3575,6 @@ module M = {
       t256 <@ __u64_to_u256 (t64, l);
     }
     st <- (BArray224.set256 st r ((BArray224.get256 st r) `^` t256));
-    return st;
-  }
-  proc __ANDN_64 (a:W64.t, b:W64.t) : W64.t = {
-    var t:W64.t;
-    t <- ((invw a) `&` b);
-    return t;
-  }
-  proc __rol_u64_ref (x:W64.t, i:int) : W64.t = {
-    var  _0:bool;
-    var  _1:bool;
-    if ((i <> 0)) {
-      ( _0,  _1, x) <- (ROL_64 x (W8.of_int i));
-    } else {
-      
-    }
-    return x;
-  }
-  proc __theta_sum_ref (a:BArray200.t) : BArray40.t = {
-    var c:BArray40.t;
-    var x:int;
-    var y:int;
-    c <- witness;
-    x <- 0;
-    while ((x < 5)) {
-      c <- (BArray40.set64 c x (BArray200.get64 a (x + 0)));
-      x <- (x + 1);
-    }
-    y <- 1;
-    while ((y < 5)) {
-      x <- 0;
-      while ((x < 5)) {
-        c <-
-        (BArray40.set64 c x
-        ((BArray40.get64 c x) `^` (BArray200.get64 a (x + (y * 5)))));
-        x <- (x + 1);
-      }
-      y <- (y + 1);
-    }
-    return c;
-  }
-  proc __theta_rol_ref (c:BArray40.t) : BArray40.t = {
-    var aux:W64.t;
-    var d:BArray40.t;
-    var x:int;
-    d <- witness;
-    x <- 0;
-    while ((x < 5)) {
-      d <- (BArray40.set64 d x (BArray40.get64 c ((x + 1) %% 5)));
-      aux <@ __rol_u64_ref ((BArray40.get64 d x), 1);
-      d <- (BArray40.set64 d x aux);
-      d <-
-      (BArray40.set64 d x
-      ((BArray40.get64 d x) `^` (BArray40.get64 c (((x - 1) + 5) %% 5))));
-      x <- (x + 1);
-    }
-    return d;
-  }
-  proc __rol_sum_ref (a:BArray200.t, d:BArray40.t, y:int) : BArray40.t = {
-    var aux:W64.t;
-    var b:BArray40.t;
-    var x:int;
-    var x_:int;
-    var y_:int;
-    var r:int;
-    b <- witness;
-    x <- 0;
-    while ((x < 5)) {
-      x_ <- ((x + (3 * y)) %% 5);
-      y_ <- x;
-      r <@ keccakf1600_rhotates (x_, y_);
-      b <- (BArray40.set64 b x (BArray200.get64 a (x_ + (y_ * 5))));
-      b <-
-      (BArray40.set64 b x ((BArray40.get64 b x) `^` (BArray40.get64 d x_)));
-      aux <@ __rol_u64_ref ((BArray40.get64 b x), r);
-      b <- (BArray40.set64 b x aux);
-      x <- (x + 1);
-    }
-    return b;
-  }
-  proc __set_row_ref (e:BArray200.t, b:BArray40.t, y:int) : BArray200.t = {
-    var x:int;
-    var x1:int;
-    var x2:int;
-    var t:W64.t;
-    x <- 0;
-    while ((x < 5)) {
-      x1 <- ((x + 1) %% 5);
-      x2 <- ((x + 2) %% 5);
-      t <@ __ANDN_64 ((BArray40.get64 b x1), (BArray40.get64 b x2));
-      t <- (t `^` (BArray40.get64 b x));
-      e <- (BArray200.set64 e (x + (y * 5)) t);
-      x <- (x + 1);
-    }
-    return e;
-  }
-  proc _pround_ref (e:BArray200.t, a:BArray200.t) : BArray200.t = {
-    var c:BArray40.t;
-    var d:BArray40.t;
-    var y:int;
-    var b:BArray40.t;
-    b <- witness;
-    c <- witness;
-    d <- witness;
-    c <@ __theta_sum_ref (a);
-    d <@ __theta_rol_ref (c);
-    y <- 0;
-    while ((y < 5)) {
-      b <@ __rol_sum_ref (a, d, y);
-      e <@ __set_row_ref (e, b, y);
-      y <- (y + 1);
-    }
-    return e;
-  }
-  proc __keccakf1600_ref (a:BArray200.t) : BArray200.t = {
-    var s_e:BArray200.t;
-    var e:BArray200.t;
-    var rC:BArray192.t;
-    var rc:W64.t;
-    var c:int;
-    rC <- witness;
-    e <- witness;
-    s_e <- witness;
-    e <- s_e;
-    c <- 0;
-    (* Erased call to spill *)
-    e <@ _pround_ref (e, a);
-    (a, e) <- (swap_ e a);
-    rC <- kECCAK1600_RC;
-    rc <- (BArray192.get64 rC c);
-    e <- (BArray200.set64 e 0 ((BArray200.get64 e 0) `^` rc));
-    a <@ _pround_ref (a, e);
-    (a, e) <- (swap_ e a);
-    rC <- kECCAK1600_RC;
-    rc <- (BArray192.get64 rC (c + 1));
-    a <- (BArray200.set64 a 0 ((BArray200.get64 a 0) `^` rc));
-    (* Erased call to unspill *)
-    c <- (c + 2);
-    while ((c < (24 - 1))) {
-      (* Erased call to spill *)
-      e <@ _pround_ref (e, a);
-      (a, e) <- (swap_ e a);
-      rC <- kECCAK1600_RC;
-      rc <- (BArray192.get64 rC c);
-      e <- (BArray200.set64 e 0 ((BArray200.get64 e 0) `^` rc));
-      a <@ _pround_ref (a, e);
-      (a, e) <- (swap_ e a);
-      rC <- kECCAK1600_RC;
-      rc <- (BArray192.get64 rC (c + 1));
-      a <- (BArray200.set64 a 0 ((BArray200.get64 a 0) `^` rc));
-      (* Erased call to unspill *)
-      c <- (c + 2);
-    }
-    return a;
-  }
-  proc _keccakf1600_ref (a:BArray200.t) : BArray200.t = {
-    
-    a <@ __keccakf1600_ref (a);
-    return a;
-  }
-  proc __state_init_ref (st:BArray200.t) : BArray200.t = {
-    var z64:W64.t;
-    var i:int;
-    z64 <- (W64.of_int 0);
-    i <- 0;
-    while ((i < 25)) {
-      st <- (BArray200.set64 st i z64);
-      i <- (i + 1);
-    }
     return st;
   }
   proc _keccakf1600_4x_pround (e:BArray800.t, a:BArray800.t, r8:W256.t,
@@ -4044,6 +4197,146 @@ module M = {
     t256 <- (VPBROADCAST_4u64 (truncateu64 t128));
     t256 <- (t256 `^` (BArray800.get256 st ((rATE8 - 1) %/ 8)));
     st <- (BArray800.set256 st ((rATE8 - 1) %/ 8) t256);
+    return st;
+  }
+  proc _init_updstate_avx2 (st:BArray208.t, r64:int, trailb:int) : BArray208.t = {
+    var r256:W256.t;
+    var i:int;
+    var status:W64.t;
+    var t:W64.t;
+    r256 <- (set0_256);
+    i <- 0;
+    while ((i < 6)) {
+      st <- (BArray208.set256 st i r256);
+      i <- (i + 1);
+    }
+    st <- (BArray208.set64 st 24 (W64.of_int 0));
+    status <- (W64.of_int trailb);
+    status <- (status `<<` (W8.of_int 8));
+    t <- (W64.of_int (r64 - 1));
+    status <- (status + t);
+    status <- (status `<<` (W8.of_int 8));
+    st <- (BArray208.set64 st 25 status);
+    return st;
+  }
+  proc _ststatus_data (ststatus:W64.t) : W8.t * int * int = {
+    var trailb:W8.t;
+    var at:W64.t;
+    var r8:W64.t;
+    var c_200:W64.t;
+    var c_0:W64.t;
+    var r8_ui:int;
+    var at_ui:int;
+    at <- ststatus;
+    at <- (at `&` (W64.of_int 255));
+    ststatus <- (ststatus `>>` (W8.of_int 8));
+    r8 <- ststatus;
+    r8 <- (r8 `&` (W64.of_int 255));
+    r8 <- (r8 + (W64.of_int 1));
+    r8 <- (r8 `<<` (W8.of_int 3));
+    c_200 <- (W64.of_int 200);
+    r8 <- (((W64.of_int 200) \ult r8) ? c_200 : r8);
+    c_0 <- (W64.of_int 0);
+    at <- ((r8 \ule at) ? c_0 : at);
+    ststatus <- (ststatus `>>` (W8.of_int 8));
+    trailb <- (truncateu8 ststatus);
+    r8_ui <- (W64.to_uint r8);
+    at_ui <- (W64.to_uint at);
+    return (trailb, r8_ui, at_ui);
+  }
+  proc _finish_updstate_avx2 (st:BArray208.t) : BArray208.t = {
+    var ststatus:W64.t;
+    var trailb:W8.t;
+    var r8:int;
+    var at:int;
+    ststatus <- (BArray208.get64 st 25);
+    (trailb, r8, at) <@ _ststatus_data (ststatus);
+    st <- (BArray208.set8d st at ((BArray208.get8d st at) `^` trailb));
+    st <-
+    (BArray208.set8d st (r8 - 1)
+    ((BArray208.get8d st (r8 - 1)) `^` (W8.of_int 128)));
+    st <-
+    (BArray208.set32d st (8 * 25)
+    ((BArray208.get32d st (8 * 25)) `&` (W32.of_int 4278255360)));
+    return st;
+  }
+  proc _add_m_updstate_avx2 (st:BArray200.t, at:int, buf:int, upto:int) : 
+  BArray200.t * int * int = {
+    var at8:W64.t;
+    var t64:W64.t;
+    var sh:W8.t;
+    var upto8:W64.t;
+    var len:int;
+    var buf2:int;
+    var newat:int;
+    at8 <- (W64.of_int at);
+    at8 <- (at8 `&` (W64.of_int 7));
+    if ((at8 <> (W64.of_int 0))) {
+      len <- upto;
+      len <- (len - at);
+      at <- (at `|>>` 3);
+      at <- (at `<<` 3);
+      (buf2, t64) <@ __m_rlen_read_upto8 (buf, len);
+      len <- (len + (W64.to_uint at8));
+      sh <- (truncateu8 at8);
+      sh <- (sh `<<` (W8.of_int 3));
+      t64 <- (t64 `<<` (sh `&` (W8.of_int 63)));
+      st <- (BArray200.set64d st at ((BArray200.get64d st at) `^` t64));
+      if ((8 <= len)) {
+        buf <- (buf + 8);
+        buf <- (buf - (W64.to_uint at8));
+        at <- (at + 8);
+      } else {
+        buf <- buf2;
+        at <- upto;
+      }
+    } else {
+      
+    }
+    newat <- at;
+    newat <- (newat + 8);
+    while ((newat <= upto)) {
+      t64 <- (loadW64 Glob.mem buf);
+      st <- (BArray200.set64d st at ((BArray200.get64d st at) `^` t64));
+      at <- newat;
+      buf <- (buf + 8);
+      newat <- (newat + 8);
+    }
+    if ((at < upto)) {
+      upto8 <- (W64.of_int upto);
+      upto8 <- (upto8 `&` (W64.of_int 7));
+      (buf, t64) <@ __m_rlen_read_upto8 (buf, (W64.to_uint upto8));
+      st <- (BArray200.set64d st at ((BArray200.get64d st at) `^` t64));
+    } else {
+      
+    }
+    at <- upto;
+    return (st, at, buf);
+  }
+  proc _absorb_m_updstate_avx2 (st:BArray208.t, buf:int, len:int) : BArray208.t = {
+    var ststatus:W64.t;
+    var stk:BArray200.t;
+    var r8:int;
+    var at:int;
+    var  _0:W8.t;
+    var  _1:int;
+    stk <- witness;
+    ststatus <- (BArray208.get64 st 25);
+    ( _0, r8, at) <@ _ststatus_data (ststatus);
+    stk <- (SBArray208_200.get_sub64 st 0);
+    (* Erased call to spill *)
+    len <- (len + at);
+    while ((r8 <= len)) {
+      (stk, at, buf) <@ _add_m_updstate_avx2 (stk, at, buf, r8);
+      stk <@ _keccakf1600_st25_avx2 (stk);
+      len <- (len - r8);
+      at <- 0;
+    }
+    len <- len;
+    (* Erased call to unspill *)
+    (stk, at,  _1) <@ _add_m_updstate_avx2 (stk, at, buf, len);
+    st <- (SBArray208_200.set_sub64 st 0 stk);
+    st <- (BArray208.set8d st (8 * 25) (truncateu8 (W64.of_int at)));
     return st;
   }
   proc a2____a_ilen_read_upto8_at (buf:BArray2.t, offset:int, dELTA:int,
@@ -5097,6 +5390,52 @@ module M = {
     }
     return (buf, dELTA, lEN);
   }
+  proc a64____a_rlen_write_upto8 (buf:BArray64.t, off:int, data:W64.t,
+                                  len:int) : BArray64.t * int = {
+    var zf:bool;
+    var  _0:bool;
+    var  _1:bool;
+    var  _2:bool;
+    var  _3:bool;
+    var  _4:bool;
+    var  _5:bool;
+    var  _6:bool;
+    var  _7:bool;
+    var  _8:bool;
+    var  _9:bool;
+    var  _10:bool;
+    var  _11:bool;
+    if ((8 <= len)) {
+      buf <- (BArray64.set64d buf off data);
+      off <- (off + 8);
+    } else {
+      ( _0,  _1,  _2,  _3, zf) <- (TEST_64 (W64.of_int len) (W64.of_int 4));
+      if ((! zf)) {
+        buf <- (BArray64.set32d buf off (truncateu32 data));
+        off <- (off + 4);
+        data <- (data `>>` (W8.of_int 32));
+      } else {
+        
+      }
+      ( _4,  _5,  _6,  _7, zf) <- (TEST_64 (W64.of_int len) (W64.of_int 2));
+      if ((! zf)) {
+        buf <- (BArray64.set16d buf off (truncateu16 data));
+        off <- (off + 2);
+        data <- (data `>>` (W8.of_int 16));
+      } else {
+        
+      }
+      ( _8,  _9,  _10,  _11, zf) <-
+      (TEST_64 (W64.of_int len) (W64.of_int 1));
+      if ((! zf)) {
+        buf <- (BArray64.set8d buf off (truncateu8 data));
+        off <- (off + 1);
+      } else {
+        
+      }
+    }
+    return (buf, off);
+  }
   proc a64____addstate_avx2 (st:BArray224.t, aT:int, buf:BArray64.t,
                              offset:int, _LEN:int, _TRAILB:int) : BArray224.t *
                                                                   int * int = {
@@ -5484,6 +5823,258 @@ module M = {
       
     }
     return (st, aT);
+  }
+  proc a64___dump_updstate_avx2 (buf:BArray64.t, off:int, st:BArray200.t,
+                                 at:int, upto:int) : int * int * BArray64.t = {
+    var at8:W64.t;
+    var t64:W64.t;
+    var sh:W8.t;
+    var t256:W256.t;
+    var upto8:W64.t;
+    var len:int;
+    var off2:int;
+    var newat:int;
+    at8 <- (W64.of_int at);
+    at8 <- (at8 `&` (W64.of_int 7));
+    if ((at8 <> (W64.of_int 0))) {
+      len <- upto;
+      len <- (len - at);
+      at <- (at `|>>` 3);
+      at <- (at `<<` 3);
+      t64 <- (BArray200.get64d st at);
+      sh <- (truncateu8 at8);
+      sh <- (sh `<<` (W8.of_int 3));
+      t64 <- (t64 `>>` (sh `&` (W8.of_int 63)));
+      (buf, off2) <@ a64____a_rlen_write_upto8 (buf, off, t64, len);
+      len <- (len + (W64.to_uint at8));
+      if ((8 <= len)) {
+        off <- (off + 8);
+        off <- (off - (W64.to_uint at8));
+        at <- (at + 8);
+      } else {
+        off <- off2;
+        at <- upto;
+      }
+    } else {
+      
+    }
+    newat <- at;
+    newat <- (newat + 32);
+    while ((newat <= upto)) {
+      t256 <- (BArray200.get256d st at);
+      buf <- (BArray64.set256d buf off t256);
+      at <- newat;
+      off <- (off + 32);
+      newat <- (newat + 32);
+    }
+    newat <- at;
+    newat <- (newat + 8);
+    while ((newat <= upto)) {
+      t64 <- (BArray200.get64d st at);
+      buf <- (BArray64.set64d buf off t64);
+      at <- newat;
+      off <- (off + 8);
+      newat <- (newat + 8);
+    }
+    if ((at < upto)) {
+      upto8 <- (W64.of_int upto);
+      upto8 <- (upto8 `&` (W64.of_int 7));
+      t64 <- (BArray200.get64d st at);
+      (buf, off) <@ a64____a_rlen_write_upto8 (buf, off, t64,
+      (W64.to_uint upto8));
+    } else {
+      
+    }
+    at <- upto;
+    return (at, off, buf);
+  }
+  proc a64___squeeze_updstate_avx2 (st:BArray208.t, buf:BArray64.t) : 
+  BArray208.t * BArray64.t = {
+    var ststatus:W64.t;
+    var stk:BArray200.t;
+    var r8:int;
+    var at:int;
+    var off:int;
+    var len:int;
+    var  _0:W8.t;
+    var  _1:int;
+    stk <- witness;
+    ststatus <- (BArray208.get64 st 25);
+    ( _0, r8, at) <@ _ststatus_data (ststatus);
+    stk <- (SBArray208_200.get_sub64 st 0);
+    (* Erased call to spill *)
+    if ((at = 0)) {
+      stk <@ _keccakf1600_st25_avx2 (stk);
+      at <- 0;
+    } else {
+      
+    }
+    off <- 0;
+    len <- 64;
+    len <- (len + at);
+    while ((r8 < len)) {
+      (at, off, buf) <@ a64___dump_updstate_avx2 (buf, off, stk, at, r8);
+      stk <@ _keccakf1600_st25_avx2 (stk);
+      len <- (len - r8);
+      at <- 0;
+    }
+    len <- len;
+    (at,  _1, buf) <@ a64___dump_updstate_avx2 (buf, off, stk, at, len);
+    (* Erased call to unspill *)
+    st <- (SBArray208_200.set_sub64 st 0 stk);
+    st <- (BArray208.set8d st (8 * 25) (truncateu8 (W64.of_int at)));
+    return (st, buf);
+  }
+  proc a66____a_rlen_read_upto8 (a:BArray66.t, off:int, len:int) : int *
+                                                                   W64.t = {
+    var w:W64.t;
+    var zf:bool;
+    var sh:W8.t;
+    var x:W64.t;
+    var  _0:bool;
+    var  _1:bool;
+    var  _2:bool;
+    var  _3:bool;
+    var  _4:bool;
+    var  _5:bool;
+    var  _6:bool;
+    var  _7:bool;
+    var  _8:bool;
+    var  _9:bool;
+    var  _10:bool;
+    var  _11:bool;
+    if ((8 <= len)) {
+      w <- (BArray66.get64d a off);
+      off <- (off + 8);
+    } else {
+      ( _0,  _1,  _2,  _3, zf) <- (TEST_64 (W64.of_int len) (W64.of_int 4));
+      if ((! zf)) {
+        w <- (zeroextu64 (BArray66.get32d a off));
+        off <- (off + 4);
+        sh <- (W8.of_int 32);
+      } else {
+        w <- (W64.of_int 0);
+        sh <- (W8.of_int 0);
+      }
+      ( _4,  _5,  _6,  _7, zf) <- (TEST_64 (W64.of_int len) (W64.of_int 2));
+      if ((! zf)) {
+        x <- (zeroextu64 (BArray66.get16d a off));
+        x <- (x `<<` (sh `&` (W8.of_int 63)));
+        w <- (w + x);
+        off <- (off + 2);
+        sh <- (sh + (W8.of_int 16));
+      } else {
+        
+      }
+      ( _8,  _9,  _10,  _11, zf) <-
+      (TEST_64 (W64.of_int len) (W64.of_int 1));
+      if ((! zf)) {
+        x <- (zeroextu64 (BArray66.get8d a off));
+        x <- (x `<<` (sh `&` (W8.of_int 63)));
+        w <- (w + x);
+        off <- (off + 1);
+      } else {
+        
+      }
+    }
+    return (off, w);
+  }
+  proc a66___add_updstate_avx2 (st:BArray200.t, at:int, buf:BArray66.t,
+                                off:int, upto:int) : int * int * BArray200.t = {
+    var at8:W64.t;
+    var t64:W64.t;
+    var sh:W8.t;
+    var r256:W256.t;
+    var t256:W256.t;
+    var upto8:W64.t;
+    var len:int;
+    var off2:int;
+    var newat:int;
+    at8 <- (W64.of_int at);
+    at8 <- (at8 `&` (W64.of_int 7));
+    if ((at8 <> (W64.of_int 0))) {
+      len <- upto;
+      len <- (len - at);
+      at <- (at `|>>` 3);
+      at <- (at `<<` 3);
+      (off2, t64) <@ a66____a_rlen_read_upto8 (buf, off, len);
+      len <- (len + at);
+      sh <- (truncateu8 at8);
+      sh <- (sh `<<` (W8.of_int 3));
+      t64 <- (t64 `<<` (sh `&` (W8.of_int 63)));
+      st <- (BArray200.set64d st at ((BArray200.get64d st at) `^` t64));
+      if ((8 <= len)) {
+        off <- (off + 8);
+        off <- (off - (W64.to_uint at8));
+        at <- (at + 8);
+      } else {
+        off <- off2;
+        at <- upto;
+      }
+    } else {
+      
+    }
+    newat <- at;
+    newat <- (newat + 32);
+    while ((newat <= upto)) {
+      r256 <- (BArray200.get256d st at);
+      t256 <- (BArray66.get256d buf off);
+      r256 <- (r256 `^` t256);
+      st <- (BArray200.set256d st at r256);
+      at <- newat;
+      off <- (off + 32);
+      newat <- (newat + 32);
+    }
+    newat <- at;
+    newat <- (newat + 8);
+    while ((newat <= upto)) {
+      t64 <- (BArray66.get64d buf off);
+      st <- (BArray200.set64d st at ((BArray200.get64d st at) `^` t64));
+      at <- newat;
+      off <- (off + 8);
+      newat <- (newat + 8);
+    }
+    if ((at < upto)) {
+      upto8 <- (W64.of_int upto);
+      upto8 <- (upto8 `&` (W64.of_int 7));
+      (off, t64) <@ a66____a_rlen_read_upto8 (buf, off, (W64.to_uint upto8));
+      st <- (BArray200.set64d st at ((BArray200.get64d st at) `^` t64));
+    } else {
+      
+    }
+    at <- upto;
+    return (at, off, st);
+  }
+  proc a66___update_updstate_avx2 (st:BArray208.t, buf:BArray66.t) : 
+  BArray208.t = {
+    var ststatus:W64.t;
+    var stk:BArray200.t;
+    var r8:int;
+    var at:int;
+    var off:int;
+    var len:int;
+    var  _0:W8.t;
+    var  _1:int;
+    stk <- witness;
+    ststatus <- (BArray208.get64 st 25);
+    ( _0, r8, at) <@ _ststatus_data (ststatus);
+    stk <- (SBArray208_200.get_sub64 st 0);
+    (* Erased call to spill *)
+    off <- 0;
+    len <- 66;
+    len <- (len + at);
+    while ((r8 <= len)) {
+      (at, off, stk) <@ a66___add_updstate_avx2 (stk, at, buf, off, r8);
+      stk <@ _keccakf1600_st25_avx2 (stk);
+      len <- (len - r8);
+      at <- 0;
+    }
+    len <- len;
+    (* Erased call to unspill *)
+    (at,  _1, stk) <@ a66___add_updstate_avx2 (stk, at, buf, off, len);
+    st <- (SBArray208_200.set_sub64 st 0 stk);
+    st <- (BArray208.set8d st (8 * 25) (truncateu8 (W64.of_int at)));
+    return st;
   }
   proc a128____a_ilen_read_upto8_at (buf:BArray128.t, offset:int, dELTA:int,
                                      lEN:int, tRAIL:int, cUR:int, aT:int) : 
@@ -6061,180 +6652,6 @@ module M = {
     offset <- (offset + dELTA);
     return (buf, offset);
   }
-  proc a136____a_ilen_read_upto8_at (buf:BArray136.t, offset:int, dELTA:int,
-                                     lEN:int, tRAIL:int, cUR:int, aT:int) : 
-  int * int * int * int * W64.t = {
-    var w:W64.t;
-    var aT8:int;
-    var t16:W64.t;
-    var t8:W64.t;
-    if ((((aT < cUR) \/ ((cUR + 8) <= aT)) \/ ((lEN = 0) /\ (tRAIL = 0)))) {
-      w <- (W64.of_int 0);
-    } else {
-      aT8 <- (aT - cUR);
-      if ((8 <= lEN)) {
-        w <- (BArray136.get64d buf (offset + dELTA));
-        w <@ __SHLQ (w, aT8);
-        dELTA <- (dELTA + (8 - aT8));
-        lEN <- (lEN - (8 - aT8));
-        aT8 <- 8;
-      } else {
-        if ((4 <= lEN)) {
-          w <- (zeroextu64 (BArray136.get32d buf (offset + dELTA)));
-          w <@ __SHLQ (w, aT8);
-          dELTA <- (dELTA + ((8 <= (4 + aT8)) ? (8 - aT8) : 4));
-          lEN <- (lEN - ((8 <= (4 + aT8)) ? (8 - aT8) : 4));
-          aT8 <- ((8 <= (4 + aT8)) ? 8 : (4 + aT8));
-        } else {
-          w <- (W64.of_int 0);
-        }
-        if (((aT8 < 8) /\ (2 <= lEN))) {
-          t16 <- (zeroextu64 (BArray136.get16d buf (offset + dELTA)));
-          dELTA <- (dELTA + ((8 <= (2 + aT8)) ? (8 - aT8) : 2));
-          lEN <- (lEN - ((8 <= (2 + aT8)) ? (8 - aT8) : 2));
-          t16 <@ __SHLQ (t16, aT8);
-          w <- (w `|` t16);
-          aT8 <- ((8 <= (2 + aT8)) ? 8 : (2 + aT8));
-        } else {
-          
-        }
-        if ((aT8 < 8)) {
-          if ((1 <= lEN)) {
-            t8 <- (zeroextu64 (BArray136.get8d buf (offset + dELTA)));
-            t8 <- (t8 `|` (W64.of_int (256 * (tRAIL %% 256))));
-            dELTA <- (dELTA + 1);
-            lEN <- (lEN - 1);
-            t8 <@ __SHLQ (t8, aT8);
-            w <- (w `|` t8);
-            aT8 <- (aT8 + 1);
-            if (((aT8 < 8) /\ ((tRAIL %% 256) <> 0))) {
-              aT8 <- (aT8 + 1);
-              tRAIL <- 0;
-            } else {
-              
-            }
-          } else {
-            if (((tRAIL %% 256) <> 0)) {
-              t8 <- (W64.of_int (tRAIL %% 256));
-              t8 <@ __SHLQ (t8, aT8);
-              w <- (w `|` t8);
-              tRAIL <- 0;
-              aT8 <- (aT8 + 1);
-            } else {
-              
-            }
-          }
-        } else {
-          
-        }
-      }
-      aT <- (cUR + aT8);
-    }
-    return (dELTA, lEN, tRAIL, aT, w);
-  }
-  proc a136____a_ilen_read_upto16_at (buf:BArray136.t, offset:int, dELTA:int,
-                                      lEN:int, tRAIL:int, cUR:int, aT:int) : 
-  int * int * int * int * W128.t = {
-    var w:W128.t;
-    var aT16:int;
-    var t64_0:W64.t;
-    var t64_1:W64.t;
-    if ((((aT < cUR) \/ ((cUR + 16) <= aT)) \/ ((lEN = 0) /\ (tRAIL = 0)))) {
-      w <- (set0_128);
-    } else {
-      aT16 <- (aT - cUR);
-      if ((16 <= lEN)) {
-        w <- (BArray136.get128d buf (offset + dELTA));
-        w <@ __SHLDQ (w, aT16);
-        dELTA <- (dELTA + (16 - aT16));
-        lEN <- (lEN - (16 - aT16));
-        aT16 <- 16;
-      } else {
-        if ((8 <= aT16)) {
-          w <- (set0_128);
-          (dELTA, lEN, tRAIL, aT16, t64_1) <@ a136____a_ilen_read_upto8_at (
-          buf, offset, dELTA, lEN, tRAIL, 8, aT16);
-          w <- (VPINSR_2u64 w t64_1 (W8.of_int 1));
-        } else {
-          (dELTA, lEN, tRAIL, aT16, t64_0) <@ a136____a_ilen_read_upto8_at (
-          buf, offset, dELTA, lEN, tRAIL, 0, aT16);
-          w <- (zeroextu128 t64_0);
-          (dELTA, lEN, tRAIL, aT16, t64_1) <@ a136____a_ilen_read_upto8_at (
-          buf, offset, dELTA, lEN, tRAIL, 8, aT16);
-          w <- (VPINSR_2u64 w t64_1 (W8.of_int 1));
-        }
-      }
-      aT <- (cUR + aT16);
-    }
-    return (dELTA, lEN, tRAIL, aT, w);
-  }
-  proc a136____a_ilen_read_upto32_at (buf:BArray136.t, offset:int, dELTA:int,
-                                      lEN:int, tRAIL:int, cUR:int, aT:int) : 
-  int * int * int * int * W256.t = {
-    var w:W256.t;
-    var aT32:int;
-    var t128_0:W128.t;
-    var t128_1:W128.t;
-    if ((((aT < cUR) \/ ((cUR + 32) <= aT)) \/ ((lEN = 0) /\ (tRAIL = 0)))) {
-      w <- (set0_256);
-    } else {
-      aT32 <- (aT - cUR);
-      if (((aT32 = 0) /\ (32 <= lEN))) {
-        w <- (BArray136.get256d buf (offset + dELTA));
-        aT32 <- (aT32 + 32);
-        dELTA <- (dELTA + 32);
-        lEN <- (lEN - 32);
-      } else {
-        if ((16 <= aT32)) {
-          w <- (set0_256);
-          (dELTA, lEN, tRAIL, aT32, t128_1) <@ a136____a_ilen_read_upto16_at (
-          buf, offset, dELTA, lEN, tRAIL, 16, aT32);
-          w <- (VINSERTI128 w t128_1 (W8.of_int 1));
-        } else {
-          (dELTA, lEN, tRAIL, aT32, t128_0) <@ a136____a_ilen_read_upto16_at (
-          buf, offset, dELTA, lEN, tRAIL, 0, aT32);
-          (dELTA, lEN, tRAIL, aT32, t128_1) <@ a136____a_ilen_read_upto16_at (
-          buf, offset, dELTA, lEN, tRAIL, 16, aT32);
-          w <-
-          (W256.of_int
-          (((W128.to_uint t128_0) %% (2 ^ 128)) +
-          ((2 ^ 128) * (W128.to_uint t128_1))));
-        }
-      }
-      aT <- (cUR + aT32);
-    }
-    return (dELTA, lEN, tRAIL, aT, w);
-  }
-  proc a136____a_ilen_read_bcast_upto8_at (buf:BArray136.t, offset:int,
-                                           dELTA:int, lEN:int, tRAIL:int,
-                                           cUR:int, aT:int) : int * int *
-                                                              int * int *
-                                                              W256.t = {
-    var w256:W256.t;
-    var aT8:int;
-    var w:W64.t;
-    var t128:W128.t;
-    if ((((aT < cUR) \/ ((cUR + 8) <= aT)) \/ ((lEN = 0) /\ (tRAIL = 0)))) {
-      w256 <- (set0_256);
-    } else {
-      if ((8 <= lEN)) {
-        aT8 <- (aT - cUR);
-        w256 <- (VPBROADCAST_4u64 (BArray136.get64d buf (offset + dELTA)));
-        w256 <@ __SHLQ_256 (w256, aT8);
-        dELTA <- (dELTA + (8 - aT8));
-        lEN <- (lEN - (8 - aT8));
-        aT <- (cUR + 8);
-      } else {
-        aT8 <- (aT - cUR);
-        (dELTA, lEN, tRAIL, aT, w) <@ a136____a_ilen_read_upto8_at (buf,
-        offset, dELTA, lEN, tRAIL, cUR, aT);
-        t128 <- (zeroextu128 w);
-        w256 <- (VPBROADCAST_4u64 (truncateu64 t128));
-        w256 <@ __SHLQ_256 (w256, aT8);
-      }
-    }
-    return (dELTA, lEN, tRAIL, aT, w256);
-  }
   proc a136____a_ilen_write_upto8 (buf:BArray136.t, offset:int, dELTA:int,
                                    lEN:int, w:W64.t) : BArray136.t * int *
                                                        int = {
@@ -6328,112 +6745,6 @@ module M = {
       
     }
     return (buf, dELTA, lEN);
-  }
-  proc a136____addstate_avx2 (st:BArray224.t, aT:int, buf:BArray136.t,
-                              offset:int, _LEN:int, _TRAILB:int) : BArray224.t *
-                                                                   int * int = {
-    var dELTA:int;
-    var r0:W256.t;
-    var r1:W256.t;
-    var t64_2:W64.t;
-    var t128_1:W128.t;
-    var t128_2:W128.t;
-    var r3:W256.t;
-    var t64_3:W64.t;
-    var r4:W256.t;
-    var t64_4:W64.t;
-    var r5:W256.t;
-    var t64_5:W64.t;
-    var r6:W256.t;
-    var r2:W256.t;
-    dELTA <- 0;
-    if ((aT < 8)) {
-      (dELTA, _LEN, _TRAILB, aT, r0) <@ a136____a_ilen_read_bcast_upto8_at (
-      buf, offset, dELTA, _LEN, _TRAILB, 0, aT);
-      st <- (BArray224.set256 st 0 ((BArray224.get256 st 0) `^` r0));
-    } else {
-      
-    }
-    if (((aT < 40) /\ ((0 < _LEN) \/ (_TRAILB <> 0)))) {
-      (dELTA, _LEN, _TRAILB, aT, r1) <@ a136____a_ilen_read_upto32_at (
-      buf, offset, dELTA, _LEN, _TRAILB, 8, aT);
-      st <- (BArray224.set256 st 1 ((BArray224.get256 st 1) `^` r1));
-    } else {
-      
-    }
-    if (((0 < _LEN) \/ (_TRAILB <> 0))) {
-      (dELTA, _LEN, _TRAILB, aT, t64_2) <@ a136____a_ilen_read_upto8_at (
-      buf, offset, dELTA, _LEN, _TRAILB, 40, aT);
-      t128_1 <- (zeroextu128 t64_2);
-      t128_2 <- (set0_128);
-      if (((0 < _LEN) \/ (_TRAILB <> 0))) {
-        (dELTA, _LEN, _TRAILB, aT, r3) <@ a136____a_ilen_read_upto32_at (
-        buf, offset, dELTA, _LEN, _TRAILB, 48, aT);
-        (dELTA, _LEN, _TRAILB, aT, t64_3) <@ a136____a_ilen_read_upto8_at (
-        buf, offset, dELTA, _LEN, _TRAILB, 80, aT);
-        t128_2 <- (zeroextu128 t64_3);
-        (dELTA, _LEN, _TRAILB, aT, r4) <@ a136____a_ilen_read_upto32_at (
-        buf, offset, dELTA, _LEN, _TRAILB, 88, aT);
-        (dELTA, _LEN, _TRAILB, aT, t64_4) <@ a136____a_ilen_read_upto8_at (
-        buf, offset, dELTA, _LEN, _TRAILB, 120, aT);
-        t128_1 <- (VPINSR_2u64 t128_1 t64_4 (W8.of_int 1));
-        (dELTA, _LEN, _TRAILB, aT, r5) <@ a136____a_ilen_read_upto32_at (
-        buf, offset, dELTA, _LEN, _TRAILB, 128, aT);
-        (dELTA, _LEN, _TRAILB, aT, t64_5) <@ a136____a_ilen_read_upto8_at (
-        buf, offset, dELTA, _LEN, _TRAILB, 160, aT);
-        t128_2 <- (VPINSR_2u64 t128_2 t64_5 (W8.of_int 1));
-        (dELTA, _LEN, _TRAILB, aT, r6) <@ a136____a_ilen_read_upto32_at (
-        buf, offset, dELTA, _LEN, _TRAILB, 168, aT);
-        st <@ __addstate_r3456_avx2 (st, r3, r4, r5, r6);
-      } else {
-        
-      }
-      r2 <- (zeroextu256 t128_2);
-      r2 <- (VINSERTI128 r2 t128_1 (W8.of_int 1));
-      st <- (BArray224.set256 st 2 ((BArray224.get256 st 2) `^` r2));
-    } else {
-      
-    }
-    offset <- (offset + dELTA);
-    return (st, aT, offset);
-  }
-  proc a136____absorb_avx2 (st:BArray224.t, aT:int, buf:BArray136.t,
-                            _TRAILB:int, _RATE8:int) : BArray224.t * int = {
-    var _LEN:int;
-    var iTERS:int;
-    var offset:int;
-    var i:int;
-    var  _0:int;
-    var  _1:int;
-    var  _2:int;
-    offset <- 0;
-    _LEN <- 136;
-    if ((_RATE8 <= (aT + _LEN))) {
-      (st,  _0, offset) <@ a136____addstate_avx2 (st, aT, buf, offset,
-      (_RATE8 - aT), 0);
-      _LEN <- (_LEN - (_RATE8 - aT));
-      aT <- 0;
-      st <@ _keccakf1600_avx2 (st);
-      iTERS <- (_LEN %/ _RATE8);
-      i <- 0;
-      while ((i < iTERS)) {
-        (st,  _1, offset) <@ a136____addstate_avx2 (st, 0, buf, offset,
-        _RATE8, 0);
-        st <@ _keccakf1600_avx2 (st);
-        i <- (i + 1);
-      }
-      _LEN <- (_LEN %% _RATE8);
-    } else {
-      
-    }
-    (st, aT,  _2) <@ a136____addstate_avx2 (st, aT, buf, offset, _LEN,
-    _TRAILB);
-    if ((_TRAILB <> 0)) {
-      st <@ __addratebit_avx2 (st, _RATE8);
-    } else {
-      
-    }
-    return (st, aT);
   }
   proc a136____dumpstate_avx2 (buf:BArray136.t, offset:int, _LEN:int,
                                st:BArray224.t) : BArray136.t * int = {
@@ -6989,6 +7300,100 @@ module M = {
     }
     return (dELTA, lEN, tRAIL, aT, w256);
   }
+  proc a_COMMITMENT_HASH____a_ilen_write_upto8 (buf:BArray48.t, offset:int,
+                                                dELTA:int, lEN:int, w:W64.t) : 
+  BArray48.t * int * int = {
+    
+    if ((0 < lEN)) {
+      if ((8 <= lEN)) {
+        buf <- (BArray48.set64d buf (offset + dELTA) w);
+        dELTA <- (dELTA + 8);
+        lEN <- (lEN - 8);
+      } else {
+        if ((4 <= lEN)) {
+          buf <- (BArray48.set32d buf (offset + dELTA) (truncateu32 w));
+          w <- (w `>>` (W8.of_int 32));
+          dELTA <- (dELTA + 4);
+          lEN <- (lEN - 4);
+        } else {
+          
+        }
+        if ((2 <= lEN)) {
+          buf <- (BArray48.set16d buf (offset + dELTA) (truncateu16 w));
+          w <- (w `>>` (W8.of_int 16));
+          dELTA <- (dELTA + 2);
+          lEN <- (lEN - 2);
+        } else {
+          
+        }
+        if ((1 <= lEN)) {
+          buf <- (BArray48.set8d buf (offset + dELTA) (truncateu8 w));
+          dELTA <- (dELTA + 1);
+          lEN <- (lEN - 1);
+        } else {
+          
+        }
+      }
+    } else {
+      
+    }
+    return (buf, dELTA, lEN);
+  }
+  proc a_COMMITMENT_HASH____a_ilen_write_upto16 (buf:BArray48.t, offset:int,
+                                                 dELTA:int, lEN:int, w:W128.t) : 
+  BArray48.t * int * int = {
+    var t64:W64.t;
+    if ((0 < lEN)) {
+      if ((16 <= lEN)) {
+        buf <- (BArray48.set128d buf (offset + dELTA) w);
+        dELTA <- (dELTA + 16);
+        lEN <- (lEN - 16);
+      } else {
+        if ((8 <= lEN)) {
+          buf <-
+          (BArray48.set64d buf (offset + dELTA) (MOVV_64 (truncateu64 w)));
+          dELTA <- (dELTA + 8);
+          lEN <- (lEN - 8);
+          w <- (VPUNPCKH_2u64 w w);
+        } else {
+          
+        }
+        t64 <- (truncateu64 w);
+        (buf, dELTA, lEN) <@ a_COMMITMENT_HASH____a_ilen_write_upto8 (
+        buf, offset, dELTA, lEN, t64);
+      }
+    } else {
+      
+    }
+    return (buf, dELTA, lEN);
+  }
+  proc a_COMMITMENT_HASH____a_ilen_write_upto32 (buf:BArray48.t, offset:int,
+                                                 dELTA:int, lEN:int, w:W256.t) : 
+  BArray48.t * int * int = {
+    var t128:W128.t;
+    if ((0 < lEN)) {
+      if ((32 <= lEN)) {
+        buf <- (BArray48.set256d buf (offset + dELTA) w);
+        dELTA <- (dELTA + 32);
+        lEN <- (lEN - 32);
+      } else {
+        t128 <- (truncateu128 w);
+        if ((16 <= lEN)) {
+          buf <- (BArray48.set128d buf (offset + dELTA) t128);
+          dELTA <- (dELTA + 16);
+          lEN <- (lEN - 16);
+          t128 <- (VEXTRACTI128 w (W8.of_int 1));
+        } else {
+          
+        }
+        (buf, dELTA, lEN) <@ a_COMMITMENT_HASH____a_ilen_write_upto16 (
+        buf, offset, dELTA, lEN, t128);
+      }
+    } else {
+      
+    }
+    return (buf, dELTA, lEN);
+  }
   proc a_COMMITMENT_HASH____addstate_avx2 (st:BArray224.t, aT:int,
                                            buf:BArray48.t, offset:int,
                                            _LEN:int, _TRAILB:int) : BArray224.t *
@@ -7097,6 +7502,791 @@ module M = {
     }
     return (st, aT);
   }
+  proc a_COMMITMENT_HASH____dumpstate_avx2 (buf:BArray48.t, offset:int,
+                                            _LEN:int, st:BArray224.t) : 
+  BArray48.t * int = {
+    var dELTA:int;
+    var t128_0:W128.t;
+    var t128_1:W128.t;
+    var t:W64.t;
+    var t256_0:W256.t;
+    var t256_1:W256.t;
+    var t256_2:W256.t;
+    var t256_3:W256.t;
+    var t256_4:W256.t;
+    var  _0:int;
+    dELTA <- 0;
+    if ((8 <= _LEN)) {
+      (buf, dELTA,  _0) <@ a_COMMITMENT_HASH____a_ilen_write_upto32 (
+      buf, offset, dELTA, 8, (BArray224.get256 st 0));
+      _LEN <- (_LEN - 8);
+    } else {
+      (buf, dELTA, _LEN) <@ a_COMMITMENT_HASH____a_ilen_write_upto32 (
+      buf, offset, dELTA, _LEN, (BArray224.get256 st 0));
+    }
+    (buf, dELTA, _LEN) <@ a_COMMITMENT_HASH____a_ilen_write_upto32 (buf,
+    offset, dELTA, _LEN, (BArray224.get256 st 1));
+    if ((0 < _LEN)) {
+      t128_0 <- (truncateu128 (BArray224.get256 st 2));
+      t128_1 <- (VEXTRACTI128 (BArray224.get256 st 2) (W8.of_int 1));
+      t <- (truncateu64 t128_1);
+      (buf, dELTA, _LEN) <@ a_COMMITMENT_HASH____a_ilen_write_upto8 (
+      buf, offset, dELTA, _LEN, t);
+      t128_1 <- (VPUNPCKH_2u64 t128_1 t128_1);
+      if ((0 < _LEN)) {
+        t256_0 <-
+        (VPBLEND_8u32 (BArray224.get256 st 3) (BArray224.get256 st 4)
+        (W8.of_int
+        ((0 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((0 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((0 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((0 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((1 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((1 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+        ));
+        t256_1 <-
+        (VPBLEND_8u32 (BArray224.get256 st 4) (BArray224.get256 st 3)
+        (W8.of_int
+        ((0 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((0 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((0 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((0 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((1 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((1 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+        ));
+        t256_2 <-
+        (VPBLEND_8u32 (BArray224.get256 st 5) (BArray224.get256 st 6)
+        (W8.of_int
+        ((0 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((0 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((0 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((0 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((1 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((1 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+        ));
+        t256_3 <-
+        (VPBLEND_8u32 (BArray224.get256 st 6) (BArray224.get256 st 5)
+        (W8.of_int
+        ((0 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((0 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((0 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((0 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((1 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((1 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+        ));
+        t256_4 <-
+        (VPBLEND_8u32 t256_0 t256_3
+        (W8.of_int
+        ((1 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((1 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((0 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((0 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((0 %% (2 ^ 1)) +
+        ((2 ^ 1) *
+        ((0 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+        ));
+        (buf, dELTA, _LEN) <@ a_COMMITMENT_HASH____a_ilen_write_upto32 (
+        buf, offset, dELTA, _LEN, t256_4);
+        if ((0 < _LEN)) {
+          t <- (truncateu64 t128_0);
+          (buf, dELTA, _LEN) <@ a_COMMITMENT_HASH____a_ilen_write_upto8 (
+          buf, offset, dELTA, _LEN, t);
+          t128_0 <- (VPUNPCKH_2u64 t128_0 t128_0);
+        } else {
+          
+        }
+        if ((0 < _LEN)) {
+          t256_4 <-
+          (VPBLEND_8u32 t256_3 t256_1
+          (W8.of_int
+          ((1 %% (2 ^ 1)) +
+          ((2 ^ 1) *
+          ((1 %% (2 ^ 1)) +
+          ((2 ^ 1) *
+          ((0 %% (2 ^ 1)) +
+          ((2 ^ 1) *
+          ((0 %% (2 ^ 1)) +
+          ((2 ^ 1) *
+          ((0 %% (2 ^ 1)) +
+          ((2 ^ 1) *
+          ((0 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+          ));
+          (buf, dELTA, _LEN) <@ a_COMMITMENT_HASH____a_ilen_write_upto32 (
+          buf, offset, dELTA, _LEN, t256_4);
+        } else {
+          
+        }
+        if ((0 < _LEN)) {
+          t <- (truncateu64 t128_1);
+          (buf, dELTA, _LEN) <@ a_COMMITMENT_HASH____a_ilen_write_upto8 (
+          buf, offset, dELTA, _LEN, t);
+        } else {
+          
+        }
+        if ((0 < _LEN)) {
+          t256_4 <-
+          (VPBLEND_8u32 t256_2 t256_0
+          (W8.of_int
+          ((1 %% (2 ^ 1)) +
+          ((2 ^ 1) *
+          ((1 %% (2 ^ 1)) +
+          ((2 ^ 1) *
+          ((0 %% (2 ^ 1)) +
+          ((2 ^ 1) *
+          ((0 %% (2 ^ 1)) +
+          ((2 ^ 1) *
+          ((0 %% (2 ^ 1)) +
+          ((2 ^ 1) *
+          ((0 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+          ));
+          (buf, dELTA, _LEN) <@ a_COMMITMENT_HASH____a_ilen_write_upto32 (
+          buf, offset, dELTA, _LEN, t256_4);
+        } else {
+          
+        }
+        if ((0 < _LEN)) {
+          t <- (truncateu64 t128_0);
+          (buf, dELTA, _LEN) <@ a_COMMITMENT_HASH____a_ilen_write_upto8 (
+          buf, offset, dELTA, _LEN, t);
+        } else {
+          
+        }
+        if ((0 < _LEN)) {
+          t256_4 <-
+          (VPBLEND_8u32 t256_1 t256_2
+          (W8.of_int
+          ((1 %% (2 ^ 1)) +
+          ((2 ^ 1) *
+          ((1 %% (2 ^ 1)) +
+          ((2 ^ 1) *
+          ((0 %% (2 ^ 1)) +
+          ((2 ^ 1) *
+          ((0 %% (2 ^ 1)) +
+          ((2 ^ 1) *
+          ((0 %% (2 ^ 1)) +
+          ((2 ^ 1) *
+          ((0 %% (2 ^ 1)) + ((2 ^ 1) * ((1 %% (2 ^ 1)) + ((2 ^ 1) * 1))))))))))))))
+          ));
+          (buf, dELTA, _LEN) <@ a_COMMITMENT_HASH____a_ilen_write_upto32 (
+          buf, offset, dELTA, _LEN, t256_4);
+        } else {
+          
+        }
+      } else {
+        
+      }
+    } else {
+      
+    }
+    offset <- (offset + dELTA);
+    return (buf, offset);
+  }
+  proc a_VERIFICATION_KEY____a_ilen_read_upto8_at (buf:BArray1952.t,
+                                                   offset:int, dELTA:int,
+                                                   lEN:int, tRAIL:int,
+                                                   cUR:int, aT:int) : 
+  int * int * int * int * W64.t = {
+    var w:W64.t;
+    var aT8:int;
+    var t16:W64.t;
+    var t8:W64.t;
+    if ((((aT < cUR) \/ ((cUR + 8) <= aT)) \/ ((lEN = 0) /\ (tRAIL = 0)))) {
+      w <- (W64.of_int 0);
+    } else {
+      aT8 <- (aT - cUR);
+      if ((8 <= lEN)) {
+        w <- (BArray1952.get64d buf (offset + dELTA));
+        w <@ __SHLQ (w, aT8);
+        dELTA <- (dELTA + (8 - aT8));
+        lEN <- (lEN - (8 - aT8));
+        aT8 <- 8;
+      } else {
+        if ((4 <= lEN)) {
+          w <- (zeroextu64 (BArray1952.get32d buf (offset + dELTA)));
+          w <@ __SHLQ (w, aT8);
+          dELTA <- (dELTA + ((8 <= (4 + aT8)) ? (8 - aT8) : 4));
+          lEN <- (lEN - ((8 <= (4 + aT8)) ? (8 - aT8) : 4));
+          aT8 <- ((8 <= (4 + aT8)) ? 8 : (4 + aT8));
+        } else {
+          w <- (W64.of_int 0);
+        }
+        if (((aT8 < 8) /\ (2 <= lEN))) {
+          t16 <- (zeroextu64 (BArray1952.get16d buf (offset + dELTA)));
+          dELTA <- (dELTA + ((8 <= (2 + aT8)) ? (8 - aT8) : 2));
+          lEN <- (lEN - ((8 <= (2 + aT8)) ? (8 - aT8) : 2));
+          t16 <@ __SHLQ (t16, aT8);
+          w <- (w `|` t16);
+          aT8 <- ((8 <= (2 + aT8)) ? 8 : (2 + aT8));
+        } else {
+          
+        }
+        if ((aT8 < 8)) {
+          if ((1 <= lEN)) {
+            t8 <- (zeroextu64 (BArray1952.get8d buf (offset + dELTA)));
+            t8 <- (t8 `|` (W64.of_int (256 * (tRAIL %% 256))));
+            dELTA <- (dELTA + 1);
+            lEN <- (lEN - 1);
+            t8 <@ __SHLQ (t8, aT8);
+            w <- (w `|` t8);
+            aT8 <- (aT8 + 1);
+            if (((aT8 < 8) /\ ((tRAIL %% 256) <> 0))) {
+              aT8 <- (aT8 + 1);
+              tRAIL <- 0;
+            } else {
+              
+            }
+          } else {
+            if (((tRAIL %% 256) <> 0)) {
+              t8 <- (W64.of_int (tRAIL %% 256));
+              t8 <@ __SHLQ (t8, aT8);
+              w <- (w `|` t8);
+              tRAIL <- 0;
+              aT8 <- (aT8 + 1);
+            } else {
+              
+            }
+          }
+        } else {
+          
+        }
+      }
+      aT <- (cUR + aT8);
+    }
+    return (dELTA, lEN, tRAIL, aT, w);
+  }
+  proc a_VERIFICATION_KEY____a_ilen_read_upto16_at (buf:BArray1952.t,
+                                                    offset:int, dELTA:int,
+                                                    lEN:int, tRAIL:int,
+                                                    cUR:int, aT:int) : 
+  int * int * int * int * W128.t = {
+    var w:W128.t;
+    var aT16:int;
+    var t64_0:W64.t;
+    var t64_1:W64.t;
+    if ((((aT < cUR) \/ ((cUR + 16) <= aT)) \/ ((lEN = 0) /\ (tRAIL = 0)))) {
+      w <- (set0_128);
+    } else {
+      aT16 <- (aT - cUR);
+      if ((16 <= lEN)) {
+        w <- (BArray1952.get128d buf (offset + dELTA));
+        w <@ __SHLDQ (w, aT16);
+        dELTA <- (dELTA + (16 - aT16));
+        lEN <- (lEN - (16 - aT16));
+        aT16 <- 16;
+      } else {
+        if ((8 <= aT16)) {
+          w <- (set0_128);
+          (dELTA, lEN, tRAIL, aT16, t64_1) <@ a_VERIFICATION_KEY____a_ilen_read_upto8_at (
+          buf, offset, dELTA, lEN, tRAIL, 8, aT16);
+          w <- (VPINSR_2u64 w t64_1 (W8.of_int 1));
+        } else {
+          (dELTA, lEN, tRAIL, aT16, t64_0) <@ a_VERIFICATION_KEY____a_ilen_read_upto8_at (
+          buf, offset, dELTA, lEN, tRAIL, 0, aT16);
+          w <- (zeroextu128 t64_0);
+          (dELTA, lEN, tRAIL, aT16, t64_1) <@ a_VERIFICATION_KEY____a_ilen_read_upto8_at (
+          buf, offset, dELTA, lEN, tRAIL, 8, aT16);
+          w <- (VPINSR_2u64 w t64_1 (W8.of_int 1));
+        }
+      }
+      aT <- (cUR + aT16);
+    }
+    return (dELTA, lEN, tRAIL, aT, w);
+  }
+  proc a_VERIFICATION_KEY____a_ilen_read_upto32_at (buf:BArray1952.t,
+                                                    offset:int, dELTA:int,
+                                                    lEN:int, tRAIL:int,
+                                                    cUR:int, aT:int) : 
+  int * int * int * int * W256.t = {
+    var w:W256.t;
+    var aT32:int;
+    var t128_0:W128.t;
+    var t128_1:W128.t;
+    if ((((aT < cUR) \/ ((cUR + 32) <= aT)) \/ ((lEN = 0) /\ (tRAIL = 0)))) {
+      w <- (set0_256);
+    } else {
+      aT32 <- (aT - cUR);
+      if (((aT32 = 0) /\ (32 <= lEN))) {
+        w <- (BArray1952.get256d buf (offset + dELTA));
+        aT32 <- (aT32 + 32);
+        dELTA <- (dELTA + 32);
+        lEN <- (lEN - 32);
+      } else {
+        if ((16 <= aT32)) {
+          w <- (set0_256);
+          (dELTA, lEN, tRAIL, aT32, t128_1) <@ a_VERIFICATION_KEY____a_ilen_read_upto16_at (
+          buf, offset, dELTA, lEN, tRAIL, 16, aT32);
+          w <- (VINSERTI128 w t128_1 (W8.of_int 1));
+        } else {
+          (dELTA, lEN, tRAIL, aT32, t128_0) <@ a_VERIFICATION_KEY____a_ilen_read_upto16_at (
+          buf, offset, dELTA, lEN, tRAIL, 0, aT32);
+          (dELTA, lEN, tRAIL, aT32, t128_1) <@ a_VERIFICATION_KEY____a_ilen_read_upto16_at (
+          buf, offset, dELTA, lEN, tRAIL, 16, aT32);
+          w <-
+          (W256.of_int
+          (((W128.to_uint t128_0) %% (2 ^ 128)) +
+          ((2 ^ 128) * (W128.to_uint t128_1))));
+        }
+      }
+      aT <- (cUR + aT32);
+    }
+    return (dELTA, lEN, tRAIL, aT, w);
+  }
+  proc a_VERIFICATION_KEY____a_ilen_read_bcast_upto8_at (buf:BArray1952.t,
+                                                         offset:int,
+                                                         dELTA:int, lEN:int,
+                                                         tRAIL:int, cUR:int,
+                                                         aT:int) : int *
+                                                                   int *
+                                                                   int *
+                                                                   int *
+                                                                   W256.t = {
+    var w256:W256.t;
+    var aT8:int;
+    var w:W64.t;
+    var t128:W128.t;
+    if ((((aT < cUR) \/ ((cUR + 8) <= aT)) \/ ((lEN = 0) /\ (tRAIL = 0)))) {
+      w256 <- (set0_256);
+    } else {
+      if ((8 <= lEN)) {
+        aT8 <- (aT - cUR);
+        w256 <- (VPBROADCAST_4u64 (BArray1952.get64d buf (offset + dELTA)));
+        w256 <@ __SHLQ_256 (w256, aT8);
+        dELTA <- (dELTA + (8 - aT8));
+        lEN <- (lEN - (8 - aT8));
+        aT <- (cUR + 8);
+      } else {
+        aT8 <- (aT - cUR);
+        (dELTA, lEN, tRAIL, aT, w) <@ a_VERIFICATION_KEY____a_ilen_read_upto8_at (
+        buf, offset, dELTA, lEN, tRAIL, cUR, aT);
+        t128 <- (zeroextu128 w);
+        w256 <- (VPBROADCAST_4u64 (truncateu64 t128));
+        w256 <@ __SHLQ_256 (w256, aT8);
+      }
+    }
+    return (dELTA, lEN, tRAIL, aT, w256);
+  }
+  proc a_VERIFICATION_KEY____addstate_avx2 (st:BArray224.t, aT:int,
+                                            buf:BArray1952.t, offset:int,
+                                            _LEN:int, _TRAILB:int) : 
+  BArray224.t * int * int = {
+    var dELTA:int;
+    var r0:W256.t;
+    var r1:W256.t;
+    var t64_2:W64.t;
+    var t128_1:W128.t;
+    var t128_2:W128.t;
+    var r3:W256.t;
+    var t64_3:W64.t;
+    var r4:W256.t;
+    var t64_4:W64.t;
+    var r5:W256.t;
+    var t64_5:W64.t;
+    var r6:W256.t;
+    var r2:W256.t;
+    dELTA <- 0;
+    if ((aT < 8)) {
+      (dELTA, _LEN, _TRAILB, aT, r0) <@ a_VERIFICATION_KEY____a_ilen_read_bcast_upto8_at (
+      buf, offset, dELTA, _LEN, _TRAILB, 0, aT);
+      st <- (BArray224.set256 st 0 ((BArray224.get256 st 0) `^` r0));
+    } else {
+      
+    }
+    if (((aT < 40) /\ ((0 < _LEN) \/ (_TRAILB <> 0)))) {
+      (dELTA, _LEN, _TRAILB, aT, r1) <@ a_VERIFICATION_KEY____a_ilen_read_upto32_at (
+      buf, offset, dELTA, _LEN, _TRAILB, 8, aT);
+      st <- (BArray224.set256 st 1 ((BArray224.get256 st 1) `^` r1));
+    } else {
+      
+    }
+    if (((0 < _LEN) \/ (_TRAILB <> 0))) {
+      (dELTA, _LEN, _TRAILB, aT, t64_2) <@ a_VERIFICATION_KEY____a_ilen_read_upto8_at (
+      buf, offset, dELTA, _LEN, _TRAILB, 40, aT);
+      t128_1 <- (zeroextu128 t64_2);
+      t128_2 <- (set0_128);
+      if (((0 < _LEN) \/ (_TRAILB <> 0))) {
+        (dELTA, _LEN, _TRAILB, aT, r3) <@ a_VERIFICATION_KEY____a_ilen_read_upto32_at (
+        buf, offset, dELTA, _LEN, _TRAILB, 48, aT);
+        (dELTA, _LEN, _TRAILB, aT, t64_3) <@ a_VERIFICATION_KEY____a_ilen_read_upto8_at (
+        buf, offset, dELTA, _LEN, _TRAILB, 80, aT);
+        t128_2 <- (zeroextu128 t64_3);
+        (dELTA, _LEN, _TRAILB, aT, r4) <@ a_VERIFICATION_KEY____a_ilen_read_upto32_at (
+        buf, offset, dELTA, _LEN, _TRAILB, 88, aT);
+        (dELTA, _LEN, _TRAILB, aT, t64_4) <@ a_VERIFICATION_KEY____a_ilen_read_upto8_at (
+        buf, offset, dELTA, _LEN, _TRAILB, 120, aT);
+        t128_1 <- (VPINSR_2u64 t128_1 t64_4 (W8.of_int 1));
+        (dELTA, _LEN, _TRAILB, aT, r5) <@ a_VERIFICATION_KEY____a_ilen_read_upto32_at (
+        buf, offset, dELTA, _LEN, _TRAILB, 128, aT);
+        (dELTA, _LEN, _TRAILB, aT, t64_5) <@ a_VERIFICATION_KEY____a_ilen_read_upto8_at (
+        buf, offset, dELTA, _LEN, _TRAILB, 160, aT);
+        t128_2 <- (VPINSR_2u64 t128_2 t64_5 (W8.of_int 1));
+        (dELTA, _LEN, _TRAILB, aT, r6) <@ a_VERIFICATION_KEY____a_ilen_read_upto32_at (
+        buf, offset, dELTA, _LEN, _TRAILB, 168, aT);
+        st <@ __addstate_r3456_avx2 (st, r3, r4, r5, r6);
+      } else {
+        
+      }
+      r2 <- (zeroextu256 t128_2);
+      r2 <- (VINSERTI128 r2 t128_1 (W8.of_int 1));
+      st <- (BArray224.set256 st 2 ((BArray224.get256 st 2) `^` r2));
+    } else {
+      
+    }
+    offset <- (offset + dELTA);
+    return (st, aT, offset);
+  }
+  proc a_VERIFICATION_KEY____absorb_avx2 (st:BArray224.t, aT:int,
+                                          buf:BArray1952.t, _TRAILB:int,
+                                          _RATE8:int) : BArray224.t * int = {
+    var _LEN:int;
+    var iTERS:int;
+    var offset:int;
+    var i:int;
+    var  _0:int;
+    var  _1:int;
+    var  _2:int;
+    offset <- 0;
+    _LEN <- (32 + (6 * (((23 - 13) * 256) %/ 8)));
+    if ((_RATE8 <= (aT + _LEN))) {
+      (st,  _0, offset) <@ a_VERIFICATION_KEY____addstate_avx2 (st, aT, 
+      buf, offset, (_RATE8 - aT), 0);
+      _LEN <- (_LEN - (_RATE8 - aT));
+      aT <- 0;
+      st <@ _keccakf1600_avx2 (st);
+      iTERS <- (_LEN %/ _RATE8);
+      i <- 0;
+      while ((i < iTERS)) {
+        (st,  _1, offset) <@ a_VERIFICATION_KEY____addstate_avx2 (st, 0, 
+        buf, offset, _RATE8, 0);
+        st <@ _keccakf1600_avx2 (st);
+        i <- (i + 1);
+      }
+      _LEN <- (_LEN %% _RATE8);
+    } else {
+      
+    }
+    (st, aT,  _2) <@ a_VERIFICATION_KEY____addstate_avx2 (st, aT, buf,
+    offset, _LEN, _TRAILB);
+    if ((_TRAILB <> 0)) {
+      st <@ __addratebit_avx2 (st, _RATE8);
+    } else {
+      
+    }
+    return (st, aT);
+  }
+  proc a_ENCODED_COMMITMENT____a_ilen_read_upto8_at (buf:BArray768.t,
+                                                     offset:int, dELTA:int,
+                                                     lEN:int, tRAIL:int,
+                                                     cUR:int, aT:int) : 
+  int * int * int * int * W64.t = {
+    var w:W64.t;
+    var aT8:int;
+    var t16:W64.t;
+    var t8:W64.t;
+    if ((((aT < cUR) \/ ((cUR + 8) <= aT)) \/ ((lEN = 0) /\ (tRAIL = 0)))) {
+      w <- (W64.of_int 0);
+    } else {
+      aT8 <- (aT - cUR);
+      if ((8 <= lEN)) {
+        w <- (BArray768.get64d buf (offset + dELTA));
+        w <@ __SHLQ (w, aT8);
+        dELTA <- (dELTA + (8 - aT8));
+        lEN <- (lEN - (8 - aT8));
+        aT8 <- 8;
+      } else {
+        if ((4 <= lEN)) {
+          w <- (zeroextu64 (BArray768.get32d buf (offset + dELTA)));
+          w <@ __SHLQ (w, aT8);
+          dELTA <- (dELTA + ((8 <= (4 + aT8)) ? (8 - aT8) : 4));
+          lEN <- (lEN - ((8 <= (4 + aT8)) ? (8 - aT8) : 4));
+          aT8 <- ((8 <= (4 + aT8)) ? 8 : (4 + aT8));
+        } else {
+          w <- (W64.of_int 0);
+        }
+        if (((aT8 < 8) /\ (2 <= lEN))) {
+          t16 <- (zeroextu64 (BArray768.get16d buf (offset + dELTA)));
+          dELTA <- (dELTA + ((8 <= (2 + aT8)) ? (8 - aT8) : 2));
+          lEN <- (lEN - ((8 <= (2 + aT8)) ? (8 - aT8) : 2));
+          t16 <@ __SHLQ (t16, aT8);
+          w <- (w `|` t16);
+          aT8 <- ((8 <= (2 + aT8)) ? 8 : (2 + aT8));
+        } else {
+          
+        }
+        if ((aT8 < 8)) {
+          if ((1 <= lEN)) {
+            t8 <- (zeroextu64 (BArray768.get8d buf (offset + dELTA)));
+            t8 <- (t8 `|` (W64.of_int (256 * (tRAIL %% 256))));
+            dELTA <- (dELTA + 1);
+            lEN <- (lEN - 1);
+            t8 <@ __SHLQ (t8, aT8);
+            w <- (w `|` t8);
+            aT8 <- (aT8 + 1);
+            if (((aT8 < 8) /\ ((tRAIL %% 256) <> 0))) {
+              aT8 <- (aT8 + 1);
+              tRAIL <- 0;
+            } else {
+              
+            }
+          } else {
+            if (((tRAIL %% 256) <> 0)) {
+              t8 <- (W64.of_int (tRAIL %% 256));
+              t8 <@ __SHLQ (t8, aT8);
+              w <- (w `|` t8);
+              tRAIL <- 0;
+              aT8 <- (aT8 + 1);
+            } else {
+              
+            }
+          }
+        } else {
+          
+        }
+      }
+      aT <- (cUR + aT8);
+    }
+    return (dELTA, lEN, tRAIL, aT, w);
+  }
+  proc a_ENCODED_COMMITMENT____a_ilen_read_upto16_at (buf:BArray768.t,
+                                                      offset:int, dELTA:int,
+                                                      lEN:int, tRAIL:int,
+                                                      cUR:int, aT:int) : 
+  int * int * int * int * W128.t = {
+    var w:W128.t;
+    var aT16:int;
+    var t64_0:W64.t;
+    var t64_1:W64.t;
+    if ((((aT < cUR) \/ ((cUR + 16) <= aT)) \/ ((lEN = 0) /\ (tRAIL = 0)))) {
+      w <- (set0_128);
+    } else {
+      aT16 <- (aT - cUR);
+      if ((16 <= lEN)) {
+        w <- (BArray768.get128d buf (offset + dELTA));
+        w <@ __SHLDQ (w, aT16);
+        dELTA <- (dELTA + (16 - aT16));
+        lEN <- (lEN - (16 - aT16));
+        aT16 <- 16;
+      } else {
+        if ((8 <= aT16)) {
+          w <- (set0_128);
+          (dELTA, lEN, tRAIL, aT16, t64_1) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto8_at (
+          buf, offset, dELTA, lEN, tRAIL, 8, aT16);
+          w <- (VPINSR_2u64 w t64_1 (W8.of_int 1));
+        } else {
+          (dELTA, lEN, tRAIL, aT16, t64_0) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto8_at (
+          buf, offset, dELTA, lEN, tRAIL, 0, aT16);
+          w <- (zeroextu128 t64_0);
+          (dELTA, lEN, tRAIL, aT16, t64_1) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto8_at (
+          buf, offset, dELTA, lEN, tRAIL, 8, aT16);
+          w <- (VPINSR_2u64 w t64_1 (W8.of_int 1));
+        }
+      }
+      aT <- (cUR + aT16);
+    }
+    return (dELTA, lEN, tRAIL, aT, w);
+  }
+  proc a_ENCODED_COMMITMENT____a_ilen_read_upto32_at (buf:BArray768.t,
+                                                      offset:int, dELTA:int,
+                                                      lEN:int, tRAIL:int,
+                                                      cUR:int, aT:int) : 
+  int * int * int * int * W256.t = {
+    var w:W256.t;
+    var aT32:int;
+    var t128_0:W128.t;
+    var t128_1:W128.t;
+    if ((((aT < cUR) \/ ((cUR + 32) <= aT)) \/ ((lEN = 0) /\ (tRAIL = 0)))) {
+      w <- (set0_256);
+    } else {
+      aT32 <- (aT - cUR);
+      if (((aT32 = 0) /\ (32 <= lEN))) {
+        w <- (BArray768.get256d buf (offset + dELTA));
+        aT32 <- (aT32 + 32);
+        dELTA <- (dELTA + 32);
+        lEN <- (lEN - 32);
+      } else {
+        if ((16 <= aT32)) {
+          w <- (set0_256);
+          (dELTA, lEN, tRAIL, aT32, t128_1) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto16_at (
+          buf, offset, dELTA, lEN, tRAIL, 16, aT32);
+          w <- (VINSERTI128 w t128_1 (W8.of_int 1));
+        } else {
+          (dELTA, lEN, tRAIL, aT32, t128_0) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto16_at (
+          buf, offset, dELTA, lEN, tRAIL, 0, aT32);
+          (dELTA, lEN, tRAIL, aT32, t128_1) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto16_at (
+          buf, offset, dELTA, lEN, tRAIL, 16, aT32);
+          w <-
+          (W256.of_int
+          (((W128.to_uint t128_0) %% (2 ^ 128)) +
+          ((2 ^ 128) * (W128.to_uint t128_1))));
+        }
+      }
+      aT <- (cUR + aT32);
+    }
+    return (dELTA, lEN, tRAIL, aT, w);
+  }
+  proc a_ENCODED_COMMITMENT____a_ilen_read_bcast_upto8_at (buf:BArray768.t,
+                                                           offset:int,
+                                                           dELTA:int,
+                                                           lEN:int,
+                                                           tRAIL:int,
+                                                           cUR:int, aT:int) : 
+  int * int * int * int * W256.t = {
+    var w256:W256.t;
+    var aT8:int;
+    var w:W64.t;
+    var t128:W128.t;
+    if ((((aT < cUR) \/ ((cUR + 8) <= aT)) \/ ((lEN = 0) /\ (tRAIL = 0)))) {
+      w256 <- (set0_256);
+    } else {
+      if ((8 <= lEN)) {
+        aT8 <- (aT - cUR);
+        w256 <- (VPBROADCAST_4u64 (BArray768.get64d buf (offset + dELTA)));
+        w256 <@ __SHLQ_256 (w256, aT8);
+        dELTA <- (dELTA + (8 - aT8));
+        lEN <- (lEN - (8 - aT8));
+        aT <- (cUR + 8);
+      } else {
+        aT8 <- (aT - cUR);
+        (dELTA, lEN, tRAIL, aT, w) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto8_at (
+        buf, offset, dELTA, lEN, tRAIL, cUR, aT);
+        t128 <- (zeroextu128 w);
+        w256 <- (VPBROADCAST_4u64 (truncateu64 t128));
+        w256 <@ __SHLQ_256 (w256, aT8);
+      }
+    }
+    return (dELTA, lEN, tRAIL, aT, w256);
+  }
+  proc a_ENCODED_COMMITMENT____addstate_avx2 (st:BArray224.t, aT:int,
+                                              buf:BArray768.t, offset:int,
+                                              _LEN:int, _TRAILB:int) : 
+  BArray224.t * int * int = {
+    var dELTA:int;
+    var r0:W256.t;
+    var r1:W256.t;
+    var t64_2:W64.t;
+    var t128_1:W128.t;
+    var t128_2:W128.t;
+    var r3:W256.t;
+    var t64_3:W64.t;
+    var r4:W256.t;
+    var t64_4:W64.t;
+    var r5:W256.t;
+    var t64_5:W64.t;
+    var r6:W256.t;
+    var r2:W256.t;
+    dELTA <- 0;
+    if ((aT < 8)) {
+      (dELTA, _LEN, _TRAILB, aT, r0) <@ a_ENCODED_COMMITMENT____a_ilen_read_bcast_upto8_at (
+      buf, offset, dELTA, _LEN, _TRAILB, 0, aT);
+      st <- (BArray224.set256 st 0 ((BArray224.get256 st 0) `^` r0));
+    } else {
+      
+    }
+    if (((aT < 40) /\ ((0 < _LEN) \/ (_TRAILB <> 0)))) {
+      (dELTA, _LEN, _TRAILB, aT, r1) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto32_at (
+      buf, offset, dELTA, _LEN, _TRAILB, 8, aT);
+      st <- (BArray224.set256 st 1 ((BArray224.get256 st 1) `^` r1));
+    } else {
+      
+    }
+    if (((0 < _LEN) \/ (_TRAILB <> 0))) {
+      (dELTA, _LEN, _TRAILB, aT, t64_2) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto8_at (
+      buf, offset, dELTA, _LEN, _TRAILB, 40, aT);
+      t128_1 <- (zeroextu128 t64_2);
+      t128_2 <- (set0_128);
+      if (((0 < _LEN) \/ (_TRAILB <> 0))) {
+        (dELTA, _LEN, _TRAILB, aT, r3) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto32_at (
+        buf, offset, dELTA, _LEN, _TRAILB, 48, aT);
+        (dELTA, _LEN, _TRAILB, aT, t64_3) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto8_at (
+        buf, offset, dELTA, _LEN, _TRAILB, 80, aT);
+        t128_2 <- (zeroextu128 t64_3);
+        (dELTA, _LEN, _TRAILB, aT, r4) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto32_at (
+        buf, offset, dELTA, _LEN, _TRAILB, 88, aT);
+        (dELTA, _LEN, _TRAILB, aT, t64_4) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto8_at (
+        buf, offset, dELTA, _LEN, _TRAILB, 120, aT);
+        t128_1 <- (VPINSR_2u64 t128_1 t64_4 (W8.of_int 1));
+        (dELTA, _LEN, _TRAILB, aT, r5) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto32_at (
+        buf, offset, dELTA, _LEN, _TRAILB, 128, aT);
+        (dELTA, _LEN, _TRAILB, aT, t64_5) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto8_at (
+        buf, offset, dELTA, _LEN, _TRAILB, 160, aT);
+        t128_2 <- (VPINSR_2u64 t128_2 t64_5 (W8.of_int 1));
+        (dELTA, _LEN, _TRAILB, aT, r6) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto32_at (
+        buf, offset, dELTA, _LEN, _TRAILB, 168, aT);
+        st <@ __addstate_r3456_avx2 (st, r3, r4, r5, r6);
+      } else {
+        
+      }
+      r2 <- (zeroextu256 t128_2);
+      r2 <- (VINSERTI128 r2 t128_1 (W8.of_int 1));
+      st <- (BArray224.set256 st 2 ((BArray224.get256 st 2) `^` r2));
+    } else {
+      
+    }
+    offset <- (offset + dELTA);
+    return (st, aT, offset);
+  }
+  proc a_ENCODED_COMMITMENT____absorb_avx2 (st:BArray224.t, aT:int,
+                                            buf:BArray768.t, _TRAILB:int,
+                                            _RATE8:int) : BArray224.t * int = {
+    var _LEN:int;
+    var iTERS:int;
+    var offset:int;
+    var i:int;
+    var  _0:int;
+    var  _1:int;
+    var  _2:int;
+    offset <- 0;
+    _LEN <- (((4 * 256) %/ 8) * 6);
+    if ((_RATE8 <= (aT + _LEN))) {
+      (st,  _0, offset) <@ a_ENCODED_COMMITMENT____addstate_avx2 (st, 
+      aT, buf, offset, (_RATE8 - aT), 0);
+      _LEN <- (_LEN - (_RATE8 - aT));
+      aT <- 0;
+      st <@ _keccakf1600_avx2 (st);
+      iTERS <- (_LEN %/ _RATE8);
+      i <- 0;
+      while ((i < iTERS)) {
+        (st,  _1, offset) <@ a_ENCODED_COMMITMENT____addstate_avx2 (st, 0,
+        buf, offset, _RATE8, 0);
+        st <@ _keccakf1600_avx2 (st);
+        i <- (i + 1);
+      }
+      _LEN <- (_LEN %% _RATE8);
+    } else {
+      
+    }
+    (st, aT,  _2) <@ a_ENCODED_COMMITMENT____addstate_avx2 (st, aT, buf,
+    offset, _LEN, _TRAILB);
+    if ((_TRAILB <> 0)) {
+      st <@ __addratebit_avx2 (st, _RATE8);
+    } else {
+      
+    }
+    return (st, aT);
+  }
   proc shake256_init_state () : BArray224.t = {
     var state:BArray224.t;
     state <- witness;
@@ -7160,17 +8350,6 @@ module M = {
     state <@ shake256_permute (state);
     return state;
   }
-  proc shake256_add_rate_bit (st:BArray224.t) : BArray224.t = {
-    
-    st <@ __addratebit_avx2 (st, 136);
-    return st;
-  }
-  proc shake256_absorb_block (state:BArray224.t, block:BArray136.t) : 
-  BArray224.t = {
-    var  _0:int;
-    (state,  _0) <@ a136____absorb_avx2 (state, 0, block, 0, 136);
-    return state;
-  }
   proc shake256_squeeze_block (block:BArray136.t, state:BArray224.t) : 
   BArray136.t = {
     var offset:int;
@@ -7186,103 +8365,81 @@ module M = {
     (array,  _0) <@ a64____dumpstate_avx2 (array, offset, 64, state);
     return array;
   }
-  proc __shake256_consider_permute (state:BArray200.t, offset:W64.t) : 
-  BArray200.t * W64.t = {
-    
-    if (((W64.of_int 136) \ule offset)) {
-      state <@ _keccakf1600_ref (state);
-      offset <- (W64.of_int 0);
-    } else {
-      
-    }
-    return (state, offset);
+  proc squeeze_commitment_hash_bytes (array:BArray48.t, state:BArray224.t) : 
+  BArray48.t = {
+    var offset:int;
+    var  _0:int;
+    offset <- 0;
+    (array,  _0) <@ a_COMMITMENT_HASH____dumpstate_avx2 (array, offset, 48,
+    state);
+    return array;
   }
   proc __derive_message_representative (verification_key_hash:BArray64.t,
-                                        context_message_pointers:BArray16.t,
-                                        context_message_sizes:BArray16.t) : 
+                                        context_pointer:int,
+                                        context_size:int,
+                                        message_pointer:int, message_size:int) : 
   BArray64.t = {
     var message_representative:BArray64.t;
-    var state:BArray200.t;
     var copied_32_bytes:W256.t;
-    var context_offset:W64.t;
-    var context:W64.t;
-    var context_size:W64.t;
-    var state_offset:W64.t;
-    var byte:W8.t;
-    var message_offset:W64.t;
-    var message:W64.t;
-    var message_size:W64.t;
-    var  _0:W64.t;
+    var prefix:BArray66.t;
+    var state:BArray208.t;
+    var buf:int;
+    var len:int;
     message_representative <- witness;
+    prefix <- witness;
     state <- witness;
-    (* Erased call to spill *)
-    state <@ __state_init_ref (state);
     copied_32_bytes <- (BArray64.get256d verification_key_hash 0);
-    state <- (BArray200.set256d state 0 copied_32_bytes);
+    prefix <- (BArray66.set256d prefix 0 copied_32_bytes);
     copied_32_bytes <- (BArray64.get256d verification_key_hash 32);
-    state <- (BArray200.set256d state 32 copied_32_bytes);
-    context_offset <- (W64.of_int 0);
+    prefix <- (BArray66.set256d prefix 32 copied_32_bytes);
+    prefix <- (BArray66.set8 prefix 64 (W8.of_int 0));
+    prefix <-
+    (BArray66.set8 prefix 65 (truncateu8 (W64.of_int context_size)));
+    (* Erased call to spill *)
+    state <@ _init_updstate_avx2 (state, 17, 31);
+    state <@ a66___update_updstate_avx2 (state, prefix);
     (* Erased call to unspill *)
-    context <- (BArray16.get64 context_message_pointers 0);
+    buf <- context_pointer;
+    len <- context_size;
+    state <@ _absorb_m_updstate_avx2 (state, buf, len);
     (* Erased call to unspill *)
-    context_size <- (BArray16.get64 context_message_sizes 0);
-    state <- (BArray200.set8d state 64 (W8.of_int 0));
-    state <- (BArray200.set8d state 65 (truncateu8 context_size));
-    state_offset <- (W64.of_int 66);
-    while ((context_offset \ult context_size)) {
-      if (((W64.of_int 136) \ule state_offset)) {
-        (* Erased call to spill *)
-        state <@ _keccakf1600_ref (state);
-        (* Erased call to unspill *)
-        state_offset <- (W64.of_int 0);
-      } else {
-        
-      }
-      byte <- (loadW8 Glob.mem (W64.to_uint (context + context_offset)));
-      context_offset <- (context_offset + (W64.of_int 1));
-      state <-
-      (BArray200.set8 state (W64.to_uint state_offset)
-      ((BArray200.get8 state (W64.to_uint state_offset)) `^` byte));
-      state_offset <- (state_offset + (W64.of_int 1));
-    }
-    message_offset <- (W64.of_int 0);
-    (* Erased call to unspill *)
-    message <- (BArray16.get64 context_message_pointers 1);
-    (* Erased call to unspill *)
-    message_size <- (BArray16.get64 context_message_sizes 1);
-    while ((message_offset \ult message_size)) {
-      if (((W64.of_int 136) \ule state_offset)) {
-        (* Erased call to spill *)
-        state <@ _keccakf1600_ref (state);
-        (* Erased call to unspill *)
-        state_offset <- (W64.of_int 0);
-      } else {
-        
-      }
-      byte <- (loadW8 Glob.mem (W64.to_uint (message + message_offset)));
-      message_offset <- (message_offset + (W64.of_int 1));
-      state <-
-      (BArray200.set8 state (W64.to_uint state_offset)
-      ((BArray200.get8 state (W64.to_uint state_offset)) `^` byte));
-      state_offset <- (state_offset + (W64.of_int 1));
-    }
-    (state, state_offset) <@ __shake256_consider_permute (state,
-    state_offset);
-    state <-
-    (BArray200.set8 state (W64.to_uint state_offset)
-    ((BArray200.get8 state (W64.to_uint state_offset)) `^` (W8.of_int 31)));
-    (state,  _0) <@ __shake256_consider_permute (state, state_offset);
-    state <-
-    (BArray200.set8 state (136 - 1)
-    ((BArray200.get8 state (136 - 1)) `^` (W8.of_int 128)));
-    state <@ _keccakf1600_ref (state);
-    copied_32_bytes <- (BArray200.get256d state 0);
-    message_representative <-
-    (BArray64.set256d message_representative 0 copied_32_bytes);
-    copied_32_bytes <- (BArray200.get256d state 32);
-    message_representative <-
-    (BArray64.set256d message_representative 32 copied_32_bytes);
+    buf <- message_pointer;
+    len <- message_size;
+    state <@ _absorb_m_updstate_avx2 (state, buf, len);
+    state <@ _finish_updstate_avx2 (state);
+    (state, message_representative) <@ a64___squeeze_updstate_avx2 (state,
+    message_representative);
     return message_representative;
+  }
+  proc hash_verification_key (verification_key_hash:BArray64.t,
+                              verification_key:BArray1952.t) : BArray64.t = {
+    var state:BArray224.t;
+    var  _0:int;
+    state <- witness;
+    state <@ shake256_init_state ();
+    (state,  _0) <@ a_VERIFICATION_KEY____absorb_avx2 (state, 0,
+    verification_key, 31, 136);
+    state <@ shake256_permute (state);
+    verification_key_hash <@ squeeze_64_bytes (verification_key_hash, state);
+    return verification_key_hash;
+  }
+  proc __derive_commitment_hash (message_representative:BArray64.t,
+                                 encoded_commitment:BArray768.t) : BArray48.t = {
+    var commitment_hash:BArray48.t;
+    var state:BArray224.t;
+    var  _0:int;
+    var  _1:int;
+    commitment_hash <- witness;
+    state <- witness;
+    state <@ shake256_init_state ();
+    (state,  _0) <@ a64____absorb_avx2 (state, 0, message_representative, 0,
+    136);
+    (state,  _1) <@ a_ENCODED_COMMITMENT____absorb_avx2 (state, 64,
+    encoded_commitment, 31, 136);
+    state <@ shake256_permute (state);
+    commitment_hash <@ squeeze_commitment_hash_bytes (commitment_hash,
+    state);
+    return commitment_hash;
   }
   proc shake128_absorb_34_4x (state:BArray800.t, rho:BArray32.t,
                               domain_separators:BArray8.t) : BArray800.t = {
@@ -8597,120 +9754,6 @@ module M = {
     }
     return s2;
   }
-  proc hash_verification_key (verification_key_hash:BArray64.t,
-                              verification_key:BArray1952.t) : BArray64.t = {
-    var state:BArray224.t;
-    var verification_key_offset:W64.t;
-    var block:BArray48.t;
-    var t64:W64.t;
-    var t128_0:W128.t;
-    var r0:W256.t;
-    var r1:W256.t;
-    var t128_1:W128.t;
-    var r2:W256.t;
-    block <- witness;
-    state <- witness;
-    state <@ __state_init_avx2 ();
-    verification_key_offset <- (W64.of_int 0);
-    while ((verification_key_offset \ult
-           (W64.of_int (((32 + (6 * (((23 - 13) * 256) %/ 8))) %/ 136) * 136)
-           ))) {
-      state <@ shake256_absorb_block (state,
-      (SBArray1952_136.get_sub8 verification_key
-      (W64.to_uint verification_key_offset)));
-      verification_key_offset <-
-      (verification_key_offset + (W64.of_int 136));
-    }
-    block <-
-    (SBArray1952_48.get_sub8 verification_key
-    (W64.to_uint verification_key_offset));
-    t64 <- (BArray48.get64d block 0);
-    t128_0 <- (zeroextu128 t64);
-    r0 <- (VPBROADCAST_4u64 (truncateu64 t128_0));
-    state <- (BArray224.set256 state 0 ((BArray224.get256 state 0) `^` r0));
-    r1 <- (BArray48.get256d block 8);
-    state <- (BArray224.set256 state 1 ((BArray224.get256 state 1) `^` r1));
-    t64 <- (BArray48.get64d block 40);
-    t128_1 <- (zeroextu128 t64);
-    t128_0 <- (set0_128);
-    t64 <- (W64.of_int 0);
-    t128_1 <- (VPINSR_2u64 t128_1 t64 (W8.of_int 1));
-    r2 <-
-    (W256.of_int
-    (((W128.to_uint t128_0) %% (2 ^ 128)) +
-    ((2 ^ 128) * (W128.to_uint t128_1))));
-    state <- (BArray224.set256 state 2 ((BArray224.get256 state 2) `^` r2));
-    t64 <- (W64.of_int 31);
-    r2 <- (zeroextu256 (VMOV_64 t64));
-    state <- (BArray224.set256 state 6 ((BArray224.get256 state 6) `^` r2));
-    state <@ shake256_add_rate_bit (state);
-    state <@ _keccakf1600_avx2 (state);
-    verification_key_hash <@ squeeze_64_bytes (verification_key_hash, state);
-    return verification_key_hash;
-  }
-  proc __derive_commitment_hash (message_representative:BArray64.t,
-                                 encoded_commitment:BArray768.t) : BArray48.t = {
-    var commitment_hash:BArray48.t;
-    var copied_32_bytes:W256.t;
-    var initial_block:BArray136.t;
-    var copied_8_bytes:W64.t;
-    var state:BArray224.t;
-    var encoded_commitment_offset:W64.t;
-    var block:BArray16.t;
-    var t64:W64.t;
-    var t128:W128.t;
-    var r0:W256.t;
-    block <- witness;
-    commitment_hash <- witness;
-    initial_block <- witness;
-    state <- witness;
-    copied_32_bytes <- (BArray64.get256d message_representative 0);
-    initial_block <- (BArray136.set256d initial_block 0 copied_32_bytes);
-    copied_32_bytes <- (BArray64.get256d message_representative 32);
-    initial_block <- (BArray136.set256d initial_block 32 copied_32_bytes);
-    copied_32_bytes <- (BArray768.get256d encoded_commitment 0);
-    initial_block <- (BArray136.set256d initial_block 64 copied_32_bytes);
-    copied_32_bytes <- (BArray768.get256d encoded_commitment 32);
-    initial_block <- (BArray136.set256d initial_block 96 copied_32_bytes);
-    copied_8_bytes <- (BArray768.get64d encoded_commitment 64);
-    initial_block <- (BArray136.set64d initial_block 128 copied_8_bytes);
-    state <@ __state_init_avx2 ();
-    state <@ shake256_absorb_block (state, initial_block);
-    encoded_commitment_offset <- (W64.of_int 72);
-    while ((encoded_commitment_offset \ult
-           (W64.of_int ((((((4 * 256) %/ 8) * 6) - 72) %/ 136) * 136)))) {
-      state <@ shake256_absorb_block (state,
-      (SBArray768_136.get_sub8 encoded_commitment
-      (W64.to_uint encoded_commitment_offset)));
-      encoded_commitment_offset <-
-      (encoded_commitment_offset + (W64.of_int 136));
-    }
-    block <-
-    (SBArray768_16.get_sub8 encoded_commitment
-    (W64.to_uint encoded_commitment_offset));
-    t64 <- (BArray16.get64d block 0);
-    t128 <- (zeroextu128 t64);
-    r0 <- (VPBROADCAST_4u64 (truncateu64 t128));
-    state <- (BArray224.set256 state 0 ((BArray224.get256 state 0) `^` r0));
-    t64 <- (BArray16.get64d block 8);
-    t128 <- (VMOV_64 t64);
-    t64 <- (W64.of_int 31);
-    t128 <- (VPINSR_2u64 t128 t64 (W8.of_int 1));
-    r0 <- (set0_256);
-    r0 <- (VINSERTI128 r0 t128 (W8.of_int 0));
-    state <- (BArray224.set256 state 1 ((BArray224.get256 state 1) `^` r0));
-    state <@ shake256_add_rate_bit (state);
-    state <@ _keccakf1600_avx2 (state);
-    t128 <- (truncateu128 (BArray224.get256 state 0));
-    commitment_hash <-
-    (BArray48.set64d commitment_hash 0 (truncateu64 t128));
-    commitment_hash <-
-    (BArray48.set256d commitment_hash 8 (BArray224.get256 state 1));
-    t128 <- (VEXTRACTI128 (BArray224.get256 state 2) (W8.of_int 1));
-    commitment_hash <-
-    (BArray48.set64d commitment_hash 40 (truncateu64 t128));
-    return commitment_hash;
-  }
   proc error_4x____bytestream_to_coefficients (bytestream:W128.t) : W256.t = {
     var coefficients:W256.t;
     var temp:W64.t;
@@ -9413,8 +10456,8 @@ module M = {
     return signer_response_element;
   }
   proc __sign_internal (signature:BArray3309.t, signing_key:BArray4032.t,
-                        context_message_pointers:BArray16.t,
-                        context_message_sizes:BArray16.t,
+                        context_pointer:int, context_size:int,
+                        message_pointer:int, message_size:int,
                         randomness:BArray32.t) : BArray3309.t = {
     var aux:BArray1024.t;
     var seed_for_matrix_A:BArray32.t;
@@ -9482,7 +10525,7 @@ module M = {
                                                                SBArray4032_64.get_sub8
                                                                signing_key 64
                                                                ),
-    context_message_pointers, context_message_sizes);
+    context_pointer, context_size, message_pointer, message_size);
     (* Erased call to unspill *)
     (* Erased call to unspill *)
     seed_for_mask <@ derive_seed_for_mask ((SBArray4032_32.get_sub8
@@ -9693,10 +10736,10 @@ module M = {
     commitment_encoded <@ commitment____encode (commitment);
     return commitment_encoded;
   }
-  proc __verify_internal (verification_key:BArray1952.t,
-                          context_message_pointers:BArray16.t,
-                          context_message_sizes:BArray16.t,
-                          signature_encoded:BArray3309.t) : W64.t = {
+  proc __verify_internal (verification_key:BArray1952.t, context_pointer:int,
+                          context_size:int, message_pointer:int,
+                          message_size:int, signature_encoded:BArray3309.t) : 
+  W64.t = {
     var result:W64.t;
     var signer_response:BArray5120.t;
     var hints:BArray6144.t;
@@ -9716,10 +10759,10 @@ module M = {
     reconstructed_signer_commitment <- witness;
     signer_response <- witness;
     verification_key_hash <- witness;
+    (* Erased call to spill *)
     (signer_response, hints, result) <@ signature____decode (signer_response,
     hints, signature_encoded);
     if ((result = (W64.of_int 0))) {
-      (* Erased call to spill *)
       (* Erased call to spill *)
       matrix_A <@ sample____matrix_A ((SBArray1952_32.get_sub8
                                       verification_key 0));
@@ -9739,7 +10782,7 @@ module M = {
       verification_key);
       (* Erased call to unspill *)
       message_representative <@ __derive_message_representative (verification_key_hash,
-      context_message_pointers, context_message_sizes);
+      context_pointer, context_size, message_pointer, message_size);
       expected_commitment_hash <@ __derive_commitment_hash (message_representative,
       reconstructed_signer_commitment);
       (* Erased call to unspill *)
@@ -9760,31 +10803,35 @@ module M = {
     return (verification_key, signing_key);
   }
   proc ml_dsa_65_sign (signature:BArray3309.t, signing_key:BArray4032.t,
-                       context_message_pointers:BArray16.t,
-                       context_message_sizes:BArray16.t,
-                       randomness:BArray32.t) : BArray3309.t * W64.t = {
+                       context:BArray16.t, message_pointer:int,
+                       message_size:int, randomness:BArray32.t) : BArray3309.t *
+                                                                  W64.t = {
     var result:W64.t;
-    var context_size:W64.t;
-    context_size <- (BArray16.get64 context_message_sizes 0);
-    if ((context_size \ule (W64.of_int 255))) {
-      signature <@ __sign_internal (signature, signing_key,
-      context_message_pointers, context_message_sizes, randomness);
+    var context_pointer:int;
+    var context_size:int;
+    context_pointer <- (W64.to_uint (BArray16.get64 context 0));
+    context_size <- (W64.to_uint (BArray16.get64 context 1));
+    if ((context_size <= 255)) {
+      signature <@ __sign_internal (signature, signing_key, context_pointer,
+      context_size, message_pointer, message_size, randomness);
       result <- (W64.of_int 0);
     } else {
       result <- (W64.of_int (- 1));
     }
     return (signature, result);
   }
-  proc ml_dsa_65_verify (verification_key:BArray1952.t,
-                         context_message_pointers:BArray16.t,
-                         context_message_sizes:BArray16.t,
+  proc ml_dsa_65_verify (verification_key:BArray1952.t, context:BArray16.t,
+                         message_pointer:int, message_size:int,
                          signature:BArray3309.t) : W64.t = {
     var verification_result:W64.t;
-    var context_size:W64.t;
-    context_size <- (BArray16.get64 context_message_sizes 0);
-    if ((context_size \ule (W64.of_int 255))) {
+    var context_pointer:int;
+    var context_size:int;
+    context_pointer <- (W64.to_uint (BArray16.get64 context 0));
+    context_size <- (W64.to_uint (BArray16.get64 context 1));
+    if ((context_size <= 255)) {
       verification_result <@ __verify_internal (verification_key,
-      context_message_pointers, context_message_sizes, signature);
+      context_pointer, context_size, message_pointer, message_size,
+      signature);
     } else {
       verification_result <- (W64.of_int (- 1));
     }

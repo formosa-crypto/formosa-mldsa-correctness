@@ -6,8 +6,9 @@ provers = Z3
 
 spec = proofs/eclib/specs/avx2.spec
 
+rdirs=Jasmin:/usr/local/lib/easycrypt/jasmin
+
 rdirs = proofs
-rdirs = Jasmin:jasmin/eclib
 idirs = jasmin-dilithium/proofs/utils
 idirs = jasmin-dilithium/proofs/security
 idirs = proofs/eclib

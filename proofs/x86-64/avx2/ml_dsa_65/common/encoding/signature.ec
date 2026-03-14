@@ -9,7 +9,8 @@ import BitEncoding BitChunking.
 
 import CDR Round Zq.
 
-require import ArrayExtra JWord_extra EclibExtra JWordList.
+require import ArrayExtra.
+from CryptoSpecs require import JWord_extra EclibExtra JWordList.
 
 import VecMat PolyKVec.
 

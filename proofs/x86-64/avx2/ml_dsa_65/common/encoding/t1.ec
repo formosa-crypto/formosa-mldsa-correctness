@@ -10,9 +10,9 @@ import BitEncoding BitChunking.
 
 import CDR Round Zq.
 
-require import ArrayExtra JWord_extra (* w2bitsE as int2bs *) EclibExtra (* size_flatten' *) JWordList (* nth_chunk *).
+from CryptoSpecs require import JWord_extra EclibExtra JWordList.
 
-require import XArray256 XArray320 XArray16 XWord10.
+require import XArray256 XArray320 XArray16 XWord10 ArrayExtra.
 
 lemma truncateu_32_10E (w : W32.t) : BS_W32_W10_U.truncateu10 w = W10.bits2w (take 10 (W32.w2bits w)).
 proof.

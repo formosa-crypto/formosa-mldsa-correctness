@@ -447,7 +447,7 @@ admitted.
 (* Correctness lemmas (complete hash operations)                            *)
 (****************************************************************************)
 
-phoare hash_verification_key_ph _vk :
+phoare hash_verification_key_correct _vk :
  [ M.hash_verification_key
  : arg.`2 = _vk
  ==> res = Array64.of_list witness (Bytes64.to_list (H_tr (BytesPK.of_list (to_list _vk))))

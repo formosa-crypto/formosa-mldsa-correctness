@@ -10,7 +10,8 @@ import BitEncoding BitChunking.
 
 import CDR Round Zq.
 
-require import ArrayExtra JWord_extra (* w2bitsE as int2bs *) EclibExtra (* size_flatten' *) JWordList (* nth_chunk *).
+require import ArrayExtra.
+from CryptoSpecs require import JWord_extra EclibExtra JWordList.
 
 require import XArray256 XArray416 XArray16 XWord13.
 

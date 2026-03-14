@@ -17,3 +17,14 @@ idirs = JazzEC:proofs/arrays
 idirs = JazzEC:proofs/xarrays
 idirs = JazzEC:proofs/xwords
 rdirs = JazzEC:proofs/x86-64/avx2/ml_dsa_65
+
+idirs = Keccak:formosa-mldsa/formosa-keccak/proof/amd64/common
+idirs = Keccak:formosa-mldsa/formosa-keccak/proof/amd64/ref
+idirs = Keccak:formosa-mldsa/formosa-keccak/proof/amd64/avx2
+idirs = JazzEC:formosa-mldsa/formosa-keccak/proof/amd64/extracted
+idirs = JazzEC:formosa-mldsa/formosa-keccak/proof/amd64/common
+
+idirs = JazzEC:formosa-mldsa/formosa-keccak/submodules/crypto-specs/arrays
+idirs = CryptoSpecs:formosa-mldsa/formosa-keccak/submodules/crypto-specs/arrays
+idirs = CryptoSpecs:formosa-mldsa/formosa-keccak/submodules/crypto-specs/common
+rdirs = CryptoSpecs:formosa-mldsa/formosa-keccak/submodules/crypto-specs/fips202

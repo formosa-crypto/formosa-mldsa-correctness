@@ -596,6 +596,104 @@ proof.
 by conseq shake256_absorb_commitment_hash_eq (shake256_absorb_commitment_hash_ph' _hash) => // /#.
 qed.
 
+
+(****************************************************************************)
+(* Correctness lemmas (squeeze operations)                                  *)
+(****************************************************************************)
+
+(* ---------- squeeze_64_bytes ---------- *)
+
+hoare squeeze_64_bytes_h' _arr _m :
+ K.squeeze_64_bytes
+ : arg.`1 = _arr /\ arg.`2 = stavx2_from_st25 (keccak_f1600_op (ABSORB1600 (W8.of_int 31) 136 _m))
+ ==> res = Array64.of_list witness (SHAKE256 _m 64).
+proof.
+proc.
+ecall (A64avx2.dumpstate_avx2_h _arr 0 64 state).
+auto => |> [rr1 rr2] -> ?.
+rewrite stavx2_from_st25K.
+apply Array64.tP => i Hi /=.
+rewrite Array64.get_of_list 1://.
+rewrite /SHAKE256 /KECCAK1600 /SQUEEZE1600 /squeezeblocks /squeezestate_i /st_i /squeezestate /SHAKE_DS_BYTE /c512_r8.
+have -> : (64 - 1) %/ 136 + 1 = 1 by done.
+rewrite -iotaredE /= fillE initiE 1:/# /= Hi /= nth_take 1,2:/# flatten1 nth_take 1,2:/#.
+rewrite iter1 /= (nth_change_dfl W8.zero witness); 1: by rewrite size_state2bytes /= /#.
+by rewrite state2bytesE.
+qed.
+
+lemma squeeze_64_bytes_ll : islossless K.squeeze_64_bytes.
+proof.
+proc.
+call A64avx2.dumpstate_avx2_ll.
+by auto.
+qed.
+
+phoare squeeze_64_bytes_ph' _arr _m :
+ [ K.squeeze_64_bytes
+ : arg.`1 = _arr /\ arg.`2 = stavx2_from_st25 (keccak_f1600_op (ABSORB1600 (W8.of_int 31) 136 _m))
+ ==> res = Array64.of_list witness (SHAKE256 _m 64)
+ ] = 1%r.
+proof.
+by conseq squeeze_64_bytes_ll (squeeze_64_bytes_h' _arr _m).
+qed.
+
+phoare squeeze_64_bytes_correct _arr _m :
+ [ M.squeeze_64_bytes
+ : arg.`1 = _arr /\ arg.`2 = stavx2_from_st25 (keccak_f1600_op (ABSORB1600 (W8.of_int 31) 136 _m))
+ ==> res = Array64.of_list witness (SHAKE256 _m 64)
+ ] = 1%r.
+proof.
+by conseq squeeze_64_bytes_eq (squeeze_64_bytes_ph' _arr _m) => // /#.
+qed.
+
+(* ---------- squeeze_128_bytes ---------- *)
+
+(* Given a state that results from absorbing _m with SHAKE256 padding,
+   squeeze_128_bytes produces the first 128 bytes of SHAKE256(_m). *)
+
+hoare squeeze_128_bytes_h' _arr _m :
+ K.squeeze_128_bytes
+ : arg.`1 = _arr /\ arg.`2 = stavx2_from_st25 (keccak_f1600_op (ABSORB1600 (W8.of_int 31) 136 _m))
+ ==> res = Array128.of_list witness (SHAKE256 _m 128).
+proof.
+proc.
+ecall (A128avx2.dumpstate_avx2_h _arr 0 128 state).
+auto => |> [rr1 rr2] -> ?.
+rewrite stavx2_from_st25K.
+apply Array128.tP => i Hi /=.
+rewrite Array128.get_of_list 1://.
+rewrite /SHAKE256 /KECCAK1600 /SQUEEZE1600 /squeezeblocks /squeezestate_i /st_i /squeezestate /SHAKE_DS_BYTE /c512_r8.
+have -> : (128 - 1) %/ 136 + 1 = 1 by done.
+rewrite -iotaredE /= fillE initiE 1:/# /= Hi /= nth_take 1,2:/# flatten1 nth_take 1,2:/#.
+rewrite iter1 /= (nth_change_dfl W8.zero witness); 1: by rewrite size_state2bytes /= /#.
+by rewrite state2bytesE.
+qed.
+
+lemma squeeze_128_bytes_ll : islossless K.squeeze_128_bytes.
+proof.
+proc.
+call A128avx2.dumpstate_avx2_ll.
+by auto.
+qed.
+
+phoare squeeze_128_bytes_ph' _arr _m :
+ [ K.squeeze_128_bytes
+ : arg.`1 = _arr /\ arg.`2 = stavx2_from_st25 (keccak_f1600_op (ABSORB1600 (W8.of_int 31) 136 _m))
+ ==> res = Array128.of_list witness (SHAKE256 _m 128)
+ ] = 1%r.
+proof.
+by conseq squeeze_128_bytes_ll (squeeze_128_bytes_h' _arr _m).
+qed.
+
+phoare squeeze_128_bytes_correct _arr _m :
+ [ M.squeeze_128_bytes
+ : arg.`1 = _arr /\ arg.`2 = stavx2_from_st25 (keccak_f1600_op (ABSORB1600 (W8.of_int 31) 136 _m))
+ ==> res = Array128.of_list witness (SHAKE256 _m 128)
+ ] = 1%r.
+proof.
+by conseq squeeze_128_bytes_eq (squeeze_128_bytes_ph' _arr _m) => // /#.
+qed.
+
 (****************************************************************************)
 (* Correctness lemmas (complete hash operations)                            *)
 (****************************************************************************)

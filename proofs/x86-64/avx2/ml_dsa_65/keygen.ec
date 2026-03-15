@@ -105,7 +105,7 @@ sp;seq 1 1: (#pre /\ liftu_wpolymat (mat_unflatten256 matrix_A{2}) = _A{1} /\
             wpolymat_urng (mat_unflatten256 matrix_A{2}) 1).
 + ecall{1} (ExpandA_correct rho{1}).
   ecall{2} (matrix_A_correct seed_for_matrix_A{2}).
-  auto => /> &1 &2 ? rr ->?.
+  auto => /> &1  rr ->?.
   + congr; apply Bytes32.tP => k kb.
     rewrite Bytes32.get_of_list 1:/# get_to_list initiE 1:/# get_of_list 1:/# nth_cat ifT.
     + by rewrite size_cat;smt(Bytes32.size_to_list).
@@ -115,7 +115,7 @@ sp;seq 1 1: (#pre /\ liftu_wpolymat (mat_unflatten256 matrix_A{2}) = _A{1} /\
 seq 0 2 : (#pre
      /\ seed_for_error_vectors{2} = Array64.of_list witness (Bytes64.to_list rhop{1})
      /\ seed_for_signing{2} = Array32.of_list witness (Bytes32.to_list _K{1})).
-+ auto => /> &1 &2 ??.
++ auto => /> ??.
   by split; rewrite tP => k kb; rewrite initiE 1:/# /= get_of_list 1:/# get_of_list 1:/# !nth_cat ?size_cat ?Bytes32.size_to_list ?Bytes64.size_to_list /#.
 
 seq 1 1 : (#pre
@@ -125,7 +125,7 @@ seq 1 1 : (#pre
      /\ wpolykvec_srng (kvec_unflatten256 s2{2}) Eta Eta).
 + ecall{1} (ExpandS_correct rhop{1}).
   ecall{2} (error_vectors_correct seed_for_error_vectors{2}).
-  by auto => /> &1 &2 ?? rr -> ?->?; split;congr;congr;rewrite Bytes64.tP => k kb;rewrite Bytes64.get_of_list 1:/# get_to_list get_of_list /#.
+  by auto => />  ?? rr -> ?->?; split;congr;congr;rewrite Bytes64.tP => k kb;rewrite Bytes64.get_of_list 1:/# get_to_list get_of_list /#.
 
 proc change {2} [10..11] : [s1p : W32.t Array1280.t] {
    s1p <@ M.row_vector__ntt(s1);
@@ -150,7 +150,7 @@ seq 2 7 : (#pre
   wp; ecall {1} (skEncode_corr rho{1} _K{1} tr{1} s1{1} s2{1} t0{1}).
   wp; ecall {1} (pkEncode_corr rho{1} t1{1}).
 
-  auto => /> &1 &2 ?????? rr1 Hrr1 rr2 Hrr2 rr3 Hrr3  rr4 Hrr4.
+  auto => /> ?????? rr1 Hrr1 rr2 Hrr2 rr3 Hrr3  rr4 Hrr4.
   split;congr.
   + apply (eq_from_nth witness); 1: by rewrite size_cat Bytes32.size_to_list size_kflatten_SimpleBitPack 1:/# size_to_list /#.
     move => k;rewrite size_cat Bytes32.size_to_list size_kflatten_SimpleBitPack 1:/# /= => Hk.

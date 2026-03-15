@@ -237,28 +237,120 @@ equiv shake256_squeezeblock4x_eq:
 (* Correctness lemmas (absorbed-state characterization)                     *)
 (****************************************************************************)
 
+hoare shake128_absorb_34_4x_h' _rho _ds :
+ K.shake128_absorb_34_4x
+ : arg.`2 = _rho /\ arg.`3 = _ds
+ ==>
+   absorb_spec_avx2x4 168 31
+     (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds.[0]))))
+      (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds.[1]))))
+      (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0_ds.[2]))))
+      (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds.[3]))))
+     res.
+proof.
+proc.
+ecall (A2avx2x4.absorb_avx2x4_h (to_list _rho) (to_list _rho) (to_list _rho) (to_list _rho) state d0 d1 d2 d3 31 168).
+wp.
+ecall (A32avx2x4.absorb_bcast_avx2x4_h [<:W8.t>] [<:W8.t>] [<:W8.t>] [<:W8.t>] state rho 0 168).
+wp; call (state_init_avx2x4_h 168).
+by auto => |>;smt(Array32.size_to_list).
+qed.
+
+lemma shake128_absorb_34_4x_ll : islossless K.shake128_absorb_34_4x.
+proof.
+proc.
+call A2avx2x4.absorb_avx2x4_ll.
+wp.
+call A32avx2x4.absorb_bcast_avx2x4_ll.
+call state_init_avx2x4_ll.
+by auto.
+qed.
+
+phoare shake128_absorb_34_4x_ph' _rho _ds :
+ [ K.shake128_absorb_34_4x
+ : arg.`2 = _rho /\ arg.`3 = _ds
+ ==>
+   absorb_spec_avx2x4 168 31
+     (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds.[0]))))
+      (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds.[1]))))
+      (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0_ds.[2]))))
+      (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds.[3]))))
+     res
+ ] = 1%r.
+proof.
+by conseq shake128_absorb_34_4x_ll (shake128_absorb_34_4x_h' _rho _ds).
+qed.
+
 phoare shake128_absorb_34_4x_ph _rho _ds :
  [ M.shake128_absorb_34_4x
  : arg.`2 = _rho /\ arg.`3 = _ds
  ==>
    absorb_spec_avx2x4 168 31
-     (to_list _rho ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (fun i => witness)) 0 _ds.[0]))))
-     (to_list _rho ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (fun i => witness)) 0 _ds.[1]))))
-     (to_list _rho ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (fun i => witness)) 0 _ds.[2]))))
-     (to_list _rho ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (fun i => witness)) 0 _ds.[3]))))
+     (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds.[0]))))
+      (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds.[1]))))
+      (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0_ds.[2]))))
+      (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds.[3]))))
      res
  ] = 1%r.
-admitted.
+proof.
+by conseq shake128_absorb_34_4x_eq (shake128_absorb_34_4x_ph' _rho _ds) => // /#.
+qed.
+
+hoare shake256_absorb_66_4x_h' _rho_prime _ds0 :
+ K.shake256_absorb_66_4x
+ : arg.`2 = _rho_prime /\ arg.`3 = _ds0
+ ==>
+   absorb_spec_avx2x4 136 31
+     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds0))))
+     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness))  0 (_ds0 + W16.one)))))
+     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness))  0 (_ds0 + (W16.of_int 2))))))
+     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness))  0 (_ds0 + (W16.of_int 3))))))
+     res.
+proof.
+proc.
+ecall (A2avx2x4.absorb_avx2x4_h (to_list _rho_prime) (to_list _rho_prime) (to_list _rho_prime) (to_list _rho_prime) state d0 d1 d2 d3 31 136).
+wp.
+ecall (A64avx2x4.absorb_bcast_avx2x4_h [<:W8.t>] [<:W8.t>] [<:W8.t>] [<:W8.t>] state rho_prime 0 136).
+wp; call (state_init_avx2x4_h 136).
+auto => |> r0 ? r1 Hinit ?; rewrite size_to_list /#.
+qed.
+
+lemma shake256_absorb_66_4x_ll : islossless K.shake256_absorb_66_4x.
+proof.
+proc.
+call A2avx2x4.absorb_avx2x4_ll.
+wp.
+call A64avx2x4.absorb_bcast_avx2x4_ll.
+call state_init_avx2x4_ll.
+by auto.
+qed.
+
+phoare shake256_absorb_66_4x_ph' _rho_prime _ds0 :
+ [ K.shake256_absorb_66_4x
+ : arg.`2 = _rho_prime /\ arg.`3 = _ds0
+ ==>
+   absorb_spec_avx2x4 136 31
+     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds0))))
+     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness))  0 (_ds0 + W16.one)))))
+     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness))  0 (_ds0 + (W16.of_int 2))))))
+     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness))  0 (_ds0 + (W16.of_int 3))))))
+     res
+ ] = 1%r.
+proof.
+by conseq shake256_absorb_66_4x_ll (shake256_absorb_66_4x_h' _rho_prime _ds0).
+qed.
 
 phoare shake256_absorb_66_4x_ph _rho_prime _ds0 :
  [ M.shake256_absorb_66_4x
  : arg.`2 = _rho_prime /\ arg.`3 = _ds0
  ==>
    absorb_spec_avx2x4 136 31
-     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (fun i => witness)) 0 _ds0))))
-     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (fun i => witness)) 0 (_ds0 + W16.one)))))
-     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (fun i => witness)) 0 (_ds0 + (W16.of_int 2))))))
-     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (fun i => witness)) 0 (_ds0 + (W16.of_int 3))))))
+     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds0))))
+     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness))  0 (_ds0 + W16.one)))))
+     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness))  0 (_ds0 + (W16.of_int 2))))))
+     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness))  0 (_ds0 + (W16.of_int 3))))))
      res
  ] = 1%r.
-admitted.
+proof.
+by conseq shake256_absorb_66_4x_eq (shake256_absorb_66_4x_ph' _rho_prime _ds0) => // /#.
+qed.

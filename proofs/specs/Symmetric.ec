@@ -5,6 +5,8 @@ require import Parameters GFq Rq VecMat Conversion Serialization.
 import PolyLVec PolyKVec PolyMat.
 import CDR Round Zq BigZMod MLDSAParams.
 
+from CryptoSpecs require import Keccak1600_Spec.
+
 abbrev gamma1m1_bits = 19.
 lemma gamma1_bitlen :  2^(gamma1m1_bits-1) < gamma1-1 (* signed range *) <= 2^(gamma1m1_bits)
   by  have/= H := param_sets; elim H => /> ??->???? /=.
@@ -17,7 +19,10 @@ clone import JArray.MonoArray as BytesV with op size <= n * (gamma1m1_bits + 1) 
 
 (*  H = SHAKE256, G = SHAKE128 *)
 
-op H_sib : BytesCT.t -> Bytes8.t. (* first 64 bytes of SHAKE256 on CTBytes input (48 or 64) *)
+(* H_sib: first 8 bytes (= 64 bits) of SHAKE256 on BytesCT input.
+   Used in SampleInBall; XOF_SIB covers the continuation of the same stream. *)
+op H_sib (ct : BytesCT.t) : Bytes8.t =
+  Bytes8.of_list (SHAKE256 (BytesCT.to_list ct) 8).
 
 module type XOF_SIB = {  (* bytes after 64 prefix of SHAKE256 on CTBytes  (48 or 64) input *)
   proc init(rho : BytesCT.t) : unit
@@ -34,22 +39,36 @@ module type XOF_RejBPoly = {  (* SHAKE256 on 66 bytes input *)
   proc next() : W8.t
 }.
 
-op H_seed : Bytes34.t -> Bytes32.t * Bytes64.t * Bytes32.t. (* SHAKE256 on 34 byte input,
-                                                               but first 32 bytes are secret (PRG) *)
+(* H_seed: SHAKE256(seed, 128), split into (rho=32, rho'=64, K=32).
+   First 32 bytes are secret (PRG). *)
+op H_seed (seed : Bytes34.t) : Bytes32.t * Bytes64.t * Bytes32.t =
+  let l = SHAKE256 (Bytes34.to_list seed) 128 in
+  ( Bytes32.of_list (take 32 l)
+  , Bytes64.of_list (take 64 (drop 32 l))
+  , Bytes32.of_list (drop 96 l) ).
 
-op H_tr : BytesPK.t -> Bytes64.t. (* shake256 on PKbytes input *)
+(* H_tr: SHAKE256(pk, 64). *)
+op H_tr (pk : BytesPK.t) : Bytes64.t =
+  Bytes64.of_list (SHAKE256 (BytesPK.to_list pk) 64).
 
-op H_mu : Bytes64.t -> W8.t list -> Bytes64.t.  
-  (* SHAKE256 on variable size input prefixed on Htr (64 bytes) + 
-         message is prepended by at least 2 bytes *)
+(* H_mu: SHAKE256(tr || msg, 64). *)
+op H_mu (tr : Bytes64.t) (msg : W8.t list) : Bytes64.t =
+  Bytes64.of_list (SHAKE256 (Bytes64.to_list tr ++ msg) 64).
 
 type rnd_. (* either 0 or 32 bytes *)
-op H_rhopp : Bytes32.t -> rnd_ -> Bytes64.t -> Bytes64.t. (* SHAKE256 on input size 32+rnd_+64 bytes, 
-                        but first input is secret (PRF) *)
+op rnd_to_list : rnd_ -> W8.t list.
 
-op H_ct : Bytes64.t -> BytesW1.t -> BytesCT.t. (* SHAKE256 on 64 + W1 bytes input *)
+(* H_rhopp: SHAKE256(K || rnd || mu, 64). First input is secret (PRF). *)
+op H_rhopp (K : Bytes32.t) (r : rnd_) (mu : Bytes64.t) : Bytes64.t =
+  Bytes64.of_list (SHAKE256 (Bytes32.to_list K ++ rnd_to_list r ++ Bytes64.to_list mu) 64).
 
-op H_v : Bytes66.t -> BytesV.t. (* SHAKE256 on 66 bytes input, but 64 bytes are secret (PRF) *)
+(* H_ct: SHAKE256(mu || w1encode, lambda/4). *)
+op H_ct (mu : Bytes64.t) (w1 : BytesW1.t) : BytesCT.t =
+  BytesCT.of_list (SHAKE256 (Bytes64.to_list mu ++ BytesW1.to_list w1) (lambda %/ 4)).
+
+(* H_v: SHAKE256(seed, outlen) where outlen = n*(gamma1_bits+1)/8. First 64 bytes are secret (PRF). *)
+op H_v (seed : Bytes66.t) : BytesV.t =
+  BytesV.of_list (SHAKE256 (Bytes66.to_list seed) (n * (gamma1m1_bits + 1) %/ 8)).
 
 (* NOTE: Strictly speaking ML-DSA is a big mess when it comes to using SHAKE256.
   There are several points where inputs with the same size can occur, due to the

@@ -58,7 +58,9 @@ bind circuit
     VPCMPGT_16u16  <-   "VPCMPGT_16u16",
     VPACKSS_16u16  <-   "VPACKSS_16u16",
     VPSRLDQ_128 <- "VPSRLDQ_128",
-    VPACKUS_8u32 <- "VPACKUS_8u32"
+    VPACKUS_8u32 <- "VPACKUS_8u32",
+    VPCMPEQ_16u8 <- "VPCMPEQ_16u8",
+    MOVEMASK_16u8 <- "VPMOVMSKB_128"
         from "specs/avx2.spec".
 
 

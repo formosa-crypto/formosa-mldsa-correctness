@@ -1,4 +1,4 @@
-require import AllCore List.
+require import AllCore List StdBigop.
 require import Parameters GFq Rq.
 require DVect Subtype.
 require import Array256.
@@ -101,8 +101,9 @@ op MakeHint(v1 : polykvec, v2 : polykvec) : polykvec =
 op infnorm(v : polykvec, bound : int) : bool = 
   all (fun ii => all (fun jj => `|v.[ii].[jj]| < bound) (iota_ 0 256)) (iota_ 0 kvec).
 
+import Bigint BIA. 
 op hammw(v : polykvec, bound : int) : bool = 
-  all (fun ii => count (fun jj => v.[ii].[jj] <> Zq.zero) (iota_ 0 256) <= bound) (iota_ 0 lvec).
+ big predT (fun ii => count (fun jj => v.[ii].[jj] <> Zq.zero) (iota_ 0 256)) (iota_ 0 lvec) <= bound.
 
 op polykvec_HighBits(v : polykvec) : polykvec = 
   map poly_HighBits v.

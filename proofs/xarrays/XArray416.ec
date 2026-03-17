@@ -6,9 +6,6 @@ require import XWord13 JWordExtra.
 from Jasmin require import JWord.
 
 (* -------------------------------------------------------------------- *)
-require Array416.
-
-(* -------------------------------------------------------------------- *)
 clone export PAE with
       op size <- 416,
   theory A    <- Array416.Array416.

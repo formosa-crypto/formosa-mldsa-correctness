@@ -9,7 +9,7 @@ op "_.[_]" : 'a list -> int -> 'a = nth witness.
 
 type sib_leakage = bool list.
 
-module type LeakyRO = {
+module type LeakyRO(XOF : XOF_SIB) = {
    proc init() : unit
    proc get(mu : Bytes64.t, w1 : BytesW1.t) : (BytesCT.t * poly) * sib_leakage
 }.
@@ -39,7 +39,7 @@ module SampleInBall(XOF : XOF_SIB) = {
    }
 }.
 
-module SIB_RO(XOF : XOF_SIB) : LeakyRO = {
+module (SIB_RO : LeakyRO) (XOF : XOF_SIB) = {
    proc init() = {}
    proc get(mu : Bytes64.t, w1 : BytesW1.t): (BytesCT.t * poly) * sib_leakage = {
         var rr;
@@ -71,12 +71,7 @@ module RejNTTPoly(XOF : XOF_RejNTTPoly) = {
 
 (*************** Begin RejNTTPoly CORRECTNESS BRIDGE ****************)
 
-(* TO DO COMPLETE SPECIFICATION *)
-module MLDSA_XOFA : XOF_RejNTTPoly = {
-  proc init(rho : Bytes34.t) : unit= {} 
-  
-  proc next() : Bytes3.t = { return witness; }
-}.
+(* Concrete definition is in Symmetric.ec: MLDSA_XOFA *)
 
 
 op rejNTTPoly : Bytes34.t ->  poly. (* Write me: PY *)
@@ -109,12 +104,7 @@ module RejBoundedPoly(XOF : XOF_RejBPoly) = {
 
 (*************** Begin RejBoundedPoly CORRECTNESS BRIDGE ****************)
 
-(* TO DO COMPLETE SPECIFICATION *)
-module MLDSA_XOFS : XOF_RejBPoly = {
-  proc init(rho : Bytes66.t) : unit= {} 
-  
-  proc next() : W8.t = { return witness; }
-}.
+(* Concrete definition is in Symmetric.ec: MLDSA_XOFS *)
 
 
 op rejBoundedPoly : Bytes66.t ->  poly. (* Write Me: PY *)

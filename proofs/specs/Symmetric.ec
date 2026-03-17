@@ -70,6 +70,63 @@ op H_ct (mu : Bytes64.t) (w1 : BytesW1.t) : BytesCT.t =
 op H_v (seed : Bytes66.t) : BytesV.t =
   BytesV.of_list (SHAKE256 (Bytes66.to_list seed) (n * (gamma1m1_bits + 1) %/ 8)).
 
+(* Concrete XOF modules using the functional Keccak view.
+   Each stores the seed and current stream position so that successive next()
+   calls return consecutive bytes of the SHAKE output. Correctness relies on
+   the prefix property: SHAKE256 m n = take n (SHAKE256 m N) for n <= N
+   (SQUEEZE1600_ext). *)
+
+module MLDSA_XOF_SIB : XOF_SIB = {
+  var seed : BytesCT.t
+  var pos  : int
+
+  proc init(ct : BytesCT.t) : unit = {
+    seed <- ct;
+    pos  <- 8;  (* bytes 0–7 are consumed by H_sib *)
+  }
+
+  proc next() : W8.t = {
+    var b : W8.t;
+    b <- nth witness (SHAKE256 (BytesCT.to_list seed) (pos + 1)) pos;
+    pos <- pos + 1;
+    return b;
+  }
+}.
+
+module MLDSA_XOFA : XOF_RejNTTPoly = {
+  var seed : Bytes34.t
+  var pos  : int
+
+  proc init(rho : Bytes34.t) : unit = {
+    seed <- rho;
+    pos  <- 0;
+  }
+
+  proc next() : Bytes3.t = {
+    var b : Bytes3.t;
+    b <- Bytes3.of_list (take 3 (drop pos (SHAKE128 (Bytes34.to_list seed) (pos + 3))));
+    pos <- pos + 3;
+    return b;
+  }
+}.
+
+module MLDSA_XOFS : XOF_RejBPoly = {
+  var seed : Bytes66.t
+  var pos  : int
+
+  proc init(rho : Bytes66.t) : unit = {
+    seed <- rho;
+    pos  <- 0;
+  }
+
+  proc next() : W8.t = {
+    var b : W8.t;
+    b <- nth witness (SHAKE256 (Bytes66.to_list seed) (pos + 1)) pos;
+    pos <- pos + 1;
+    return b;
+  }
+}.
+
 (* NOTE: Strictly speaking ML-DSA is a big mess when it comes to using SHAKE256.
   There are several points where inputs with the same size can occur, due to the
   variable size input of the message hashing.

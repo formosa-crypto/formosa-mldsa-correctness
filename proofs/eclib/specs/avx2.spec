@@ -419,6 +419,18 @@ VPMOVMSKB_u256u64(w@256) -> @64 =
 VPMOVMSKB_u256u32(w@256) -> @32 =
   map<8, 32>(fun i@8 . i[7], w)
 
+# Intel intrinsic: _mm_cmpeq_epi8
+VPCMPEQ_16u8(w1@128, w2@128) -> @128 =
+  map<8, 16>(
+    fun w1@8 w2@8 . ugt<8>(xor<8>(w1, w2), 0@8) ? 0x00@8 : 0xff@8,
+    w1,
+    w2
+  )
+
+# Intel intrinsic: _mm_movemask_epi8
+VPMOVMSKB_128(w@128) -> @32 =
+  uextend<16, 32>(map<8, 16>(fun i@8 . i[7], w))
+
 # Intel intrinsic: _mm256_unpacklo_epi8
 VPUNPCKL_32u8(w1@256, w2@256) -> @256 =
   let interleave (w1@64, w2@64) =

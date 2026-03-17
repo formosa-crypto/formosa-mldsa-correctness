@@ -61,7 +61,7 @@ module S(XOFA : XOF_RejNTTPoly, XOFS : XOF_RejBPoly) : Samplers = {
    }
 }.
 
-module MLDSA_SP(S : Samplers, RO : LeakyRO) = {
+module MLDSA_SP(S : Samplers, XOFSIB : XOF_SIB, RO : LeakyRO) = {
    proc keygen_derand() : BytesSK.t * BytesPK.t= {
      var sk,rho,_A,s1,s2,t,t1,t0,pk,tr;
      rho <@ S.init();
@@ -94,7 +94,7 @@ module MLDSA_SP(S : Samplers, RO : LeakyRO) = {
        y <@ S.sampleY();
        w <- invnttv (ntt_mulmxv _A (nttv y));
        w1 <- polykvec_HighBits w;
-       ctl <@ RO.get(mu,w1Encode w1);
+       ctl <@ RO(XOFSIB).get(mu,w1Encode w1);
        (ct,c) <- ctl.`1;
        leakage <- leakage ++ [ RO ctl.`2] ;
        ch <- ntt c;
@@ -118,7 +118,7 @@ module MLDSA_SP(S : Samplers, RO : LeakyRO) = {
   }
 
   proc verify(pk : BytesPK.t, sigma : BytesSig.t, m : W8.t list) : bool = {
-    var rho,t1,ctl,ct,c,z,h,rb,_A,tr,mu,wapprox,w1,ctp;
+    var rho,t1,c,l,ct,z,h,rb,_A,tr,mu,wapprox,w1,ctp;
     w1 <- witness;
     rb <- false;
     (rho,t1) <@ PkEncDec.pkDecode(pk);
@@ -127,13 +127,12 @@ module MLDSA_SP(S : Samplers, RO : LeakyRO) = {
       _A <@ S.sampleA();
       tr <- H_tr pk;
       mu <- H_mu tr m;
-      ctl <@ RO.get(mu,w1Encode w1);
-      (ct,c) <- ctl.`1;
+      (c,l) <@ SampleInBall(XOFSIB).sample(ct);
       wapprox <- invnttv (ntt_mulmxv _A (nttv z) - (ntt_smul (ntt c) (nttv (smul t1 (incoeff (2^d))))));
       w1 <- UseHint (oget h) wapprox;
       ctp <- H_ct mu (w1Encode w1);
       rb <- infnorm z (gamma1 - Beta);
-      rb <- rb && ct = ctp && hammw (oget h) w_hint;
+      rb <- rb && ct = ctp;
     }
     return rb;
   }

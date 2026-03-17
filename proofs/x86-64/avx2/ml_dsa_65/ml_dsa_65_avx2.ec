@@ -11757,28 +11757,24 @@ module M = {
   proc __compare_commitment_hashes (lhs:W8.t Array48.t, rhs:W8.t Array48.t) : 
   W64.t = {
     var result:W64.t;
-    var offset:W64.t;
     var lhs_bytes:W128.t;
     var rhs_bytes:W128.t;
     var result_vec:W128.t;
     var temp:W128.t;
-    offset <- (W64.of_int 0);
-    lhs_bytes <-
-    (get128_direct (WArray48.init8 (fun i => lhs.[i])) (W64.to_uint offset));
-    rhs_bytes <-
-    (get128_direct (WArray48.init8 (fun i => rhs.[i])) (W64.to_uint offset));
+    var offset:int;
+    offset <- 0;
+    lhs_bytes <- (get128_direct (WArray48.init8 (fun i => lhs.[i])) offset);
+    rhs_bytes <- (get128_direct (WArray48.init8 (fun i => rhs.[i])) offset);
     result_vec <- (VPCMPEQ_16u8 lhs_bytes rhs_bytes);
-    offset <- (offset + (W64.of_int 16));
-    while ((offset \ult (W64.of_int 48))) {
+    offset <- (offset + 16);
+    while ((offset < 48)) {
       lhs_bytes <-
-      (get128_direct (WArray48.init8 (fun i => lhs.[i])) (W64.to_uint offset)
-      );
+      (get128_direct (WArray48.init8 (fun i => lhs.[i])) offset);
       rhs_bytes <-
-      (get128_direct (WArray48.init8 (fun i => rhs.[i])) (W64.to_uint offset)
-      );
+      (get128_direct (WArray48.init8 (fun i => rhs.[i])) offset);
       temp <- (VPCMPEQ_16u8 lhs_bytes rhs_bytes);
       result_vec <- (VPAND_128 result_vec temp);
-      offset <- (offset + (W64.of_int 16));
+      offset <- (offset + 16);
     }
     result <- (zeroextu64 (MOVEMASK_16u8 result_vec));
     result <- result;

@@ -809,16 +809,104 @@ proof.
 by conseq derive_commitment_hash_eq (derive_commitment_hash_ph' _mu _w1) => // /#.
 qed.
 
+(* 
+lemma K_derive_message_representative_ll : islossless K.__derive_message_representative.
+proof.
+proc.
+call a64_squeeze_updstate_avx2_ll.
+call finish_updstate_avx2_ll.
+call absorb_m_updstate_avx2_ll.
+wp;call absorb_m_updstate_avx2_ll.
+wp;call a66_update_updstate_avx2_ll.
+call init_updstate_avx2_ll.
+by auto.
+qed.
 
+hoare K_derive_message_representative_h' _vk_hash _ctx _msg :
+  K.__derive_message_representative :
+    arg.`1 = _vk_hash /\
+    arg.`3 = List.size _ctx /\
+    memread Glob.mem arg.`2 arg.`3 = _ctx /\
+    arg.`5 = List.size _msg /\
+    memread Glob.mem arg.`4 arg.`5 = _msg /\
+    arg.`2 + List.size _ctx < W64.modulus /\
+    arg.`4 + List.size _msg < W64.modulus
+    ==>
+    res = Array64.of_list witness (SHAKE256
+      (to_list _vk_hash ++ [W8.zero; truncateu8 (W64.of_int (List.size _ctx))]
+       ++ _ctx ++ _msg) 64).
+proof.
+proc.
+ecall (a64_squeeze_updstate_avx2_h state message_representative
+  (to_list _vk_hash ++ [W8.zero; truncateu8 (W64.of_int (List.size _ctx))]
+   ++ _ctx ++ _msg)).
+wp; ecall (finish_updstate_avx2_h state
+  (to_list _vk_hash ++ [W8.zero; truncateu8 (W64.of_int (List.size _ctx))]
+   ++ _ctx ++ _msg)).
+wp; wp; ecall (absorb_m_updstate_avx2_h Glob.mem state
+  (to_list _vk_hash ++ [W8.zero; truncateu8 (W64.of_int (List.size _ctx))] ++ _ctx)
+  message_pointer message_size).
+wp; wp; ecall (absorb_m_updstate_avx2_h Glob.mem state
+  (to_list _vk_hash ++ [W8.zero; truncateu8 (W64.of_int (List.size _ctx))])
+  context_pointer context_size).
+wp; ecall (a66_update_updstate_avx2_h state prefix ([<:W8.t>])).
+wp; ecall (init_updstate_avx2_h).
+wp; skip => /> &hr -> -> ?? rr Hrr rr0 ->.
+do split.
++ do congr; apply (eq_from_nth witness); 1: by  rewrite size_to_list size_cat size_to_list /=.
+  move => i;  rewrite size_to_list /= => ib.
+  rewrite nth_cat size_to_list !get_setE 1,2:/#.
+  case (i < 64) => ?; last by smt().
+  rewrite ifF 1:/# ifF 1:/# initiE 1:/# /=.
+  case (32 <= i < 64) => ?.
+  + rewrite /get256_direct /pack32_t /(\bits8) wordP  /= => k kb.
+    by rewrite initiE 1:/# /= initiE 1:/# /= initiE 1:/# /= initiE 1:/# /= /#.
+  rewrite /get256_direct /set256_direct /get8 /pack32_t /(\bits8) wordP => k kb.
+  by rewrite initiE 1:/# /= initiE 1:/# /= initiE 1:/# /= ifT 1:/# initiE 1:/# /= initiE 1:/# /= initiE /= 1:/# initiE /= /#.
++ by smt(size_ge0).
++ by smt(size_ge0).
+qed.
+
+phoare K_derive_message_representative_ph' _vk_hash _ctx _msg :
+ [ K.__derive_message_representative
+ : arg.`1 = _vk_hash /\
+   arg.`3 = List.size _ctx /\
+   memread Glob.mem arg.`2 arg.`3 = _ctx /\
+   arg.`5 = List.size _msg /\
+   memread Glob.mem arg.`4 arg.`5 = _msg /\
+   arg.`2 + List.size _ctx < W64.modulus /\
+   arg.`4 + List.size _msg < W64.modulus
+ ==> res = Array64.of_list witness (SHAKE256
+       (to_list _vk_hash ++ [W8.zero; truncateu8 (W64.of_int (List.size _ctx))]
+        ++ _ctx ++ _msg) 64)
+ ] = 1%r.
+proof.
+by conseq K_derive_message_representative_ll
+          (K_derive_message_representative_h' _vk_hash _ctx _msg).
+qed.
+*)
 phoare derive_message_representative_ph _vk_hash _ctx _msg :
  [ M.__derive_message_representative
  : arg.`1 = _vk_hash /\
    arg.`3 = List.size _ctx /\
    memread Glob.mem arg.`2 arg.`3 = _ctx /\
    arg.`5 = List.size _msg /\
-   memread Glob.mem arg.`4 arg.`5 = _msg
+   memread Glob.mem arg.`4 arg.`5 = _msg /\
+   arg.`2 + List.size _ctx < W64.modulus /\
+   arg.`4 + List.size _msg < W64.modulus
  ==> res = Array64.of_list witness (Bytes64.to_list
      (H_mu (Bytes64.of_list (to_list _vk_hash))
            ([W8.zero; truncateu8 (W64.of_int (List.size _ctx))] ++ _ctx ++ _msg)))
  ] = 1%r.
-admitted. (* TODO: NEED MISSING STATEMENTS IN FORMOSA-KECCAK *)
+ admitted.
+ (* 
+proof.
+have Hconseq := (K_derive_message_representative_ph' _vk_hash _ctx _msg).
+conseq derive_message_representative_eq Hconseq => |>.
++ move => &1 ???????; exists Glob.mem{1} arg{1}  =>/=;do split;smt(W64.to_uint_cmp pow2_64).
+rewrite Bytes64.of_listK;1: by rewrite size_SHAKE256 // Bytes64.to_listK.
+congr;congr.  
+rewrite Bytes64.of_listK;1: by rewrite size_to_list. 
+by rewrite -!catA /=.
+qed.
+*)

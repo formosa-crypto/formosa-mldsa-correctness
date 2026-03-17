@@ -78,9 +78,10 @@ rewrite WArray32.get256E pack32E wordP => i ib.
 rewrite /(\bits8) initiE 1:/# /= initiE 1:/# /= initiE 1:/# /= initiE 1:/# /#.
 qed.
 
-lemma keygen_internal
-    (RO <: LeakyRO):
-    equiv [ MLDSA(MLDSA_XOFA, MLDSA_XOFS, RO).keygen_derand ~ M.__keygen_internal :
+require import Array2.
+
+lemma ml_dsa_65_keygen_correct :
+    equiv [ MLDSA(MLDSA_XOFA, MLDSA_XOFS, MLDSA_XOF_SIB, SIB_RO).keygen_derand ~ M.ml_dsa_65_keygen :
        arg{1} = Bytes32.of_list (to_list arg{2}.`3)
      ==>
        res{1}.`2 = BytesPK.of_list (to_list res{2}.`1) /\
@@ -91,6 +92,8 @@ have Eta_val := mldsa65_Eta.
 have Hlvec := mldsa65_lvec.
 have Hkvec := mldsa65_kvec.
 proc => /=.
+inline {2} M.__keygen_internal.
+wp;sp 0 3.
 seq 0 13 : #pre; 1: by auto.
 
 (* expanding seeds *)
@@ -98,8 +101,24 @@ sp 2 0.
 seq 0 2 : (#pre /\
  prf_output{2} =
    Array128.of_list witness (Bytes32.to_list rho{1} ++ Bytes64.to_list rhop{1} ++ Bytes32.to_list _K{1})).
-+ admit. (* TODO: REFACTORING TO USE FORMOSA-KECCAK *)
-
+  inline {2} M.__initialize_xof.
+  ecall {2} (squeeze_128_bytes_correct prf_output{2}
+               (to_list randomness{2} ++ [W8.of_int 6; W8.of_int 5])).
+  wp;ecall {2} (shake256_absorb_34_ph randomness{2}
+               (Array2.of_list witness [W8.of_int 6; W8.of_int 5])).
+  wp; skip => /> &1;split; 1: by smt(Array2.tP Array2.get_of_list Array2.get_setE).
+  move => ?; split; 1: by smt(Array2.of_listK Array2.tP Array2.get_of_list Array2.get_setE).
+  move => ?. 
+  + congr; rewrite !Bytes32.of_listK.
+    + by rewrite size_to_list.
+    + by rewrite size_take 1:/# Keccak1600_Spec.size_SHAKE256 /#.
+    + by rewrite size_to_list.
+    + by rewrite size_drop 1:/# Keccak1600_Spec.size_SHAKE256 /#.
+  rewrite !Bytes64.of_listK.
+  + by rewrite size_take 1:/# size_drop 1:/# Keccak1600_Spec.size_SHAKE256 /#.
+  rewrite -takeD 1,2:/# /= cat_take_drop !Bytes34.of_listK.
+  + by rewrite size_cat size_to_list /=.
+  by rewrite mldsa65_kvec mldsa65_lvec /=. 
 (* expanding A *)
 sp;seq 1 1: (#pre /\ liftu_wpolymat (mat_unflatten256 matrix_A{2}) = _A{1} /\
             wpolymat_urng (mat_unflatten256 matrix_A{2}) 1).

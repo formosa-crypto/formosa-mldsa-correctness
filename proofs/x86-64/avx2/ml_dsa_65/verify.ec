@@ -3,7 +3,7 @@ require import AllCore List IntDiv RealExp.
 from Jasmin require import JModel_x86.
 
 from JazzEC require import Ml_dsa_65_avx2 Mldsa_65_prelude Matrix_A Hashing
-                           Signature Challenge.
+                           Signature Challenge Row_vector.
 
 require import CircuitBindings Bindings XArray48.
 
@@ -96,6 +96,11 @@ lemma ml_dsa_65_verify_correct _m :
 proof.
 have Hlvec := mldsa65_lvec.
 have Hkvec := mldsa65_kvec.
+have HLambda := mldsa65_lambda.
+have HEta := mldsa65_Eta.
+have Htau := mldsa65_tau.
+have Hgamma1 := mldsa65_gamma1.
+
 proc => /=; conseq |>.
 
 sp 0 2.
@@ -116,28 +121,36 @@ seq 1 0 : (#pre /\
 seq 1 1 : (#pre /\
     ct{1} = BytesCT.init (fun i => signature{2}.[i]) /\
     lifts_wpolylvec (lvec_unflatten256 signer_response{2}) = z{1} /\
-    (h{1} = None => result{2} = -W64.one) /\
+    (h{1} = None => result1{2} = -W64.one) /\
     (h{1} <> None =>
-        result{2} = W64.zero /\
+        result1{2} = W64.zero /\
         liftu_wpolykvec (kvec_unflatten256 hints{2}) = oget h{1} /\
         wpolykvec_urng (kvec_unflatten256 hints{2}) 2)).
 + ecall (signature_decode signature{2}).
   by auto.
 
-if; last first.
-+ by auto => /> &2 ????  ->; rewrite to_uint_eq /=  minus_one oneE /=.
-+ auto => /> &1 &2 ???? H H0;split => H1; 1: by smt().
-  case (h{1} = None) => H2; last by smt().
-  have := H H2; rewrite H1 /=.
-  by rewrite to_uint_eq /= minus_one oneE /=.
-
+seq 0 1 : (#pre /\
+    (!infnorm z{1} (gamma1 - Beta)=> result2{2} <> W64.of_int 0) /\
+    (infnorm z{1} (gamma1 - Beta) => result2{2} = W64.zero)).
++ ecall {2} (check_row_vector_infinity_norm_correct signer_response{2} ((1 `<<` gamma1m1_bits) - 49 * w1_bits)).
+  by auto => /> &1 &2 ?????? rr0; rewrite /(`<<`) /= /#.
+  
+if {1}; last first.
++ sp 0 1; rcondf {2} 1;1: by auto => />;smt(@W64).
+  by auto => /> &2 ????  ->;smt(@W64).
+  
+sp;if {2}; last first.
++ wp; call {1} (: true ==> true); 1: by proc*; exlim  rho => _rho;  call (SampleInBall_correct _rho).
+  wp; call {1} (: true ==> true); 1: by proc*; exlim  rho => _rho;  call (ExpandA_correct _rho).
+  by auto => />;smt(@W64).
+  
 (* expand A *)
 seq 1 1 : (#pre /\
       liftu_wpolymat (mat_unflatten256 matrix_A{2}) = _A{1} /\
       wpolymat_urng (mat_unflatten256 matrix_A{2}) 1).
   + ecall{1} (ExpandA_correct rho{1}).
     ecall{2} (matrix_A_correct (Array32.init (fun i => verification_key{2}.[i]))).
-    auto => |> &1 &2 ??????? rr -> ?;congr.
+    auto => |> &1 &2 ?????????? rr0 -> ?;congr.
     apply Bytes32.tP => k kb.
     do 2!(rewrite Bytes32.get_of_list //).
     rewrite get_to_list initiE 1:/# /=.
@@ -181,7 +194,7 @@ swap {2} [3..4] -2.
     wp; skip => /> &1 &2 *.
     rewrite BytesCT.tP => i ib.
     rewrite BytesCT.initiE 1:/# BytesCT.get_of_list 1:/#.
-    by rewrite get_to_list initiE; smt(mldsa65_lambda).
+    by rewrite get_to_list initiE /#.
 
 (* jump over algebra *)
 seq 2 4 :
@@ -204,10 +217,14 @@ seq 0 1 : (#pre /\
  wp;skip => /> &1 &2 *.
  pose xx := H_ct
    (H_mu (H_tr (BytesPK.of_list (to_list verification_key{2})))
-      (W8.zero :: truncateu8 context{2}.[1] :: (memread _m (to_uint context{2}.[0]) (to_uint context{2}.[1]) ++
-                                                memread _m message_pointer{2} message_size{2}))) (
-   w1Encode w1{1}). admit. (* Something's wrong *)
- 
+      (W8.zero :: truncateu8 context{2}.[1] :: (memread _m (to_uint context{2}.[0]) (to_uint context{2}.[1]) ++  memread _m message_pointer{2} message_size{2}))) (
+   w1Encode w1{1}).
+have -> /=: infnorm (lifts_wpolylvec (lvec_unflatten256 signer_response{2})) (gamma1 - Beta) by smt(@W64).
+suff: ((BytesCT.init ("_.[_]" signature{2}) = xx) <=>  (Array48.of_list witness (BytesCT.to_list xx) = Array48.init ("_.[_]" signature{2}))); last first.
++ by rewrite tP BytesCT.tP /=;split => H i ib; have := H i _;[ by smt() | rewrite get_of_list 1:/# BytesCT.get_to_list BytesCT.initiE 1:/# /= initiE /#  | by smt() | rewrite get_of_list 1:/# BytesCT.get_to_list BytesCT.initiE 1:/# /= initiE /# ].
+
+move => -> ; pose bb := Array48.of_list witness (BytesCT.to_list xx) = Array48.init ("_.[_]" signature{2}).
+case (bb) => /=;smt(@W64).
 
 (* algebra *)
 admit.

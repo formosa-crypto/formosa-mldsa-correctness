@@ -9719,16 +9719,17 @@ module M = {
     return polynomial;
   }
   proc polynomial____check_infinity_norm (polynomial:W32.t Array256.t,
-                                          threshold:int) : W8.t = {
-    var result:W8.t;
+                                          threshold:int) : W64.t = {
+    var result:W64.t;
     var temp:W64.t;
     var threshold_vector:W256.t;
     var exceeds_any:W256.t;
-    var offset:W64.t;
     var coefficients:W256.t;
     var exceeds:W256.t;
     var msb_mask:W32.t;
     var zf:bool;
+    var res8:W8.t;
+    var offset:int;
     var  _0:bool;
     var  _1:bool;
     var  _2:bool;
@@ -9737,38 +9738,37 @@ module M = {
     threshold_vector <- (zeroextu256 (VMOV_64 temp));
     threshold_vector <- (VPBROADCAST_8u32 (truncateu32 threshold_vector));
     exceeds_any <- (set0_256);
-    offset <- (W64.of_int 0);
-    while ((offset \ult (W64.of_int ((256 * 32) %/ 8)))) {
+    offset <- 0;
+    while ((offset < ((256 * 32) %/ 8))) {
       coefficients <-
-      (get256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-      (W64.to_uint offset));
+      (get256_direct (WArray1024.init32 (fun i => polynomial.[i])) offset);
       coefficients <- (VPABS_8u32 coefficients);
       exceeds <- (VPCMPGT_8u32 coefficients threshold_vector);
       exceeds_any <- (VPOR_256 exceeds_any exceeds);
-      offset <- (offset + (W64.of_int 32));
+      offset <- (offset + 32);
     }
     exceeds_any <- exceeds_any;
     msb_mask <- (MOVEMASK_8u32 exceeds_any);
     ( _0,  _1,  _2,  _3, zf) <- (TEST_32 msb_mask msb_mask);
-    result <- (SETcc (! zf));
+    res8 <- (SETcc (! zf));
+    result <- (zeroextu64 res8);
     return result;
   }
   proc polynomial____shift_coefficients_left (polynomial:W32.t Array256.t) : 
   W32.t Array256.t = {
-    var offset:W64.t;
     var coefficients:W256.t;
-    offset <- (W64.of_int 0);
-    while ((offset \ult (W64.of_int ((256 * 32) %/ 8)))) {
+    var offset:int;
+    offset <- 0;
+    while ((offset < ((256 * 32) %/ 8))) {
       coefficients <-
-      (get256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-      (W64.to_uint offset));
+      (get256_direct (WArray1024.init32 (fun i => polynomial.[i])) offset);
       coefficients <- (VPSLL_8u32 coefficients (W128.of_int 13));
       polynomial <-
       (Array256.init
       (WArray1024.get32
       (WArray1024.set256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-      (W64.to_uint offset) coefficients)));
-      offset <- (offset + (W64.of_int 32));
+      offset coefficients)));
+      offset <- (offset + 32);
     }
     return polynomial;
   }
@@ -9834,6 +9834,24 @@ module M = {
       i <- (i + 1);
     }
     return out;
+  }
+  proc row_vector____check_infinity_norm (vector:W32.t Array1280.t,
+                                          threshold:int) : W64.t = {
+    var result:W64.t;
+    var i:int;
+    var vector_element:W32.t Array256.t;
+    var ret:W64.t;
+    vector_element <- witness;
+    result <- (W64.of_int 0);
+    i <- 0;
+    while ((i < 5)) {
+      vector_element <-
+      (Array256.init (fun i_0 => vector.[((i * 256) + i_0)]));
+      ret <@ polynomial____check_infinity_norm (vector_element, threshold);
+      result <- (result `|` ret);
+      i <- (i + 1);
+    }
+    return result;
   }
   proc column_vector__reduce32 (vector:W32.t Array1536.t) : W32.t Array1536.t = {
     var aux:W32.t Array256.t;
@@ -11171,16 +11189,17 @@ module M = {
      _1 <- aux_2;
     return matrix_A;
   }
-  proc __initialize_xof (randomness:W8.t Array32.t, number_of_rows:W8.t,
-                         number_of_columns:W8.t) : W256.t Array7.t = {
-    var state:W256.t Array7.t;
+  proc __keygen_prf (prf_output:W8.t Array128.t, randomness:W8.t Array32.t) : 
+  W8.t Array128.t = {
     var extra:W8.t Array2.t;
+    var state:W256.t Array7.t;
     extra <- witness;
     state <- witness;
-    extra.[0] <- number_of_rows;
-    extra.[1] <- number_of_columns;
+    extra.[0] <- (W8.of_int 6);
+    extra.[1] <- (W8.of_int 5);
     state <@ shake256_absorb_34 (randomness, extra);
-    return state;
+    prf_output <@ squeeze_128_bytes (prf_output, state);
+    return prf_output;
   }
   proc __keygen_internal (verification_key:W8.t Array1952.t,
                           signing_key:W8.t Array4032.t,
@@ -11190,7 +11209,6 @@ module M = {
     var aux_2:W8.t Array2496.t;
     var aux:W8.t Array640.t;
     var aux_0:W8.t Array768.t;
-    var state:W256.t Array7.t;
     var prf_output:W8.t Array128.t;
     var seed_for_matrix_A:W8.t Array32.t;
     var matrix_A:W32.t Array7680.t;
@@ -11211,15 +11229,13 @@ module M = {
     seed_for_error_vectors <- witness;
     seed_for_matrix_A <- witness;
     seed_for_signing <- witness;
-    state <- witness;
     t <- witness;
     t0 <- witness;
     t1 <- witness;
     verification_key_hash <- witness;
     verification_key_pointer_copy <- witness;
     (* Erased call to spill *)
-    state <@ __initialize_xof (randomness, (W8.of_int 6), (W8.of_int 5));
-    prf_output <@ squeeze_128_bytes (prf_output, state);
+    prf_output <@ __keygen_prf (prf_output, randomness);
     seed_for_matrix_A <- (Array32.init (fun i => prf_output.[(0 + i)]));
     matrix_A <@ sample____matrix_A (seed_for_matrix_A);
     seed_for_error_vectors <-
@@ -11549,7 +11565,7 @@ module M = {
     var commitment_encoded:W8.t Array768.t;
     var commitment_hash:W8.t Array48.t;
     var verifier_challenge:W32.t Array256.t;
-    var infinity_norm_check_result:W8.t;
+    var infinity_norm_check_result:W64.t;
     var i:int;
     var signer_response:W32.t Array1280.t;
     var total_ones_in_hint:W64.t;
@@ -11650,11 +11666,11 @@ module M = {
       commitment_hash);
       (* Erased call to unspill *)
       verifier_challenge <@ polynomial__ntt (verifier_challenge);
-      infinity_norm_check_result <- (W8.of_int 0);
+      infinity_norm_check_result <- (W64.of_int 0);
       i <- 0;
       while ((i < 5)) {
         infinity_norm_check_result <- infinity_norm_check_result;
-        if ((infinity_norm_check_result = (W8.of_int 0))) {
+        if ((infinity_norm_check_result = (W64.of_int 0))) {
           aux <@ __compute_signer_response_element ((Array256.init
                                                     (fun i_0 => s1.[(
                                                                     (
@@ -11682,7 +11698,7 @@ module M = {
       i <- 0;
       while ((i < 6)) {
         infinity_norm_check_result <- infinity_norm_check_result;
-        if ((infinity_norm_check_result = (W8.of_int 0))) {
+        if ((infinity_norm_check_result = (W64.of_int 0))) {
           s2_element <- (Array256.init (fun i_0 => s2.[((i * 256) + i_0)]));
           cs2 <@ polynomial__pointwise_montgomery_multiply_and_reduce (
           cs2, s2_element, verifier_challenge);
@@ -11693,7 +11709,7 @@ module M = {
           infinity_norm_check_result <@ polynomial____check_infinity_norm (
           w0_minus_cs2, (((8380417 - 1) %/ 32) - (49 * 4)));
           infinity_norm_check_result <- infinity_norm_check_result;
-          if ((infinity_norm_check_result = (W8.of_int 0))) {
+          if ((infinity_norm_check_result = (W64.of_int 0))) {
             t0_element <-
             (Array256.init (fun i_0 => t0.[((i * 256) + i_0)]));
             ct0 <@ polynomial__pointwise_montgomery_multiply_and_reduce (
@@ -11703,7 +11719,7 @@ module M = {
             infinity_norm_check_result <@ polynomial____check_infinity_norm (
             ct0, ((8380417 - 1) %/ 32));
             infinity_norm_check_result <- infinity_norm_check_result;
-            if ((infinity_norm_check_result = (W8.of_int 0))) {
+            if ((infinity_norm_check_result = (W64.of_int 0))) {
               total_ones_in_hint <- total_ones_in_hint;
               if ((total_ones_in_hint \ule (W64.of_int 55))) {
                 w0_minus_cs2_plus_ct0 <@ polynomial__add (w0_minus_cs2_plus_ct0,
@@ -11848,6 +11864,8 @@ module M = {
     var result:W64.t;
     var signer_response:W32.t Array1280.t;
     var hints:W32.t Array1536.t;
+    var result1:W64.t;
+    var result2:W64.t;
     var matrix_A:W32.t Array7680.t;
     var a_times_signer_response:W32.t Array1536.t;
     var challenge:W32.t Array256.t;
@@ -11865,8 +11883,11 @@ module M = {
     signer_response <- witness;
     verification_key_hash <- witness;
     (* Erased call to spill *)
-    (signer_response, hints, result) <@ signature____decode (signer_response,
+    (signer_response, hints, result1) <@ signature____decode (signer_response,
     hints, signature_encoded);
+    result2 <@ row_vector____check_infinity_norm (signer_response,
+    ((1 `<<` 19) - (49 * 4)));
+    result <- (result1 `|` result2);
     if ((result = (W64.of_int 0))) {
       (* Erased call to spill *)
       matrix_A <@ sample____matrix_A ((Array32.init

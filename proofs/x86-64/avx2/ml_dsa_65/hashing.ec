@@ -278,6 +278,20 @@ module K = {
     return commitment_hash;
   }
 
+  (* Absorbs (randomness || [6; 5]) via SHAKE256 and squeezes 128 bytes,
+     corresponding to the keygen PRF expansion step in __keygen_internal. *)
+  proc __keygen_prf (prf_output:W8.t Array128.t, randomness:W8.t Array32.t) : W8.t Array128.t = {
+    var state:W256.t Array7.t;
+    var extra:W8.t Array2.t;
+    extra <- witness;
+    state <- witness;
+    extra.[0] <- W8.of_int 6;
+    extra.[1] <- W8.of_int 5;
+    state <@ shake256_absorb_34(randomness, extra);
+    prf_output <@ squeeze_128_bytes(prf_output, state);
+    return prf_output;
+  }
+
   (* __derive_message_representative uses the streaming updstate interface
      (variable-length absorb via memory pointers). No abstract EC theory exists
      for updstate in formosa-keccak yet, so K mirrors M exactly — calling M's
@@ -411,6 +425,13 @@ equiv derive_message_representative_eq:
  M.__derive_message_representative ~ K.__derive_message_representative
  : ={arg, Glob.mem} ==> ={res, Glob.mem}
  by sim.
+
+equiv keygen_prf_eq:
+ M.__keygen_prf ~ K.__keygen_prf
+ : ={arg} ==> ={res}.
+proc.
+inline *; sim; auto => />.
+qed.
 
 (****************************************************************************)
 (* Correctness lemmas (absorbed-state characterization)                     *)
@@ -809,7 +830,52 @@ proof.
 by conseq derive_commitment_hash_eq (derive_commitment_hash_ph' _mu _w1) => // /#.
 qed.
 
-(* 
+(* ---------- __keygen_prf ---------- *)
+
+(* Absorbs (randomness || [W8.of_int 6; W8.of_int 5]) with SHAKE256 and
+   squeezes 128 bytes. The 6 and 5 are the ML-DSA-65 matrix dimensions
+   ROWS_IN_MATRIX_A and COLUMNS_IN_MATRIX_A. *)
+
+hoare keygen_prf_h' _seed :
+ K.__keygen_prf
+ : arg.`2 = _seed
+ ==> res = Array128.of_list witness (SHAKE256 (to_list _seed ++ [W8.of_int 6; W8.of_int 5]) 128).
+proof.
+proc. 
+ecall (squeeze_128_bytes_h' prf_output (to_list _seed ++ [W8.of_int 6; W8.of_int 5])).
+ecall (shake256_absorb_34_h' _seed (Array2.of_list witness [W8.of_int 6; W8.of_int 5])).
+wp; skip => /> *; split;1: by 
+ by smt(Array2.tP Array2.get_of_list Array2.get_setE).
+by move => ? /=; congr;congr;congr;congr;rewrite of_listK //=.
+qed.
+
+lemma keygen_prf_ll : islossless K.__keygen_prf.
+proof.
+proc.
+call squeeze_128_bytes_ll.
+call shake256_absorb_34_ll.
+by auto.
+qed.
+
+phoare keygen_prf_ph' _seed :
+ [ K.__keygen_prf
+ : arg.`2 = _seed
+ ==> res = Array128.of_list witness (SHAKE256 (to_list _seed ++ [W8.of_int 6; W8.of_int 5]) 128)
+ ] = 1%r.
+proof.
+by conseq keygen_prf_ll (keygen_prf_h' _seed).
+qed.
+
+phoare keygen_prf_correct _seed :
+ [ M.__keygen_prf
+ : arg.`2 = _seed
+ ==> res = Array128.of_list witness (SHAKE256 (to_list _seed ++ [W8.of_int 6; W8.of_int 5]) 128)
+ ] = 1%r.
+proof.
+by conseq keygen_prf_eq (keygen_prf_ph' _seed) => // /#.
+qed.
+
+(*
 lemma K_derive_message_representative_ll : islossless K.__derive_message_representative.
 proof.
 proc.

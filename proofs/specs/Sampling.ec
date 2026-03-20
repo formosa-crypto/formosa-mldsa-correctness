@@ -39,6 +39,19 @@ module SampleInBall(XOF : XOF_SIB) = {
    }
 }.
 
+(*************** Begin SampleInBall CORRECTNESS BRIDGE ****************)
+
+
+op sampleInBall : BytesCT.t ->  poly * sib_leakage. (* Write me: PY *)
+
+
+phoare SampleInBall_correct _ct :
+   [ SampleInBall(MLDSA_XOF_SIB).sample : arg = _ct ==> res = sampleInBall _ct] = 1%r.
+admitted. (* FIXME: PY *)
+
+(*************** End SampleInBall CORRECTNESS BRIDGE ****************)
+
+
 module (SIB_RO : LeakyRO) (XOF : XOF_SIB) = {
    proc init() = {}
    proc get(mu : Bytes64.t, w1 : BytesW1.t): (BytesCT.t * poly) * sib_leakage = {

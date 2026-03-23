@@ -71,11 +71,22 @@ have hh : hoare [ M.__compare_commitment_hashes :
   + move => &hr [<- <-] rr [Hl Hr].
     case (rr <> W64.of_int 65535); last first.
     + move => HH; rewrite Hr //=.
-      move => ?; rewrite ifF 1:/# /=; smt(@W64 pow2_64).
+      move => ?; rewrite ifF 1:/# /=.
+      case (lhs{hr} = rhs{hr}) => ?; 1: by
+       rewrite to_uint_eq /=; smt(W64.to_uint_cmp pow2_64).
+      by rewrite to_uint_eq /= to_uintN /=. 
   by circuit.
 conseq compare_commitment_hashes_ll hh;smt().
 qed.
 
+lemma or64_ne0 w1 w2 :
+        w1 `|` w2 <> W64.zero <=>
+        (w1 <> W64.zero \/ w2 <> W64.zero).
+have ? := W64.wordP w1 w2.
+have ? := W64.orwE w1 w2.
+split => H; 1: by smt(W64.orw0 W64.or0w W64.zerowE).
+by elim H; rewrite !wordP /= negb_forall /= /#.
+qed.
 
 lemma ml_dsa_65_verify_correct _m :
     equiv [ MLDSA(MLDSA_XOFA, MLDSA_XOFS, MLDSA_XOF_SIB, SIB_RO).verify ~ M.ml_dsa_65_verify :
@@ -142,21 +153,26 @@ seq 0 1 : (#pre /\
   by smt(). 
   
 if {1}; last first.
-+ sp 0 1; rcondf {2} 1;1: by auto => />;smt(@W64).
-  by auto => /> &2 ?????  ->;smt(@W64).
++ sp 0 1; rcondf {2} 1.
+  + auto => |> &hr ?????-> ??. 
+    have ? : (- W64.one <> W64.zero); last by smt(or64_ne0).
+    by rewrite to_uint_eq to_uintN  /=.
+  auto => /> &2 ?????  -> ??.
+    have ? : (- W64.one <> W64.zero); last by smt(or64_ne0).
+    by rewrite to_uint_eq to_uintN  /=.
   
 sp;if {2}; last first.
 + wp; call {1} (: true ==> true); 1: by proc*; exlim  rho => _rho;  call (SampleInBall_correct _rho).
   wp; call {1} (: true ==> true); 1: by proc*; exlim  rho => _rho;  call (ExpandA_correct _rho).
   auto => /> &1 &2 ?????????? rr0 rr1.
-  have ? : (!wpolylvec_infnorm_lt (gamma1 - Beta) (lvec_unflatten256 signer_response{2})) by smt(@W64).
+  have ? : (!wpolylvec_infnorm_lt (gamma1 - Beta) (lvec_unflatten256 signer_response{2})) by smt(or64_ne0).
   have Hrng : wpolylvec_srng (lvec_unflatten256 signer_response{2}) (gamma1-1) gamma1 by smt().
   have Hb : 0 < gamma1 - Beta <= q %/ 2 by rewrite /Beta /=; smt(mldsa65_gamma1 mldsa65_tau mldsa65_Eta).
   have Hq1 : (gamma1-1) + 1 <= q %/ 2 by smt(mldsa65_gamma1).
   have Hq2 : gamma1 <= q %/ 2 by smt(mldsa65_gamma1).
   have ? := wpolylvec_infnorm_unliftE (gamma1-Beta) (gamma1-1) gamma1
               (lvec_unflatten256 signer_response{2}) Hb Hq1 Hq2 Hrng.
-  smt().
+  by smt().
   
 (* expand A *)
 seq 1 1 : (#pre /\
@@ -233,7 +249,7 @@ seq 0 1 : (#pre /\
    (H_mu (H_tr (BytesPK.of_list (to_list verification_key{2})))
       (W8.zero :: truncateu8 context{2}.[1] :: (memread _m (to_uint context{2}.[0]) (to_uint context{2}.[1]) ++  memread _m message_pointer{2} message_size{2}))) (
    w1Encode w1{1}).
-have ? : wpolylvec_infnorm_lt (gamma1 - Beta) (lvec_unflatten256 signer_response{2}) by smt(@W64).
+have ? : wpolylvec_infnorm_lt (gamma1 - Beta) (lvec_unflatten256 signer_response{2}) by smt(or64_ne0).
 have -> /=: infnorm_lt (lifts_wpolylvec (lvec_unflatten256 signer_response{2})) (gamma1 - Beta).
 + have /# := wpolylvec_infnorm_liftE (gamma1-Beta) 
               (lvec_unflatten256 signer_response{2}) _ _; by smt(). 
@@ -241,7 +257,7 @@ suff: ((BytesCT.init ("_.[_]" signature{2}) = xx) <=>  (Array48.of_list witness 
 + by rewrite tP BytesCT.tP /=;split => H i ib; have := H i _;[ by smt() | rewrite get_of_list 1:/# BytesCT.get_to_list BytesCT.initiE 1:/# /= initiE /#  | by smt() | rewrite get_of_list 1:/# BytesCT.get_to_list BytesCT.initiE 1:/# /= initiE /# ].
 
 move => -> ; pose bb := Array48.of_list witness (BytesCT.to_list xx) = Array48.init ("_.[_]" signature{2}).
-case (bb) => /=;smt(@W64).
+by case (bb) => //=; rewrite to_uint_eq to_uintN /=.
 
 (* algebra *)
 admit.

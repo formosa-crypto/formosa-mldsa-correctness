@@ -38,7 +38,7 @@ seq 2 : (#pre /\ threshold_vector = W256.of_int (524091)).
     by rewrite /BitEncoding.BS2Int.int2bs nth_mkseq 1:/# /= nth_mkseq 1:/# /= /#.
   rewrite /BitEncoding.BS2Int.int2bs nth_mkseq 1:/# /=.
   rewrite pdiv_small; last by smt().
-  smt(@StdOrder pow2_64).
+  smt(StdOrder.IntOrder.ler_lt_trans StdOrder.IntOrder.ler_weexpn2l pow2_64).
   
 proc change ^while.1 : { coefficients <- if (0 <= offset*8 <= 32*256-256)
                                          then BSWAS_256u32_256.sliceget polynomial (offset*8)

@@ -57,10 +57,10 @@ while (0 <= i <= 5 /\ threshold = _threshold /\ vector = _a /\ _threshold = 5240
    + by move : Hrng; rewrite /wpolylvec_srng !allP /#.
 
 move => H H0 rr0 Htp Hfp;do split;1,2,5..:smt().
-+ case (result{hr} = W64.zero) => ?; smt(@W64).
++ case (result{hr} = W64.zero) => ?; smt(W64.or0w).
 + case (result{hr} = W64.zero) => HH.
   + move => ?; have ? : !wpoly_srng 524091 524091 (lvec_unflatten256 _a).[_i] by smt().
-    by smt(@W64).
+    by smt(W64.or0w).
   + move => ?; move : HH.
     by admit. (* To do: Claude *)
 qed.

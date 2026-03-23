@@ -102,7 +102,7 @@ module MLDSA_SP(S : Samplers, XOFSIB : XOF_SIB, RO : LeakyRO) = {
        cs2 <- invnttv (ntt_smul ch s2);
        z <- y + cs1;
        r0 <- polykvec_LowBits (w - cs2);
-       bz <- infnorm z (gamma1 - Beta) && 
+       bz <- infnorm_lt z (gamma1 - Beta) && 
                   infnorm r0 (gamma2 - Beta);
        leakage <- leakage ++ [ CheckZ bz ];
        if (bz) {
@@ -131,7 +131,7 @@ module MLDSA_SP(S : Samplers, XOFSIB : XOF_SIB, RO : LeakyRO) = {
       wapprox <- invnttv (ntt_mulmxv _A (nttv z) - (ntt_smul (ntt c) (nttv (smul t1 (incoeff (2^d))))));
       w1 <- UseHint (oget h) wapprox;
       ctp <- H_ct mu (w1Encode w1);
-      rb <- infnorm z (gamma1 - Beta);
+      rb <- infnorm_lt z (gamma1 - Beta);
       rb <- rb && ct = ctp;
     }
     return rb;

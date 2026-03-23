@@ -55,8 +55,14 @@ op zerov : polylvec = LArray.init (fun i =>  poly_zero).
 op (+) (v1 v2 : polylvec) : polylvec = alg2polylvec ((polylvec2alg v1) + (polylvec2alg v2)).
 op ntt_smul(p : poly, v : polylvec) : polylvec = map (fun p' => basemul p' p) v.
 
-op infnorm(v : polylvec, bound : int) : bool = 
+op infnorm_lt(v : polylvec, bound : int) : bool =
   all (fun ii => all (fun jj => `|v.[ii].[jj]| < bound) (iota_ 0 256)) (iota_ 0 lvec).
+
+lemma infnorm_lt_polyE (v : polylvec) (bound : int) :
+  infnorm_lt v bound <=> all (fun i => infnorm_lt v.[i] bound) (iota_ 0 lvec).
+proof.
+by rewrite /infnorm_lt  allP /=; split => H i Hi /=.
+qed.
 
 op mods(v : polylvec, md : int) : polylvec = 
   map (fun (vi : poly) => map (fun c => incoeff (smod (asint c) md)) vi) v.

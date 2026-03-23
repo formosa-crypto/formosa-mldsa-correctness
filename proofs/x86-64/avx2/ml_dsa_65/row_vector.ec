@@ -10,6 +10,8 @@ require import CircuitBindings Bindings XArray48.
 from Spec require import GFq Rq Serialization Conversion Parameters VecMat
                          Symmetric Sampling MLDSA_W32_Rep MLDSA.
 
+require import Polynomial.
+                         
 import PolyLVec PolyKVec PolyMat.
 import CDR Round Zq PolyReduceZq BigZMod.
 
@@ -21,13 +23,44 @@ require import BitEncoding.
 from CryptoSpecs require import JWordList.
 import BitChunking.
 
-lemma check_row_vector_infinity_norm_correct (z0 : W32.t Array1280.t) (b0 : int) :
+lemma row_vector____check_infinity_norm_correct (_a : W32.t Array1280.t) (_threshold : int) :
     phoare [ M.row_vector____check_infinity_norm :
-        arg = (z0,b0)
+       _threshold = (1 `<<` gamma1m1_bits) - 49 * w1_bits /\
+       arg.`1 = _a /\ arg.`2 = _threshold /\
+       wpolylvec_srng (lvec_unflatten256 _a) (gamma1-1) gamma1 
         ==>
-        ((infnorm (lifts_wpolylvec (lvec_unflatten256 z0)) b0) => res = W64.zero) /\
-        ((!infnorm (lifts_wpolylvec (lvec_unflatten256 z0)) (gamma1 - Beta)) => res <> W64.zero) 
+        (wpolylvec_infnorm_lt _threshold (lvec_unflatten256 _a) => res = W64.zero) /\
+        (!wpolylvec_infnorm_lt _threshold (lvec_unflatten256 _a) => res <> W64.zero)
     ] = 1%r.
 proof.
-proc. 
-admit. qed.
+have Hlvec := mldsa65_lvec.
+have Hgamma1 := mldsa65_gamma1.
+  
+rewrite /(`<<`) /=.
+proc => /=.
+while (0 <= i <= 5 /\ threshold = _threshold /\ vector = _a /\ _threshold = 524092 /\
+       wpolylvec_srng (lvec_unflatten256 _a) (gamma1 - 1) gamma1  /\
+       ((forall k, 0<=k<i =>
+          wpoly_srng (524092-1) (524092-1) (lvec_unflatten256 _a).[k]) => result = W64.zero) /\
+        (! (forall k, 0<=k<i =>
+          wpoly_srng (524092-1) (524092-1) (lvec_unflatten256 _a).[k]) => result <> W64.zero)) (5 - i); last first.
++ auto => |> ?; split;1:smt().
+  move => i rr;split;1:smt().
+  move => ??? Ht Hf; rewrite /wpolylvec_infnorm_lt /wpolylvec_srng !allP /= /#.
+
+ move => ?.
+ exlim i => _i.
+ wp; call (polynomial____check_infinity_norm_ph ((lvec_unflatten256 _a).[_i]) _threshold).
+ rewrite /(`<<`) /=; auto => |> &hr ??Hrng Ht Hf ?;split.
+ + split.
+   + by rewrite tP => k kb; rewrite initiE 1:/# /= /lvec_unflatten256 initiE 1:/# /= get_of_list /= 1:/# nth_sub /#.
+   + by move : Hrng; rewrite /wpolylvec_srng !allP /#.
+
+move => H H0 rr0 Htp Hfp;do split;1,2,5..:smt().
++ case (result{hr} = W64.zero) => ?; smt(@W64).
++ case (result{hr} = W64.zero) => HH.
+  + move => ?; have ? : !wpoly_srng 524091 524091 (lvec_unflatten256 _a).[_i] by smt().
+    by smt(@W64).
+  + move => ?; move : HH.
+    by admit. (* To do: Claude *)
+qed.

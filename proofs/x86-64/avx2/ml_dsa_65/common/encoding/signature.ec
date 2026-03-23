@@ -591,6 +591,7 @@ lemma signature_decode (_signature : W8.t Array3309.t) :
        ==>
        res{1}.`1 = init (fun i => _signature.[i])
     /\ lifts_wpolylvec (lvec_unflatten256 res{2}.`1) = res{1}.`2
+    /\ wpolylvec_srng (lvec_unflatten256 res{2}.`1) (gamma1-1) gamma1
     /\ (res{1}.`3 = None  => res{2}.`3 = -W64.one)
     /\ (res{1}.`3 <> None =>
           res{2}.`3 = W64.zero
@@ -612,31 +613,32 @@ seq 3 0 : (#pre
 
 ecall (decode_hint).
 wp; ecall {2} (gamma1_decode_ph (Array3200.init  (fun (i0 : int) => signature_encoded{2}.[48 + i0]))).
-conseq (: _ ==> forall k, 0 <= k < lvec =>
+conseq (: _ ==>
+    forall k, 0 <= k < lvec =>
     z{1}.[k] = BitUnpack
      (mkseq (fun (ii : int) =>  sigma{1}.[lambda %/ w1_bits +
                640 * k + ii]) 640) (gamma1 - 1) gamma1).
-+ auto => /> z1 Hz1 rr0 H1; split.
++ auto => /> z1 Hz1_eq rr0 Hrr0_eq Hrr0_rng; split.
   + apply (eq_from_nth witness);
      1: by  rewrite size_take 1:/# size_drop 1:/# !size_to_list /= /#.
     move => k; rewrite size_take 1:/# size_drop 1:/# !size_to_list /= => kb.
     rewrite nth_take 1,2:/# nth_drop 1,2:/# get_to_list initiE 1:/#.
-    by rewrite initiE /#. 
+    by rewrite initiE /#.
   move => H2 rr1 rr2 ? ?; do split.
   + by apply BytesCT.tP => k kb; rewrite !initiE /#.
-  + rewrite H1 tP => k kb; rewrite mapiE 1:/# /= Hz1 1:/# /lvec_unflatten640.
+  + rewrite tP => k kb;  rewrite Hz1_eq 1:/# /= Hrr0_eq mapiE 1:/# /= /lvec_unflatten640.
     congr.
     apply (eq_from_nth W8.zero); 1: by rewrite size_to_list size_mkseq //=.
     move => i; rewrite size_to_list => ib.
     rewrite (nth_change_dfl witness);1:smt(Array640.size_to_list).
     rewrite get_to_list initiE 1:/# /= initiE 1:/# /= nth_mkseq 1:/# /= initiE 1:/# /=.
-    rewrite nth_mkseq 1:/# /= BytesSig.initiE /#. 
+    rewrite nth_mkseq 1:/# /= BytesSig.initiE /#.
 
 while{1} (0 <= i{1} <= lvec /\
   forall (k : int),
     0 <= k < i{1} =>
     z{1}.[k] =
-    BitUnpack (mkseq (fun (ii : int) => sigma{1}.[lambda %/ w1_bits + 640 * k + ii]) 640) (gamma1 - 1) gamma1) (lvec - i{1}); last by auto => /#.
+    BitUnpack (mkseq (fun (ii : int) => sigma{1}.[lambda %/ w1_bits + 640 * k + ii]) 640) (gamma1 - 1) gamma1) (lvec - i{1}); last by auto => /> /#.
 move => ??; auto => /> &hr ????;split;last by smt().
 do split; 1,2:smt().
 move => k ??.

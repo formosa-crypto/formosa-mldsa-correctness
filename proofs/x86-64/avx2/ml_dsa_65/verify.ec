@@ -118,9 +118,11 @@ seq 1 0 : (#pre /\
           (2^(q_bits - d) - 1))).
 + ecall{1} (pkDecode_corr pk{1}).
   by auto.
+  print signature_decode.
 seq 1 1 : (#pre /\
     ct{1} = BytesCT.init (fun i => signature{2}.[i]) /\
     lifts_wpolylvec (lvec_unflatten256 signer_response{2}) = z{1} /\
+    wpolylvec_srng (lvec_unflatten256 signer_response{2}) (gamma1 - 1) gamma1 /\
     (h{1} = None => result1{2} = -W64.one) /\
     (h{1} <> None =>
         result1{2} = W64.zero /\
@@ -128,21 +130,33 @@ seq 1 1 : (#pre /\
         wpolykvec_urng (kvec_unflatten256 hints{2}) 2)).
 + ecall (signature_decode signature{2}).
   by auto.
-
 seq 0 1 : (#pre /\
-    (!infnorm z{1} (gamma1 - Beta)=> result2{2} <> W64.of_int 0) /\
-    (infnorm z{1} (gamma1 - Beta) => result2{2} = W64.zero)).
-+ ecall {2} (check_row_vector_infinity_norm_correct signer_response{2} ((1 `<<` gamma1m1_bits) - 49 * w1_bits)).
-  by auto => /> &1 &2 ?????? rr0; rewrite /(`<<`) /= /#.
+    (!wpolylvec_infnorm_lt (gamma1 - Beta) (lvec_unflatten256 signer_response{2}) => result2{2} <> W64.of_int 0) /\
+    (wpolylvec_infnorm_lt (gamma1 - Beta) (lvec_unflatten256 signer_response{2})  => result2{2} = W64.zero)).
++ ecall {2} (row_vector____check_infinity_norm_correct signer_response{2} ((1 `<<` gamma1m1_bits) - 49 * w1_bits)).
+  auto => /> &1 &2 ?????? rr0.
+  have -> : (1 `<<` gamma1m1_bits) - 49 * w1_bits = gamma1 - Beta
+    by rewrite /(`<<`) /= /Beta /=; smt(mldsa65_gamma1 mldsa65_tau mldsa65_Eta).
+  have Hbnd : 0 < gamma1 - Beta <= q %/ 2
+    by rewrite /Beta /=; smt(mldsa65_gamma1 mldsa65_tau mldsa65_Eta). 
+  by smt(). 
   
 if {1}; last first.
 + sp 0 1; rcondf {2} 1;1: by auto => />;smt(@W64).
-  by auto => /> &2 ????  ->;smt(@W64).
+  by auto => /> &2 ?????  ->;smt(@W64).
   
 sp;if {2}; last first.
 + wp; call {1} (: true ==> true); 1: by proc*; exlim  rho => _rho;  call (SampleInBall_correct _rho).
   wp; call {1} (: true ==> true); 1: by proc*; exlim  rho => _rho;  call (ExpandA_correct _rho).
-  by auto => />;smt(@W64).
+  auto => /> &1 &2 ?????????? rr0 rr1.
+  have ? : (!wpolylvec_infnorm_lt (gamma1 - Beta) (lvec_unflatten256 signer_response{2})) by smt(@W64).
+  have Hrng : wpolylvec_srng (lvec_unflatten256 signer_response{2}) (gamma1-1) gamma1 by smt().
+  have Hb : 0 < gamma1 - Beta <= q %/ 2 by rewrite /Beta /=; smt(mldsa65_gamma1 mldsa65_tau mldsa65_Eta).
+  have Hq1 : (gamma1-1) + 1 <= q %/ 2 by smt(mldsa65_gamma1).
+  have Hq2 : gamma1 <= q %/ 2 by smt(mldsa65_gamma1).
+  have ? := wpolylvec_infnorm_unliftE (gamma1-Beta) (gamma1-1) gamma1
+              (lvec_unflatten256 signer_response{2}) Hb Hq1 Hq2 Hrng.
+  smt().
   
 (* expand A *)
 seq 1 1 : (#pre /\
@@ -150,7 +164,7 @@ seq 1 1 : (#pre /\
       wpolymat_urng (mat_unflatten256 matrix_A{2}) 1).
   + ecall{1} (ExpandA_correct rho{1}).
     ecall{2} (matrix_A_correct (Array32.init (fun i => verification_key{2}.[i]))).
-    auto => |> &1 &2 ?????????? rr0 -> ?;congr.
+    auto => |> &1 &2 ??????????? rr0 -> ?;congr.
     apply Bytes32.tP => k kb.
     do 2!(rewrite Bytes32.get_of_list //).
     rewrite get_to_list initiE 1:/# /=.
@@ -219,7 +233,10 @@ seq 0 1 : (#pre /\
    (H_mu (H_tr (BytesPK.of_list (to_list verification_key{2})))
       (W8.zero :: truncateu8 context{2}.[1] :: (memread _m (to_uint context{2}.[0]) (to_uint context{2}.[1]) ++  memread _m message_pointer{2} message_size{2}))) (
    w1Encode w1{1}).
-have -> /=: infnorm (lifts_wpolylvec (lvec_unflatten256 signer_response{2})) (gamma1 - Beta) by smt(@W64).
+have ? : wpolylvec_infnorm_lt (gamma1 - Beta) (lvec_unflatten256 signer_response{2}) by smt(@W64).
+have -> /=: infnorm_lt (lifts_wpolylvec (lvec_unflatten256 signer_response{2})) (gamma1 - Beta).
++ have /# := wpolylvec_infnorm_liftE (gamma1-Beta) 
+              (lvec_unflatten256 signer_response{2}) _ _; by smt(). 
 suff: ((BytesCT.init ("_.[_]" signature{2}) = xx) <=>  (Array48.of_list witness (BytesCT.to_list xx) = Array48.init ("_.[_]" signature{2}))); last first.
 + by rewrite tP BytesCT.tP /=;split => H i ib; have := H i _;[ by smt() | rewrite get_of_list 1:/# BytesCT.get_to_list BytesCT.initiE 1:/# /= initiE /#  | by smt() | rewrite get_of_list 1:/# BytesCT.get_to_list BytesCT.initiE 1:/# /= initiE /# ].
 

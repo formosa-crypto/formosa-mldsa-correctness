@@ -404,6 +404,25 @@ VPBLENDVB_128(w1@128, w2@128, c@128) -> @128 =
     w2
   )
 
+# Intel intrinsic: _mm256_cmpgt_epi32
+VPCMPGT_8u32(w1@256, w2@256) -> @256 =
+  map<32, 8>(
+    fun w1@32 w2@32 . sgt<32>(w1, w2) ? 0xffffffff@32 : 0x00000000@32,
+    w1,
+    w2
+  )
+
+# Intel intrinsic: _mm256_abs_epi32
+VPABS_8u32(w@256) -> @256 =
+  map<32, 8>(
+    fun w@32 . sgt<32>(0@32, w) ? sub<32>(0@32, w) : w,
+    w
+  )
+
+# Intel intrinsic: _mm256_movemask_ps
+MOVEMASK_8u32(w@256) -> @32 =
+  uextend<8, 32>(map<32, 8>(fun i@32 . i[31], w))
+
 # Intel intrinsic: _mm256_cmpgt_epi16
 VPCMPGT_16u16(w1@256, w2@256) -> @256 =
   map<16, 16>(

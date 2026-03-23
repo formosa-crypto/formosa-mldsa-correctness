@@ -59,5 +59,8 @@ op poly_MakeHint(p1 : poly, p2 : poly) : poly =
 op poly_HighBits(p : poly) : poly = 
      init (fun ii => incoeff (HighBits p.[ii])).
 
-op poly_LowBits(p : poly) : poly = 
+op poly_LowBits(p : poly) : poly =
      init (fun ii => incoeff (LowBits p.[ii])).
+
+op infnorm_lt (p : poly) (bound : int) : bool =
+  all (fun j => `|p.[j]| < bound) (iota_ 0 256).

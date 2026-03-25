@@ -23,6 +23,15 @@ require import BitEncoding.
 from CryptoSpecs require import JWordList.
 import BitChunking.
 
+lemma or64_ne0 w1 w2 :
+        w1 `|` w2 <> W64.zero <=>
+        (w1 <> W64.zero \/ w2 <> W64.zero).
+have ? := W64.wordP w1 w2.
+have ? := W64.orwE w1 w2.
+split => H; 1: by smt(W64.orw0 W64.or0w W64.zerowE).
+by elim H; rewrite !wordP /= negb_forall /= /#.
+qed.
+
 lemma row_vector____check_infinity_norm_correct (_a : W32.t Array1280.t) (_threshold : int) :
     phoare [ M.row_vector____check_infinity_norm :
        _threshold = (1 `<<` gamma1m1_bits) - 49 * w1_bits /\
@@ -62,5 +71,5 @@ move => H H0 rr0 Htp Hfp;do split;1,2,5..:smt().
   + move => ?; have ? : !wpoly_srng 524091 524091 (lvec_unflatten256 _a).[_i] by smt().
     by smt(W64.or0w).
   + move => ?; move : HH.
-    by admit. (* To do: Claude *)
+    smt(or64_ne0).
 qed.

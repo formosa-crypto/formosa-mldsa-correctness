@@ -94,7 +94,7 @@ have Hkvec := mldsa65_kvec.
 proc => /=.
 inline {2} M.__keygen_internal.
 wp;sp 0 3.
-seq 0 12 : #pre; 1: by auto.
+seq 0 11 : #pre; 1: by auto.
 
 (* expanding seeds *)
 sp 2 0.
@@ -142,12 +142,12 @@ seq 1 1 : (#pre
 
 proc change {2} [10..11] : [s1p : W32.t Array1280.t] {
    s1p <@ M.row_vector__ntt(s1);
-   t <@ M.row_vector____multiply_with_matrix_A(matrix_A, s1p);
-}; 1: by sim.
+   (t1, t0) <@ M.__compute_t0_t1(matrix_A, s1p, s2);
+}; 1:  by sim.  
 
-swap {2} [10..16] -9.
+swap {2} [10..11] -9.
 
-seq 2 7 : (#pre
+seq 2 2 : (#pre
       /\ lifts_wpolykvec (kvec_unflatten256 t0{2}) = t0{1}
       /\ wpolykvec_srng (kvec_unflatten256 t0{2}) (dpow - 1) dpow 
       /\ liftu_wpolykvec (kvec_unflatten256 t1{2}) = t1{1}

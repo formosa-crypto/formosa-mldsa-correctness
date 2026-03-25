@@ -11201,6 +11201,23 @@ module M = {
     prf_output <@ squeeze_128_bytes (prf_output, state);
     return prf_output;
   }
+  proc __compute_t0_t1 (matrix_A:W32.t Array7680.t, s1:W32.t Array1280.t,
+                        s2:W32.t Array1536.t) : W32.t Array1536.t *
+                                                W32.t Array1536.t = {
+    var t1:W32.t Array1536.t;
+    var t0:W32.t Array1536.t;
+    var t:W32.t Array1536.t;
+    t <- witness;
+    t0 <- witness;
+    t1 <- witness;
+    t <@ row_vector____multiply_with_matrix_A (matrix_A, s1);
+    t <@ column_vector__reduce32 (t);
+    t <@ column_vector__invert_ntt_montgomery (t);
+    t <@ column_vector____add (t, s2);
+    t <@ column_vector____conditionally_add_modulus (t);
+    (t1, t0) <@ column_vector____power2round (t);
+    return (t1, t0);
+  }
   proc __keygen_internal (verification_key:W8.t Array1952.t,
                           signing_key:W8.t Array4032.t,
                           randomness:W8.t Array32.t) : W8.t Array1952.t *
@@ -11217,7 +11234,6 @@ module M = {
     var s1:W32.t Array1280.t;
     var s2:W32.t Array1536.t;
     var copied_32_bytes:W256.t;
-    var t:W32.t Array1536.t;
     var t1:W32.t Array1536.t;
     var t0:W32.t Array1536.t;
     var verification_key_pointer_copy:W8.t Array1952.t;
@@ -11229,7 +11245,6 @@ module M = {
     seed_for_error_vectors <- witness;
     seed_for_matrix_A <- witness;
     seed_for_signing <- witness;
-    t <- witness;
     t0 <- witness;
     t1 <- witness;
     verification_key_hash <- witness;
@@ -11293,12 +11308,7 @@ module M = {
     );
     (* Erased call to spill *)
     s1 <@ row_vector__ntt (s1);
-    t <@ row_vector____multiply_with_matrix_A (matrix_A, s1);
-    t <@ column_vector__reduce32 (t);
-    t <@ column_vector__invert_ntt_montgomery (t);
-    t <@ column_vector____add (t, s2);
-    t <@ column_vector____conditionally_add_modulus (t);
-    (t1, t0) <@ column_vector____power2round (t);
+    (t1, t0) <@ __compute_t0_t1 (matrix_A, s1, s2);
     aux_1 <@ t1____encode ((Array1920.init
                            (fun i => verification_key.[(32 + i)])),
     t1);
@@ -11309,6 +11319,7 @@ module M = {
     );
     verification_key <- verification_key;
     verification_key_pointer_copy <- verification_key;
+    (* Erased call to unspill *)
     verification_key_hash <-
     (Array64.init (fun i => signing_key.[(64 + i)]));
     verification_key_hash <@ hash_verification_key (verification_key_hash,
@@ -11540,12 +11551,193 @@ module M = {
     signer_response_element <@ polynomial__reduce32 (signer_response_element);
     return signer_response_element;
   }
+  proc __compute_z_and_check_norm (s1:W32.t Array1280.t,
+                                   verifier_challenge:W32.t Array256.t,
+                                   mask:W32.t Array1280.t,
+                                   signer_response:W32.t Array1280.t) : 
+  W32.t Array1280.t * W64.t = {
+    var aux:W32.t Array256.t;
+    var infinity_norm_check_result:W64.t;
+    var i:int;
+    infinity_norm_check_result <- (W64.of_int 0);
+    i <- 0;
+    while ((i < 5)) {
+      infinity_norm_check_result <- infinity_norm_check_result;
+      if ((infinity_norm_check_result = (W64.of_int 0))) {
+        aux <@ __compute_signer_response_element ((Array256.init
+                                                  (fun i_0 => s1.[((i * 256) +
+                                                                  i_0)])
+                                                  ),
+        verifier_challenge,
+        (Array256.init (fun i_0 => mask.[((i * 256) + i_0)])),
+        (Array256.init (fun i_0 => signer_response.[((i * 256) + i_0)])));
+        signer_response <-
+        (Array1280.init
+        (fun i_0 => (if ((i * 256) <= i_0 < ((i * 256) + 256)) then aux.[
+                                                                    (
+                                                                    i_0 -
+                                                                    (i * 256))] else 
+                    signer_response.[i_0]))
+        );
+        infinity_norm_check_result <@ polynomial____check_infinity_norm (
+        (Array256.init (fun i_0 => signer_response.[((i * 256) + i_0)])),
+        ((1 `<<` 19) - (49 * 4)));
+      } else {
+        
+      }
+      i <- (i + 1);
+    }
+    return (signer_response, infinity_norm_check_result);
+  }
+  proc __apply_cs2_and_check_norm (w0_minus_cs2:W32.t Array1536.t,
+                                   w0:W32.t Array1536.t,
+                                   s2:W32.t Array1536.t,
+                                   verifier_challenge:W32.t Array256.t,
+                                   infinity_norm_check_result:W64.t) : 
+  W32.t Array1536.t * W64.t = {
+    var aux:W32.t Array256.t;
+    var cs2:W32.t Array256.t;
+    var i:int;
+    cs2 <- witness;
+    i <- 0;
+    while ((i < 6)) {
+      infinity_norm_check_result <- infinity_norm_check_result;
+      if ((infinity_norm_check_result = (W64.of_int 0))) {
+        cs2 <@ polynomial__pointwise_montgomery_multiply_and_reduce (
+        cs2, (Array256.init (fun i_0 => s2.[((i * 256) + i_0)])),
+        verifier_challenge);
+        cs2 <@ polynomial__invert_ntt_montgomery (cs2);
+        aux <@ polynomial__subtract ((Array256.init
+                                     (fun i_0 => w0_minus_cs2.[((i * 256) +
+                                                               i_0)])
+                                     ),
+        (Array256.init (fun i_0 => w0.[((i * 256) + i_0)])), cs2);
+        w0_minus_cs2 <-
+        (Array1536.init
+        (fun i_0 => (if ((i * 256) <= i_0 < ((i * 256) + 256)) then aux.[
+                                                                    (
+                                                                    i_0 -
+                                                                    (i * 256))] else 
+                    w0_minus_cs2.[i_0]))
+        );
+        aux <@ polynomial__reduce32 ((Array256.init
+                                     (fun i_0 => w0_minus_cs2.[((i * 256) +
+                                                               i_0)])
+                                     ));
+        w0_minus_cs2 <-
+        (Array1536.init
+        (fun i_0 => (if ((i * 256) <= i_0 < ((i * 256) + 256)) then aux.[
+                                                                    (
+                                                                    i_0 -
+                                                                    (i * 256))] else 
+                    w0_minus_cs2.[i_0]))
+        );
+        infinity_norm_check_result <@ polynomial____check_infinity_norm (
+        (Array256.init (fun i_0 => w0_minus_cs2.[((i * 256) + i_0)])),
+        (((8380417 - 1) %/ 32) - (49 * 4)));
+      } else {
+        
+      }
+      i <- (i + 1);
+    }
+    return (w0_minus_cs2, infinity_norm_check_result);
+  }
+  proc __apply_ct0_and_check_norm (w0_minus_cs2_plus_ct0:W32.t Array1536.t,
+                                   w0_minus_cs2:W32.t Array1536.t,
+                                   t0:W32.t Array1536.t,
+                                   verifier_challenge:W32.t Array256.t,
+                                   infinity_norm_check_result:W64.t) : 
+  W32.t Array1536.t * W64.t = {
+    var aux:W32.t Array256.t;
+    var ct0:W32.t Array256.t;
+    var i:int;
+    ct0 <- witness;
+    i <- 0;
+    while ((i < 6)) {
+      infinity_norm_check_result <- infinity_norm_check_result;
+      if ((infinity_norm_check_result = (W64.of_int 0))) {
+        ct0 <@ polynomial__pointwise_montgomery_multiply_and_reduce (
+        ct0, (Array256.init (fun i_0 => t0.[((i * 256) + i_0)])),
+        verifier_challenge);
+        ct0 <@ polynomial__invert_ntt_montgomery (ct0);
+        ct0 <@ polynomial__reduce32 (ct0);
+        infinity_norm_check_result <@ polynomial____check_infinity_norm (
+        ct0, ((8380417 - 1) %/ 32));
+        infinity_norm_check_result <- infinity_norm_check_result;
+        if ((infinity_norm_check_result = (W64.of_int 0))) {
+          aux <@ polynomial__add ((Array256.init
+                                  (fun i_0 => w0_minus_cs2_plus_ct0.[
+                                              ((i * 256) + i_0)])
+                                  ),
+          (Array256.init (fun i_0 => w0_minus_cs2.[((i * 256) + i_0)])),
+          ct0);
+          w0_minus_cs2_plus_ct0 <-
+          (Array1536.init
+          (fun i_0 => (if ((i * 256) <= i_0 < ((i * 256) + 256)) then 
+                      aux.[(i_0 - (i * 256))] else w0_minus_cs2_plus_ct0.[
+                                                   i_0]))
+          );
+        } else {
+          
+        }
+      } else {
+        
+      }
+      i <- (i + 1);
+    }
+    return (w0_minus_cs2_plus_ct0, infinity_norm_check_result);
+  }
+  proc __make_hint_vector (w0_minus_cs2_plus_ct0:W32.t Array1536.t,
+                           w1:W32.t Array1536.t, hint_0:W32.t Array1536.t,
+                           infinity_norm_check_result:W64.t) : W32.t Array1536.t *
+                                                               W64.t = {
+    var total_ones_in_hint:W64.t;
+    var i:int;
+    var hint_element:W32.t Array256.t;
+    var ones_in_hint:W64.t;
+    hint_element <- witness;
+    total_ones_in_hint <- (W64.of_int 0);
+    i <- 0;
+    while ((i < 6)) {
+      infinity_norm_check_result <- infinity_norm_check_result;
+      if ((infinity_norm_check_result = (W64.of_int 0))) {
+        hint_element <-
+        (Array256.init (fun i_0 => hint_0.[((i * 256) + i_0)]));
+        (hint_element, ones_in_hint) <@ polynomial____make_hint (hint_element,
+        (Array256.init (fun i_0 => w0_minus_cs2_plus_ct0.[((i * 256) + i_0)])
+        ), (Array256.init (fun i_0 => w1.[((i * 256) + i_0)])));
+        hint_0 <-
+        (Array1536.init
+        (fun i_0 => (if ((i * 256) <= i_0 < ((i * 256) + 256)) then hint_element.[
+                                                                    (
+                                                                    i_0 -
+                                                                    (i * 256))] else 
+                    hint_0.[i_0]))
+        );
+        total_ones_in_hint <- (total_ones_in_hint + ones_in_hint);
+      } else {
+        
+      }
+      i <- (i + 1);
+    }
+    infinity_norm_check_result <- infinity_norm_check_result;
+    if ((infinity_norm_check_result = (W64.of_int 0))) {
+      total_ones_in_hint <- total_ones_in_hint;
+      if ((total_ones_in_hint \ule (W64.of_int 55))) {
+        infinity_norm_check_result <- (W64.of_int 0);
+      } else {
+        infinity_norm_check_result <- (W64.of_int 1);
+      }
+    } else {
+      
+    }
+    return (hint_0, infinity_norm_check_result);
+  }
   proc __sign_internal (signature:W8.t Array3309.t,
                         signing_key:W8.t Array4032.t, context_pointer:int,
                         context_size:int, message_pointer:int,
                         message_size:int, randomness:W8.t Array32.t) : 
   W8.t Array3309.t = {
-    var aux:W32.t Array256.t;
     var seed_for_matrix_A:W8.t Array32.t;
     var matrix_A:W32.t Array7680.t;
     var message_representative:W8.t Array64.t;
@@ -11565,38 +11757,24 @@ module M = {
     var commitment_encoded:W8.t Array768.t;
     var commitment_hash:W8.t Array48.t;
     var verifier_challenge:W32.t Array256.t;
-    var infinity_norm_check_result:W64.t;
-    var i:int;
     var signer_response:W32.t Array1280.t;
-    var total_ones_in_hint:W64.t;
-    var hint_elements_processed:W64.t;
-    var s2_element:W32.t Array256.t;
-    var cs2:W32.t Array256.t;
-    var w0_minus_cs2:W32.t Array256.t;
-    var t0_element:W32.t Array256.t;
-    var ct0:W32.t Array256.t;
-    var w0_minus_cs2_plus_ct0:W32.t Array256.t;
+    var infinity_norm_check_result:W64.t;
+    var w0_minus_cs2:W32.t Array1536.t;
+    var w0_minus_cs2_plus_ct0:W32.t Array1536.t;
     var hint_0:W32.t Array1536.t;
-    var hint_element:W32.t Array256.t;
-    var ones_in_hint:W64.t;
     commitment_encoded <- witness;
     commitment_hash <- witness;
-    cs2 <- witness;
-    ct0 <- witness;
     hint_0 <- witness;
-    hint_element <- witness;
     mask <- witness;
     mask_as_ntt <- witness;
     matrix_A <- witness;
     message_representative <- witness;
     s1 <- witness;
     s2 <- witness;
-    s2_element <- witness;
     seed_for_mask <- witness;
     seed_for_matrix_A <- witness;
     signer_response <- witness;
     t0 <- witness;
-    t0_element <- witness;
     verifier_challenge <- witness;
     w <- witness;
     w0 <- witness;
@@ -11604,32 +11782,29 @@ module M = {
     w0_minus_cs2_plus_ct0 <- witness;
     w1 <- witness;
     (* Erased call to spill *)
-    seed_for_matrix_A <- (Array32.init (fun i_0 => signing_key.[(0 + i_0)]));
+    seed_for_matrix_A <- (Array32.init (fun i => signing_key.[(0 + i)]));
     matrix_A <@ sample____matrix_A (seed_for_matrix_A);
     (* Erased call to unspill *)
     message_representative <@ __derive_message_representative ((Array64.init
-                                                               (fun i_0 => 
+                                                               (fun i => 
                                                                signing_key.[
                                                                (64 + 
-                                                               i_0)])),
+                                                               i)])),
     context_pointer, context_size, message_pointer, message_size);
     (* Erased call to unspill *)
     (* Erased call to unspill *)
     seed_for_mask <@ derive_seed_for_mask ((Array32.init
-                                           (fun i_0 => signing_key.[(32 +
-                                                                    i_0)])
-                                           ),
+                                           (fun i => signing_key.[(32 + i)])),
     randomness, message_representative, seed_for_mask);
     (* Erased call to unspill *)
     s1 <@ s1____decode (s1,
-    (Array640.init (fun i_0 => signing_key.[(((32 + 32) + 64) + i_0)])));
+    (Array640.init (fun i => signing_key.[(((32 + 32) + 64) + i)])));
     s2 <@ s2____decode (s2,
     (Array768.init
-    (fun i_0 => signing_key.[((((32 + 32) + 64) + (5 * 128)) + i_0)])));
+    (fun i => signing_key.[((((32 + 32) + 64) + (5 * 128)) + i)])));
     t0 <@ t0__decode (t0,
     (Array2496.init
-    (fun i_0 => signing_key.[(((((32 + 32) + 64) + (5 * 128)) + (6 * 128)) +
-                             i_0)])
+    (fun i => signing_key.[(((((32 + 32) + 64) + (5 * 128)) + (6 * 128)) + i)])
     ));
     s1 <@ row_vector__ntt (s1);
     s2 <@ column_vector__ntt (s2);
@@ -11642,13 +11817,13 @@ module M = {
       j <- (W64.of_int 0);
       while ((j \ult (W64.of_int (5 * ((256 * 32) %/ 8))))) {
         copied_32_bytes <-
-        (get256_direct (WArray5120.init32 (fun i_0 => mask.[i_0]))
+        (get256_direct (WArray5120.init32 (fun i => mask.[i]))
         (W64.to_uint j));
         mask_as_ntt <-
         (Array1280.init
         (WArray5120.get32
         (WArray5120.set256_direct
-        (WArray5120.init32 (fun i_0 => mask_as_ntt.[i_0])) (W64.to_uint j)
+        (WArray5120.init32 (fun i => mask_as_ntt.[i])) (W64.to_uint j)
         copied_32_bytes)));
         j <- (j + (W64.of_int 32));
       }
@@ -11666,98 +11841,18 @@ module M = {
       commitment_hash);
       (* Erased call to unspill *)
       verifier_challenge <@ polynomial__ntt (verifier_challenge);
-      infinity_norm_check_result <- (W64.of_int 0);
-      i <- 0;
-      while ((i < 5)) {
-        infinity_norm_check_result <- infinity_norm_check_result;
-        if ((infinity_norm_check_result = (W64.of_int 0))) {
-          aux <@ __compute_signer_response_element ((Array256.init
-                                                    (fun i_0 => s1.[(
-                                                                    (
-                                                                    i * 256) +
-                                                                    i_0)])
-                                                    ),
-          verifier_challenge,
-          (Array256.init (fun i_0 => mask.[((i * 256) + i_0)])),
-          (Array256.init (fun i_0 => signer_response.[((i * 256) + i_0)])));
-          signer_response <-
-          (Array1280.init
-          (fun i_0 => (if ((i * 256) <= i_0 < ((i * 256) + 256)) then 
-                      aux.[(i_0 - (i * 256))] else signer_response.[i_0]))
-          );
-          infinity_norm_check_result <@ polynomial____check_infinity_norm (
-          (Array256.init (fun i_0 => signer_response.[((i * 256) + i_0)])),
-          ((1 `<<` 19) - (49 * 4)));
-        } else {
-          
-        }
-        i <- (i + 1);
-      }
-      total_ones_in_hint <- (W64.of_int 0);
-      hint_elements_processed <- (W64.of_int 0);
-      i <- 0;
-      while ((i < 6)) {
-        infinity_norm_check_result <- infinity_norm_check_result;
-        if ((infinity_norm_check_result = (W64.of_int 0))) {
-          s2_element <- (Array256.init (fun i_0 => s2.[((i * 256) + i_0)]));
-          cs2 <@ polynomial__pointwise_montgomery_multiply_and_reduce (
-          cs2, s2_element, verifier_challenge);
-          cs2 <@ polynomial__invert_ntt_montgomery (cs2);
-          w0_minus_cs2 <@ polynomial__subtract (w0_minus_cs2,
-          (Array256.init (fun i_0 => w0.[((i * 256) + i_0)])), cs2);
-          w0_minus_cs2 <@ polynomial__reduce32 (w0_minus_cs2);
-          infinity_norm_check_result <@ polynomial____check_infinity_norm (
-          w0_minus_cs2, (((8380417 - 1) %/ 32) - (49 * 4)));
-          infinity_norm_check_result <- infinity_norm_check_result;
-          if ((infinity_norm_check_result = (W64.of_int 0))) {
-            t0_element <-
-            (Array256.init (fun i_0 => t0.[((i * 256) + i_0)]));
-            ct0 <@ polynomial__pointwise_montgomery_multiply_and_reduce (
-            ct0, t0_element, verifier_challenge);
-            ct0 <@ polynomial__invert_ntt_montgomery (ct0);
-            ct0 <@ polynomial__reduce32 (ct0);
-            infinity_norm_check_result <@ polynomial____check_infinity_norm (
-            ct0, ((8380417 - 1) %/ 32));
-            infinity_norm_check_result <- infinity_norm_check_result;
-            if ((infinity_norm_check_result = (W64.of_int 0))) {
-              total_ones_in_hint <- total_ones_in_hint;
-              if ((total_ones_in_hint \ule (W64.of_int 55))) {
-                w0_minus_cs2_plus_ct0 <@ polynomial__add (w0_minus_cs2_plus_ct0,
-                w0_minus_cs2, ct0);
-                hint_element <-
-                (Array256.init (fun i_0 => hint_0.[((i * 256) + i_0)]));
-                (hint_element, ones_in_hint) <@ polynomial____make_hint (
-                hint_element, w0_minus_cs2_plus_ct0,
-                (Array256.init (fun i_0 => w1.[((i * 256) + i_0)])));
-                hint_0 <-
-                (Array1536.init
-                (fun i_0 => (if ((i * 256) <= i_0 < ((i * 256) + 256)) then 
-                            hint_element.[(i_0 - (i * 256))] else hint_0.[
-                                                                  i_0]))
-                );
-                total_ones_in_hint <- (total_ones_in_hint + ones_in_hint);
-                hint_elements_processed <-
-                (hint_elements_processed + (W64.of_int 1));
-              } else {
-                
-              }
-            } else {
-              
-            }
-          } else {
-            
-          }
-        } else {
-          
-        }
-        i <- (i + 1);
-      }
-      if ((hint_elements_processed = (W64.of_int 6))) {
-        if ((total_ones_in_hint \ule (W64.of_int 55))) {
-          exit_rejection_sampling_loop <- (W8.of_int 1);
-        } else {
-          exit_rejection_sampling_loop <- (W8.of_int 0);
-        }
+      (signer_response, infinity_norm_check_result) <@ __compute_z_and_check_norm (
+      s1, verifier_challenge, mask, signer_response);
+      (w0_minus_cs2, infinity_norm_check_result) <@ __apply_cs2_and_check_norm (
+      w0_minus_cs2, w0, s2, verifier_challenge, infinity_norm_check_result);
+      (w0_minus_cs2_plus_ct0, infinity_norm_check_result) <@ __apply_ct0_and_check_norm (
+      w0_minus_cs2_plus_ct0, w0_minus_cs2, t0, verifier_challenge,
+      infinity_norm_check_result);
+      (hint_0, infinity_norm_check_result) <@ __make_hint_vector (w0_minus_cs2_plus_ct0,
+      w1, hint_0, infinity_norm_check_result);
+      infinity_norm_check_result <- infinity_norm_check_result;
+      if ((infinity_norm_check_result = (W64.of_int 0))) {
+        exit_rejection_sampling_loop <- (W8.of_int 1);
       } else {
         exit_rejection_sampling_loop <- (W8.of_int 0);
       }

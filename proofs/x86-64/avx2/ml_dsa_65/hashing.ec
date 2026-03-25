@@ -964,7 +964,7 @@ phoare derive_message_representative_ph _vk_hash _ctx _msg :
      (H_mu (Bytes64.of_list (to_list _vk_hash))
            ([W8.zero; truncateu8 (W64.of_int (List.size _ctx))] ++ _ctx ++ _msg)))
  ] = 1%r.
- admitted.
+ admitted. (* FIXME: Waiting for Keccak updstate *)
  (* 
 proof.
 have Hconseq := (K_derive_message_representative_ph' _vk_hash _ctx _msg).

@@ -20,4 +20,5 @@ lemma sample_challenge_correct :
        ==>
        lifts_wpoly res{2} = res{1}.`1
     ].
-admitted. (* FIXME *)
+proc. 
+admitted. (* FIXME: PY *)

@@ -79,14 +79,6 @@ have hh : hoare [ M.__compare_commitment_hashes :
 conseq compare_commitment_hashes_ll hh;smt().
 qed.
 
-lemma or64_ne0 w1 w2 :
-        w1 `|` w2 <> W64.zero <=>
-        (w1 <> W64.zero \/ w2 <> W64.zero).
-have ? := W64.wordP w1 w2.
-have ? := W64.orwE w1 w2.
-split => H; 1: by smt(W64.orw0 W64.or0w W64.zerowE).
-by elim H; rewrite !wordP /= negb_forall /= /#.
-qed.
 
 lemma ml_dsa_65_verify_correct _m :
     equiv [ MLDSA(MLDSA_XOFA, MLDSA_XOFS, MLDSA_XOF_SIB, SIB_RO).verify ~ M.ml_dsa_65_verify :

@@ -163,7 +163,7 @@ seq 2 2 : (#pre
   wp; ecall {1} (skEncode_corr rho{1} _K{1} tr{1} s1{1} s2{1} t0{1}).
   wp; ecall {1} (pkEncode_corr rho{1} t1{1}).
 
-  auto => /> ?????? rr1 Hrr1 rr2 Hrr2 rr3 Hrr3  rr4 Hrr4.
+  auto => /> ?????? rr1 [Hrr1 _] rr2 [Hrr2 _] rr3 Hrr3  rr4 Hrr4.
   split;congr.
   + apply (eq_from_nth witness); 1: by rewrite size_cat Bytes32.size_to_list size_kflatten_SimpleBitPack 1:/# size_to_list /#.
     move => k;rewrite size_cat Bytes32.size_to_list size_kflatten_SimpleBitPack 1:/# /= => Hk.

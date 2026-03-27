@@ -972,7 +972,24 @@ conseq derive_message_representative_eq Hconseq => |>.
 + move => &1 ???????; exists Glob.mem{1} arg{1}  =>/=;do split;smt(W64.to_uint_cmp pow2_64).
 rewrite Bytes64.of_listK;1: by rewrite size_SHAKE256 // Bytes64.to_listK.
 congr;congr.  
-rewrite Bytes64.of_listK;1: by rewrite size_to_list. 
+rewrite Bytes64.of_listK;1: by rewrite size_to_list.
 by rewrite -!catA /=.
 qed.
 *)
+
+(* ---------- derive_seed_for_mask ---------- *)
+
+(* Assembles block = k || randomness || mu (128 bytes) using four 256-bit
+   AVX2 copies, calls shake256_absorb_128, then squeeze_64_bytes.
+   The result is SHAKE256(k || randomness || mu, 64) = H_rhopp(K, coins, mu)
+   when rnd_to_list coins = to_list randomness. *)
+
+phoare derive_seed_for_mask_ph _k _randomness _mu _arr :
+  [ M.derive_seed_for_mask :
+    arg.`1 = _k /\ arg.`2 = _randomness /\ arg.`3 = _mu /\ arg.`4 = _arr
+    ==>
+    res = Array64.of_list witness
+            (SHAKE256 (to_list _k ++ to_list _randomness ++ to_list _mu) 64)
+  ] = 1%r.
+admitted. (* FIXME: prove by chaining shake256_absorb_128_ph and squeeze_64_bytes_correct
+             after showing the AVX2 block assembly produces to_list _k ++ to_list _randomness ++ to_list _mu *)

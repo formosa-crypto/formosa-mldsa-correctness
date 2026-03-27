@@ -204,9 +204,10 @@ qed.
 
 lemma t0_decode_to_polynomial _a :
    hoare [ M.t0____decode_polynomial :
-       t0_encoded = _a 
+       t0_encoded = _a
      ==>
        lifts_wpoly res = BitUnpack (to_list _a) (dpow-1) dpow
+       /\ wpoly_srng (dpow-1) dpow res
    ].
 proc => /=;inline *.
 print BSWAS_416u8_128_slicegetE.
@@ -241,12 +242,14 @@ conseq (_: _ ==>
     t0 = BSWA_256u32.init (fun i => t0_decode_to_polynomial_lane (W13.init (fun j =>
                _a.[(13*i+j) %/ 8].[(13*i+j) %% 8])))); last by circuit.
             
-(* Part 1 *)
-move=> &hr |>.
-rewrite /lifts_wpoly /=; apply (inj_eq Array256.to_list Array256.to_list_inj).
-
-
-by rewrite BitUnack_liftE ~-1:// !array256_mapE; do 2!congr => //.
+move=> &hr -> Hdecoded.
+split.
+- rewrite /lifts_wpoly /=; apply (inj_eq Array256.to_list Array256.to_list_inj).
+  by rewrite Hdecoded BitUnack_liftE ~-1:// !array256_mapE; do 2!congr => //.
+- rewrite /wpoly_srng Hdecoded allP => w; rewrite mem_iota /= => Hw.
+  rewrite initiE 1:/# /= /t0_decode_to_polynomial_lane.
+  have Hc := W13.to_uint_cmp (W13.init (fun j => _a.[(13*w+j) %/ 8].[(13*w+j) %% 8])).
+  smt(W32.to_sintK_small W32.to_uint_add W32.to_uint_neg W32.of_uintK W32.to_uintK zeroextu32E).
 qed.
 
 
@@ -255,43 +258,57 @@ import VecMat PolyLVec.
 require import Array416 Array1536 Array256 Array2496.
 
 lemma t0_decode _a  :
-    hoare [ M.t0__decode : 
-       encoded = _a 
+    hoare [ M.t0__decode :
+       encoded = _a
      ==>
-       lifts_wpolykvec (kvec_unflatten256 res) = 
+       lifts_wpolykvec (kvec_unflatten256 res) =
            KArray.map (fun p => BitUnpack (to_list p) (dpow-1) dpow) (kvec_unflatten416 _a)
+       /\ wpolykvec_srng (kvec_unflatten256 res) (dpow-1) dpow
    ].
 have Hkvec := mldsa65_kvec.
 proc => /=.
 while (0 <= i <= 6 /\ encoded = _a /\
        forall k, 0 <= k < i =>
        (lifts_wpolykvec (kvec_unflatten256 t0)).[k] =
-       (map (fun (p : W8.t Array416.t) => BitUnpack (to_list p) (Top.dpow - 1) Top.dpow) (kvec_unflatten416 _a)).[k]);
+       (map (fun (p : W8.t Array416.t) => BitUnpack (to_list p) (Top.dpow - 1) Top.dpow) (kvec_unflatten416 _a)).[k]
+       /\ wpoly_srng (dpow-1) dpow (kvec_unflatten256 t0).[k]);
        last first.
        + auto => /> &hr *;do split;1: smt().
-         move => i0 t00 *;rewrite tP => k kb; smt().
+         move => i0 t00 * H; rewrite tP => k kb; smt().
 wp; ecall (t0_decode_to_polynomial (Array416.init (fun (i_0 : int) => _a.[i * (d * n %/ 8) + i_0]))).
 auto => /> &hr ?? H ?; split;1:smt().
-move => ? rr Hrr;do split;1,2:smt().
+move => ? rr [Hrr Hrng]; do split;1,2:smt().
 move => k kbl kbh.
 case(0<=k<i{hr}) => *.
-+ have -> : (lifts_wpolykvec
-   (kvec_unflatten256
++ split.
+  + have -> : (lifts_wpolykvec
+     (kvec_unflatten256
+        (Array1536.init
+           (fun (i_0 : int) => if i{hr} * n <= i_0 < i{hr} * n + n then rr.[i_0 - i{hr} * n] else t0{hr}.[i_0])))).[k] =
+      (lifts_wpolykvec (kvec_unflatten256 t0{hr})).[k]; last by smt().
+    rewrite !mapiE 1..2:/# initiE 1:/# /= initiE 1:/# /= tP =>  ii iib.
+    rewrite mapiE 1:/# /= initiE 1:/# /= mapiE 1:/# /= initiE 1:/# /= !nth_sub 1,2:/# initiE 1:/# /= /#.
+  + have -> : (kvec_unflatten256
       (Array1536.init
-         (fun (i_0 : int) => if i{hr} * n <= i_0 < i{hr} * n + n then rr.[i_0 - i{hr} * n] else t0{hr}.[i_0])))).[k] =
-    (lifts_wpolykvec (kvec_unflatten256 t0{hr})).[k]; last by smt().
-  rewrite !mapiE 1..2:/# initiE 1:/# /= initiE 1:/# /= tP =>  ii iib.
-  rewrite mapiE 1:/# /= initiE 1:/# /= mapiE 1:/# /= initiE 1:/# /= !nth_sub 1,2:/# initiE 1:/# /= /#.
+         (fun (i_0 : int) => if i{hr} * n <= i_0 < i{hr} * n + n then rr.[i_0 - i{hr} * n] else t0{hr}.[i_0]))).[k] =
+      (kvec_unflatten256 t0{hr}).[k]; last by smt().
+    rewrite initiE 1:/# /= tP => ii iib; rewrite initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.
 have -> : k = i{hr} by smt().
-+ have -> : (lifts_wpolykvec
-   (kvec_unflatten256
++ split.
+  + have -> : (lifts_wpolykvec
+     (kvec_unflatten256
+        (Array1536.init
+           (fun (i_0 : int) => if i{hr} * n <= i_0 < i{hr} * n + n then rr.[i_0 - i{hr} * n] else t0{hr}.[i_0])))).[i{hr}]  =
+      (lifts_wpoly rr); last first.
+    + rewrite Hrr mapiE 1:/# /=;congr;congr;rewrite /input_unflatten initiE 1:/# /= tP => ii iib.
+      by rewrite initiE 1:/# get_of_list 1:/# /= nth_sub /#.
+    rewrite mapiE 1:/# /= initiE 1:/# /= tP => ii iib.
+    rewrite !mapiE 1,2:/# /= initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.
+  + have -> : (kvec_unflatten256
       (Array1536.init
-         (fun (i_0 : int) => if i{hr} * n <= i_0 < i{hr} * n + n then rr.[i_0 - i{hr} * n] else t0{hr}.[i_0])))).[i{hr}]  =
-    (lifts_wpoly rr); last first.
-  + rewrite Hrr mapiE 1:/# /=;congr;congr;rewrite /input_unflatten initiE 1:/# /= tP => ii iib.
-    by rewrite initiE 1:/# get_of_list 1:/# /= nth_sub /#.
-rewrite mapiE 1:/# /= initiE 1:/# /= tP => ii iib.
-rewrite !mapiE 1,2:/# /= initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.
+         (fun (i_0 : int) => if i{hr} * n <= i_0 < i{hr} * n + n then rr.[i_0 - i{hr} * n] else t0{hr}.[i_0]))).[i{hr}] = rr.
+    + rewrite initiE 1:/# /= tP => ii iib; rewrite initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.
+    by exact Hrng.
 qed.
 
 
@@ -304,11 +321,12 @@ while (0 <= input_offset <=  d * n %/ 8 - d /\ input_offset %% d = 0) (d * n %/ 
 qed.
 
 lemma t0_decode_ph _a  :
-    phoare [ M.t0__decode : 
-       encoded = _a 
+    phoare [ M.t0__decode :
+       encoded = _a
      ==>
-       lifts_wpolykvec (kvec_unflatten256 res) = 
+       lifts_wpolykvec (kvec_unflatten256 res) =
            KArray.map (fun p => BitUnpack (to_list p) (dpow-1) dpow) (kvec_unflatten416 _a)
+       /\ wpolykvec_srng (kvec_unflatten256 res) (dpow-1) dpow
     ] = 1%r by conseq t0_decode_ll (t0_decode _a).
 
 

@@ -40,6 +40,10 @@ lemma ilog_Eta : ilog 2 (Eta + Eta) = 3 by rewrite mldsa65_Eta /=.
 op error_polynomial_encode_lane(c : W32.t) : W4.t =
     BS_W32_W4_U.truncateu4 ((W32.of_int 4) + (-c)).
 
+op valid_eta_bytes (a : W8.t Array128.t) =
+    forall i, 0 <= i < 256 =>
+     (W4.init (fun j => a.[(4*i+j) %/ 8].[(4*i+j) %% 8])) \ule W4.of_int (2*Eta).
+
 lemma BitPack_liftE (p : wpoly) :
   wpoly_srng Eta Eta p =>
     BitPack (lifts_wpoly p) Eta Eta
@@ -95,6 +99,7 @@ lemma error_polynomial_encode _a :
        polynomial = _a /\ wpoly_srng 4 4 _a
      ==>
        to_list res = BitPack (lifts_wpoly _a) Eta Eta
+       /\ valid_eta_bytes res
    ].
 have Eta_val := mldsa65_Eta.
 proc;inline * => /=.
@@ -189,7 +194,9 @@ conseq (:
   rewrite to_sintK_small //=.
   by rewrite of_sintK /= /smod /= /#.
 
-+ by move => &hr [<- Hrng] ? /= => ->;rewrite BitPack_liftE /#.
++ move => &hr [<- Hrng] ? /= => ->.
+  split; 1: by rewrite BitPack_liftE /#.
+  admit. (* TODO: valid_eta_bytes from circuit equality + wpoly_srng *)
 
 qed.
 
@@ -255,9 +262,10 @@ qed.
 
 lemma error_polynomial_decode _a :
    hoare [ M.error_polynomial__decode :
-       encoded = _a
+       encoded = _a /\ valid_eta_bytes _a
      ==>
        lifts_wpoly res = BitUnpack (to_list _a) Eta Eta
+       /\ wpoly_srng Eta Eta res
    ].
 proc => /=.
 proc change 1 : { temp <- W64.of_int 15;}; 1: by auto.
@@ -302,10 +310,16 @@ conseq (_: _ ==>
     decoded = BSWA_256u32.init (fun i => error_polynomial_decode_lane (W4.init (fun j =>
                _a.[(4*i+j) %/ 8].[(4*i+j) %% 8])))); last by circuit.
 
-(* Part 1 *)
-move=> &hr |>.
-rewrite /lifts_wpoly /=; apply (inj_eq Array256.to_list Array256.to_list_inj).
-
-
-by rewrite BitUnack_liftE ~-1:// !array256_mapE; do 2!congr => //.
+move=> &hr [-> Hvalid] Hdecoded.
+split.
+- (* Part 1: lifts_wpoly = BitUnpack *)
+  rewrite /lifts_wpoly /=; apply (inj_eq Array256.to_list Array256.to_list_inj).
+  by rewrite Hdecoded BitUnack_liftE ~-1:// !array256_mapE; do 2!congr => //.
+- (* Part 2: wpoly_srng Eta Eta res *)
+  have Eta_v := mldsa65_Eta.
+  rewrite /wpoly_srng Hdecoded allP => w; rewrite mem_iota /= => Hw.
+  rewrite initiE 1:/# /= /error_polynomial_decode_lane.
+  have Hc_le := Hvalid w Hw.
+  have Hc_ge := W4.to_uint_cmp (W4.init (fun j => _a.[(4*w+j) %/ 8].[(4*w+j) %% 8])).
+  smt(W32.to_sintK_small W4.to_uint_cmp W32.to_uint_add W32.to_uint_neg W32.of_uintK W32.to_uintK zeroextu32E).
 qed.

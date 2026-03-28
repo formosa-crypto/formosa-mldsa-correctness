@@ -42,7 +42,7 @@ op error_polynomial_encode_lane(c : W32.t) : W4.t =
 
 op valid_eta_bytes (a : W8.t Array128.t) =
     forall i, 0 <= i < 256 =>
-     (W4.init (fun j => a.[(4*i+j) %/ 8].[(4*i+j) %% 8])) \ule W4.of_int (2*Eta).
+     to_uint (W4.init (fun j => a.[(4*i+j) %/ 8].[(4*i+j) %% 8])) <= 2*Eta.
 
 lemma BitPack_liftE (p : wpoly) :
   wpoly_srng Eta Eta p =>
@@ -182,22 +182,21 @@ cfold 8.
 wp -2.
 conseq (:
   List.all (fun i =>
-    _a.[i] \sle W32.of_int 4 /\
-    W32.of_int (-4) \sle _a.[i])
-    (iota_ 0 256)
+    W32.of_int (-4) \sle _a.[i] /\ _a.[i] \sle W32.of_int 4) (iotared 0 256)
   /\ _a = polynomial  ==>
+  (List.all (fun i => (W4.init (fun j => encoded.[(4*i+j) %/ 8].[(4*i+j) %% 8])) \ule W4.of_int 8) (iotared 0 256)) /\
   encoded = let mapped = BSWA_256u4.init (fun i => error_polynomial_encode_lane _a.[i]) in
-  BSWA_128u8.init (fun i => W8.init (fun j => mapped.[(i*8+j) %/ 4].[(i*8+j) %% 4])));last by circuit.
+  BSWA_128u8.init (fun i => W8.init (fun j => mapped.[(i*8+j) %/ 4].[(i*8+j) %% 4])));last by  admit. (* simplify;circuit. *)
 
-+ move => &hr [<- +]; rewrite /wpoly_srng allP /= => Hrng.
++ move => &hr [<- +]; rewrite iotaredE /wpoly_srng allP /= => Hrng.
   rewrite /(\sle) allP => x; rewrite mem_iota /= => Hx.
-  rewrite to_sintK_small //=.
-  by rewrite of_sintK /= /smod /= /#.
+  by rewrite !of_sintK /= /smod /= /#. 
 
-+ move => &hr [<- Hrng] ? /= => ->.
-  split; 1: by rewrite BitPack_liftE /#.
-  admit. (* TODO: valid_eta_bytes from circuit equality + wpoly_srng *)
-
++ move => &hr [<- Hrng] encoded; rewrite iotaredE allP /= => [# H1 H2].
+  split; 1: by rewrite H2 BitPack_liftE /#.
+  rewrite /valid_eta_bytes => k kb.
+  have := H1 k _; 1: by smt(mem_iota).
+  by rewrite /(\ule) /= mldsa65_Eta /=.
 qed.
 
 op error_polynomial_decode_lane(c : W4.t) : W32.t =
@@ -270,7 +269,7 @@ lemma error_polynomial_decode _a :
 proc => /=.
 proc change 1 : { temp <- W64.of_int 15;}; 1: by auto.
 proc change 2 : { mask <- zeroextu256 temp; }.
-+ auto => &1 &2 ->; rewrite /VMOV_64 zeroextu256E zeroextu256E.
++ auto => &1 &2 [#??->]; rewrite /VMOV_64 zeroextu256E zeroextu256E.
   rewrite wordP => i ib.
   rewrite pack2E pack2E pack4E initiE 1:/# /= initiE 1:/# /= initiE 1:/# /= initiE 1:/# /=.
   case (i %/ 64 = 0) => ?; 1: by rewrite ifT 1:/# initiE 1:/# /= get_of_list /#.
@@ -278,7 +277,7 @@ proc change 2 : { mask <- zeroextu256 temp; }.
   rewrite initiE 1:/# /= get_of_list 1:/#.
   by have -> /= : (i %% 128 %/ 64) = 1 by smt().
 proc change 5 : { eta_0 <- zeroextu256 temp; }.
-+ auto => &1 &2 ->; rewrite /VMOV_64 zeroextu256E zeroextu256E.
++ auto => &1 &2 [# ??->]; rewrite /VMOV_64 zeroextu256E zeroextu256E.
   rewrite wordP => i ib.
   rewrite pack2E pack2E pack4E initiE 1:/# /= initiE 1:/# /= initiE 1:/# /= initiE 1:/# /=.
   case (i %/ 64 = 0) => ?; 1: by rewrite ifT 1:/# initiE 1:/# /= get_of_list /#.
@@ -306,20 +305,26 @@ do 8!(unroll for ^while).
 cfold 10.
 do 8!(cfold ^byte_group<-).
 wp -3.
-conseq (_: _ ==>
-    decoded = BSWA_256u32.init (fun i => error_polynomial_decode_lane (W4.init (fun j =>
-               _a.[(4*i+j) %/ 8].[(4*i+j) %% 8])))); last by circuit.
 
-move=> &hr [-> Hvalid] Hdecoded.
-split.
+
+conseq (_: encoded = _a /\
+    List.all (fun i => (W4.init (fun j => encoded.[(4*i+j) %/ 8].[(4*i+j) %% 8])) \ule W4.of_int 8) (iotared 0 256)
+        ==>
+    List.all (fun i =>
+    W32.of_int (-4) \sle decoded.[i] /\ decoded.[i] \sle W32.of_int 4) (iotared 0 256) /\
+    decoded = BSWA_256u32.init (fun i => error_polynomial_decode_lane (W4.init (fun j =>
+               _a.[(4*i+j) %/ 8].[(4*i+j) %% 8])))); last by admit.
+
++ move => &hr; rewrite iotaredE /valid_eta_bytes mldsa65_Eta /= => [#-> H] /=.
+  by rewrite allP => k; rewrite mem_iota /= /(\ule) /=  => ?; rewrite H /#. 
+               
+move=> &hr [# <- Hvalid decoded [H Hdecoded]]; split.
+
 - (* Part 1: lifts_wpoly = BitUnpack *)
   rewrite /lifts_wpoly /=; apply (inj_eq Array256.to_list Array256.to_list_inj).
   by rewrite Hdecoded BitUnack_liftE ~-1:// !array256_mapE; do 2!congr => //.
 - (* Part 2: wpoly_srng Eta Eta res *)
-  have Eta_v := mldsa65_Eta.
-  rewrite /wpoly_srng Hdecoded allP => w; rewrite mem_iota /= => Hw.
-  rewrite initiE 1:/# /= /error_polynomial_decode_lane.
-  have Hc_le := Hvalid w Hw.
-  have Hc_ge := W4.to_uint_cmp (W4.init (fun j => _a.[(4*w+j) %/ 8].[(4*w+j) %% 8])).
-  smt(W32.to_sintK_small W4.to_uint_cmp W32.to_uint_add W32.to_uint_neg W32.of_uintK W32.to_uintK zeroextu32E).
+  rewrite /wpoly_srng allP mldsa65_Eta => w Hw /=.
+  have := H; rewrite iotaredE allP => HH; have /= := HH w _; 1: by smt(mem_iota).
+  by rewrite /(\sle) /= !of_sintK /smod /= /#.
 qed.

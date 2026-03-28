@@ -153,7 +153,7 @@ rewrite (nth_chunk 10) 1,2:/#.
 rewrite initiE 1:/# /= nth_take 1,2:/# /= nth_drop 1,2:/# /= /BytesToBits.
 rewrite (nth_flatten false 8);1: by rewrite allP => x /=; rewrite mapP => Hx;elim Hx;smt(W8.size_w2bits).
 rewrite (nth_map witness);1:smt(Array320.size_to_list).
-by rewrite get_w2bits get_to_list /#.
+by rewrite get_w2bits get_to_list /#. 
 qed.
 
 lemma t1_decode_polynomial _a :
@@ -161,6 +161,7 @@ lemma t1_decode_polynomial _a :
        t1_encoded = _a
      ==>
        liftu_wpoly res = SimpleBitUnpack (to_list _a) b_t1
+       /\ wpoly_urng (b_t1 + 1) res
    ].
 proc => /=.
 proc change ^while.1 : { bytestream <- if (0 <= input_offset*8 <= 8*320-128)
@@ -176,8 +177,8 @@ proc change ^while.10 : {t1 <- if (0 <= output_offset*8 <= 32*256-256)
                  case (0 <= output_offset{2} * 8 <= 7936); last by auto.
                  by move => ?; rewrite BSWAS_256u32_256_slicesetE /#.
 proc change 5 : { bytestream <- BSWAS_320u8_128.sliceget t1_encoded (304*8);}.
-                + auto => /> &2.
-                  by have /# /= := BSWAS_320u8_128_slicegetE  304 t1_encoded{2} _.
+                + auto => />.
+                  by have /# /= := BSWAS_320u8_128_slicegetE  304 _a _.
 proc change 14 : {t1 <- if (0 <= output_offset*8 <= 32*256-256)
                          then BSWAS_256u32_256.sliceset t1 (output_offset*8) coefficients
                          else Array256.init (get32 (set256_direct (WArray1024.init32 (fun (i_0 : int) => t1.[i_0])) output_offset coefficients));}.
@@ -194,8 +195,13 @@ conseq (: t1_encoded = _a ==>
      t1 = BSWA_256u32.init (fun i => BS_W32_W10_U.zeroextu32 (W10.init (fun j => _a.[(i*10+j) %/ 8].[(i*10+j) %% 8])))); last by circuit.
 
 
-move=> &hr |>  /=.
-by rewrite SimpleBitUnpack_liftE ~-1://.
+move=> &hr <- decoded Hdecoded.
+split.
+- by rewrite Hdecoded SimpleBitUnpack_liftE ~-1://.
+- rewrite /wpoly_urng Hdecoded allP => w Hw /=.
+  rewrite initiE 1:/# /= /BS_W32_W10_U.zeroextu32 of_uintK /= modz_small /b_t1 /=.
+  + by have /= /#:= W10.to_uint_cmp.
+  + by have /= /#:= W10.to_uint_cmp.
 qed.
 
 import VecMat PolyKVec.

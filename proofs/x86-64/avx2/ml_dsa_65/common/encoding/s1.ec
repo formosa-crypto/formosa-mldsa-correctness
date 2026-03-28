@@ -41,18 +41,20 @@ while (0 <= i <= 5 /\ s1 = _a /\ wpolylvec_srng (lvec_unflatten256 _a) Eta Eta  
        (forall k, 0 <= k < i =>
        valid_eta_bytes (Array128.init (fun j => encoded.[k * 128 + j]))));
        last first.
-       + auto => /> &hr *; do split; 1: smt().
-         + move => r0 j0 * Hfunc Hval; rewrite tP => k kb; smt().
-         + move => r0 j0 * Hfunc Hval k kb.
-           rewrite /valid_s1_bytes in Hval; exact (Hval k kb).
+       + auto => /> &hr *; do split; 1,2: smt().
+         + move => r0 j0 ??? H H1;split.
+           + rewrite tP => kk Hkk.
+             by rewrite mapiE 1:/# /= H 1:/# mapiE 1:/# /=.
+           + by rewrite /valid_s1_bytes => i ib; apply H1; smt(). 
 wp; ecall (error_polynomial_encode (Array256.init (fun (i_0 : int) => _a.[i * 256 + i_0]))).
-auto => /> &hr ?? Hrng H Hval ? [Hrr Heta]; do split; 1: smt().
+auto => /> &hr ?? Hrng H Hval ?;  do split;1:smt().  
 + move : Hrng; rewrite /wpolylvec_srng /wpoly_srng !allP /=  => Hrng ii iib.
   have := Hrng i{hr} _; 1:smt().
   rewrite allP /= /input_unflatten initiE 1:/# /= => Hrngj.
   have := Hrngj ii _; 1:smt().
-  rewrite initiE 1:/# /= initiE 1:/# /= nth_sub 1:/# /#.
-move => ?? rr [Hrr Hval_rr]; do split; 1,2: smt().
+  by rewrite initiE 1:/# /= initiE 1:/# /= nth_sub 1:/# /#.
+  
+move => ?? rr Hrr Hval_rr; do split; 1,2: smt().
 move => k kbl kbh.
 case(0<=k<i{hr}) => *.
 +
@@ -75,23 +77,23 @@ have -> : k = i{hr} by smt().
 rewrite initiE 1:/# /= tP => ii iib.
 rewrite  initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.
 move => k kbl kbh.
-case(0<=k<i{hr}) => *.
+case(0<=k<i{hr}) =>? .
 + have -> : valid_eta_bytes
     (Array128.init (fun j =>
       (Array640.init (fun (i_0 : int) =>
         if 128 * i{hr} <= i_0 < 128 * i{hr} + 128
         then rr.[i_0 - 128 * i{hr}]
         else encoded{hr}.[i_0])).[k * 128 + j])) =
-    valid_eta_bytes (Array128.init (fun j => encoded{hr}.[k * 128 + j])); last by smt().
-  congr; rewrite tP => j jb; rewrite !initiE 1:/# /=; smt().
+    valid_eta_bytes (Array128.init (fun j => encoded{hr}.[k * 128 + j])); last by apply Hval ; smt().
+  by congr; rewrite tP => j jb;  rewrite !initiE 1,2:/# /= initiE 1:/# /= /#.
 have -> : k = i{hr} by smt().
 have -> : Array128.init (fun j =>
     (Array640.init (fun (i_0 : int) =>
       if 128 * i{hr} <= i_0 < 128 * i{hr} + 128
       then rr.[i_0 - 128 * i{hr}]
       else encoded{hr}.[i_0])).[i{hr} * 128 + j]) = rr.
-+ rewrite tP => j jb; rewrite !initiE 1:/# /=; smt().
-exact Hval_rr.
++ rewrite tP => j jb; rewrite !initiE 1:/# /= initiE 1:/# /= /#.
+by exact Hval_rr.
 qed.
 
 
@@ -133,17 +135,20 @@ while (0 <= i <= 5 /\ encoded = _a /\ valid_s1_bytes _a /\
        /\ wpoly_srng Eta Eta (lvec_unflatten256 s1).[k]);
        last first.
        + auto => /> &hr *; do split; 1: smt().
-         move => r0 j0 * H; rewrite tP => k kb; smt().
+         move => r0 j0 ??? H; split.
+         + by rewrite tP => k Hk;have := H k _;smt().
+         by rewrite /wpolylvec_srng allP => k kb;have := H k _;smt().
+         
 wp; ecall (error_polynomial_decode (Array128.init (fun (i_0 : int) => _a.[i * 128 + i_0]))).
-auto => /> &hr ?? Hvalid H ? [Hrr Hrng]; do split; 1: smt().
+auto => /> &hr ?? Hvalid H ?; do split; 1: smt().
 + (* valid_eta_bytes precondition for ecall *)
-  move => j jb; have := (Hvalid i{hr} _); 1: smt().
-  rewrite /valid_eta_bytes => Hv; have := Hv j jb.
-  congr; congr; rewrite initiE 1:/# /= /#.
-move => ? rr [Hrr Hrng]; do split; 1,2: smt().
+  by have := (Hvalid i{hr} _); 1: smt().
+move => H0 H1 rr  Hrr Hrng; do split; 1,2: smt().
 move => k kbl kbh.
 case(0<=k<i{hr}) => *.
-+ split.
++ have := H k _;1:smt().
+  move => [H00 H10].
+  split.
   + have -> : (lifts_wpolylvec
      (lvec_unflatten256
         (Array1280.init
@@ -155,7 +160,7 @@ case(0<=k<i{hr}) => *.
       (Array1280.init
          (fun (i_0 : int) => if i{hr} * n <= i_0 < i{hr} * n + n then rr.[i_0 - i{hr} * n] else s1{hr}.[i_0]))).[k] =
       (lvec_unflatten256 s1{hr}).[k]; last by smt().
-    rewrite initiE 1:/# /= tP => ii iib; rewrite initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.
+    by rewrite initiE 1:/# /= tP => ii iib; rewrite initiE 1:/# /= !get_of_list 1,2:/# /= !nth_sub 1,2:/# /= initiE 1:/# /= /#.
 have -> : k = i{hr} by smt().
 + split.
   + have -> : (lifts_wpolylvec

@@ -224,8 +224,8 @@ proc change ^while.15 : {t0 <- if (0 <= output_offset*8 <= 256*32-256)
                  case (0 <= output_offset{2} * 8 <= 7936); last by auto.
                  by move => ?; rewrite BSWAS_256u32_256_slicesetE /#.
 proc change 4 : { bytestream <- BSWAS_416u8_128.sliceget t0_encoded (400*8); }.
-               + auto => /> &2.
-                 by have /# := BSWAS_416u8_128_slicegetE (400) t0_encoded{2} _.
+               + auto => />.
+                 by have /# := BSWAS_416u8_128_slicegetE (400) _a _.
 proc change 19 : {t0 <- if (0 <= output_offset*8 <= 256*32-256)
                                then BSWAS_256u32_256.sliceset t0 (output_offset*8) coefficients
                                else Array256.init (fun (i : int) =>                                                                                              get32 (set256_direct (WArray1024.init32 (fun (i0 : int) => t0.[i0])) output_offset coefficients) i);}.
@@ -242,14 +242,20 @@ conseq (_: _ ==>
     t0 = BSWA_256u32.init (fun i => t0_decode_to_polynomial_lane (W13.init (fun j =>
                _a.[(13*i+j) %/ 8].[(13*i+j) %% 8])))); last by circuit.
             
-move=> &hr -> Hdecoded.
+move=> &hr <- decoded Hdecoded.
 split.
 - rewrite /lifts_wpoly /=; apply (inj_eq Array256.to_list Array256.to_list_inj).
-  by rewrite Hdecoded BitUnack_liftE ~-1:// !array256_mapE; do 2!congr => //.
-- rewrite /wpoly_srng Hdecoded allP => w; rewrite mem_iota /= => Hw.
-  rewrite initiE 1:/# /= /t0_decode_to_polynomial_lane.
-  have Hc := W13.to_uint_cmp (W13.init (fun j => _a.[(13*w+j) %/ 8].[(13*w+j) %% 8])).
-  smt(W32.to_sintK_small W32.to_uint_add W32.to_uint_neg W32.of_uintK W32.to_uintK zeroextu32E).
+  by rewrite BitUnack_liftE ~-1:// !array256_mapE; do 2!congr => //.
+- rewrite /wpoly_srng  allP => w Hw /=.
+  rewrite Hdecoded /t0_decode_to_polynomial_lane initiE 1:/# /=.
+  pose x := (W13.init (fun (j : int) => t0_encoded{hr}.[(d * w + j) %/ 8].[(d * w + j) %% 8])).
+  have ? : 2^13 = 8192 by auto.
+  have ? : 0 <= to_sint (BS_W32_W13_U.zeroextu32 x) < 8192.   
+    +rewrite /BS_W32_W13_U.zeroextu32 of_sintK /= modz_small;1: smt(W13.to_uint_cmp).
+      by rewrite /smod /=ifF; smt(W13.to_uint_cmp).
+  rewrite to_sintB_small /=.
+  + rewrite of_sintK /smod /= modz_small /#.
+  rewrite of_sintK /smod /= ifF 1:/# modz_small /#.
 qed.
 
 
@@ -274,13 +280,18 @@ while (0 <= i <= 6 /\ encoded = _a /\
        /\ wpoly_srng (dpow-1) dpow (kvec_unflatten256 t0).[k]);
        last first.
        + auto => /> &hr *;do split;1: smt().
-         move => i0 t00 * H; rewrite tP => k kb; smt().
+         move => i0 t00 ??? H; do split.
+         + rewrite tP => k kb; smt().
+         by smt(KArray.allP).
+         
 wp; ecall (t0_decode_to_polynomial (Array416.init (fun (i_0 : int) => _a.[i * (d * n %/ 8) + i_0]))).
 auto => /> &hr ?? H ?; split;1:smt().
-move => ? rr [Hrr Hrng]; do split;1,2:smt().
+move => ? rr Hrr Hrng; do split;1,2:smt().
 move => k kbl kbh.
 case(0<=k<i{hr}) => *.
-+ split.
++ have := H k _; 1:smt().
+  move => [H1 H2].
+  split.
   + have -> : (lifts_wpolykvec
      (kvec_unflatten256
         (Array1536.init
@@ -288,11 +299,12 @@ case(0<=k<i{hr}) => *.
       (lifts_wpolykvec (kvec_unflatten256 t0{hr})).[k]; last by smt().
     rewrite !mapiE 1..2:/# initiE 1:/# /= initiE 1:/# /= tP =>  ii iib.
     rewrite mapiE 1:/# /= initiE 1:/# /= mapiE 1:/# /= initiE 1:/# /= !nth_sub 1,2:/# initiE 1:/# /= /#.
-  + have -> : (kvec_unflatten256
-      (Array1536.init
-         (fun (i_0 : int) => if i{hr} * n <= i_0 < i{hr} * n + n then rr.[i_0 - i{hr} * n] else t0{hr}.[i_0]))).[k] =
-      (kvec_unflatten256 t0{hr}).[k]; last by smt().
-    rewrite initiE 1:/# /= tP => ii iib; rewrite initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.
+  + rewrite /kvec_unflatten256 initiE 1:/# /= /wpoly_srng allP => kk Hkk /=.
+    rewrite get_of_list // nth_sub 1:/# initiE 1:/# /=.
+    rewrite ifF 1:/#.
+    have := H2; rewrite /wpoly_srng allP => H21.
+    have /= := H21 kk _; 1:smt().
+    rewrite initiE 1:/# /= get_of_list 1:/# nth_sub /#.
 have -> : k = i{hr} by smt().
 + split.
   + have -> : (lifts_wpolykvec

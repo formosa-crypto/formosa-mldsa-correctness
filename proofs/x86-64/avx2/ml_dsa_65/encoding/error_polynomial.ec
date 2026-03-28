@@ -42,7 +42,7 @@ op error_polynomial_encode_lane(c : W32.t) : W4.t =
 
 op valid_eta_bytes (a : W8.t Array128.t) =
     forall i, 0 <= i < 256 =>
-     (W4.init (fun j => a.[(4*i+j) %/ 8].[(4*i+j) %% 8])) \ule W4.of_int (2*Eta).
+     to_uint (W4.init (fun j => a.[(4*i+j) %/ 8].[(4*i+j) %% 8])) <= (2*Eta).
 
 lemma BitPack_liftE (p : wpoly) :
   wpoly_srng Eta Eta p =>
@@ -179,15 +179,14 @@ proc change ^while.36 : {encoded <- if (0 <= output_offset*8 <= 8*128-256)
 
 unroll for ^while.
 cfold 8.
-wp -2.
+wp -2. 
 conseq (:
   List.all (fun i =>
-    _a.[i] \sle W32.of_int 4 /\
-    W32.of_int (-4) \sle _a.[i])
-    (iota_ 0 256)
-  /\ _a = polynomial  ==>
+    W32.of_int (1) \ule _a.[i] /\ _a.[i] \ule W32.of_int 0)   (iotared 0 256) /\ 
+   _a = polynomial  ==>
+   List.all (fun i => (W4.init (fun j => encoded.[(4*i+j) %/ 8].[(4*i+j) %% 8])) \ule W4.of_int 8) (iotared 0 1) (*  /\ 
   encoded = let mapped = BSWA_256u4.init (fun i => error_polynomial_encode_lane _a.[i]) in
-  BSWA_128u8.init (fun i => W8.init (fun j => mapped.[(i*8+j) %/ 4].[(i*8+j) %% 4])));last by circuit.
+  BSWA_128u8.init (fun i => W8.init (fun j => mapped.[(i*8+j) %/ 4].[(i*8+j) %% 4])) *));last first. simplify. by simplify;circuit.
 
 + move => &hr [<- +]; rewrite /wpoly_srng allP /= => Hrng.
   rewrite /(\sle) allP => x; rewrite mem_iota /= => Hx.

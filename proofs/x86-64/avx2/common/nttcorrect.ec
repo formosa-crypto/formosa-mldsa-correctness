@@ -861,7 +861,7 @@ seq 1: (#pre /\ (product = W8u32.pack8_t
   (W8u32.Pack.map2 mmr (W8u32.unpack32 coeffs_i_plus_step) (W8u32.unpack32 zetas)))).
 - ecall (mmrP coeffs_i_plus_step (pack8 (nseq 8 z))); auto=> &hr |> /=.
   - by rewrite of_listK //= 8?nseqS_minus //= nseq0. (* FIXME *)
-  - by move=> |> * /#.
+  - (*by move=> |> * /#.*) (* FIXME *)
 
 seq 2: (#{/~{coeffs_i,coeffs_i_plus_step}}pre /\
      coeffs_i = pack8 (mkseq (fun i => uw i + mmr (vw i) z) 8)

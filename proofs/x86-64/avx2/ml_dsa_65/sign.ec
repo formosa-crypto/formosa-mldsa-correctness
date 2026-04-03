@@ -12,7 +12,7 @@ import PolyLVec PolyKVec PolyMat.
 import CDR Round Zq PolyReduceZq BigZMod.
 
 require import Array2 Array32 Array48 Array64 Array128 Array256
-               Array640 Array768 Array1280 Array1536 Array2496
+               Array416 Array640 Array768 Array1280 Array1536 Array2496
                Array3309 Array4032 Array7680.
 
 require import BitEncoding.
@@ -89,15 +89,16 @@ seq 1 0 : (#pre /\
     t0{1} = KArray.init (fun i =>
         BitUnpack (take ((n * d) %/ 8)
                         (drop (128 + s1_bytes + s2_bytes + i * ((n * d) %/ 8)) (BytesSK.to_list sk{1})))
-                  (2^(d-1)-1) (2^(d-1)))); 1: by  ecall{1} (skDecode_corr sk{1}); auto => |> /#.
-
+                  (2^(d-1)-1) (2^(d-1))));
+   1: by ecall{1} (skDecode_corr sk{1}); auto => |> *; smt().
+   
 sp 3 0.
  seq 1 1 : (#pre /\
     liftu_wpolymat (mat_unflatten256 matrix_A{2}) = _A{1} /\
     wpolymat_urng (mat_unflatten256 matrix_A{2}) 1).
 + ecall{1} (ExpandA_correct rho{1}).
   ecall{2} (matrix_A_correct (Array32.init (fun i => signing_key{2}.[0 + i]))).
-  auto => |> &1 &2 Hrnd ???? rr -> ?;congr;rewrite Bytes32.tP => k kb.
+  auto => |> &1 &2 Hrnd ?????? rr -> ?;congr;rewrite Bytes32.tP => k kb.
   by rewrite !Bytes32.get_of_list // get_to_list initiE 1:/# nth_take 1,2:/# BytesSK.of_listK ?size_to_list /#.
 
 sp 1 0.
@@ -143,11 +144,13 @@ seq 0 1 : (#pre /\
     lifts_wpolylvec (lvec_unflatten256 s1{2}) = s1{1} /\
     wpolylvec_srng (lvec_unflatten256 s1{2}) Eta Eta).
 + ecall{2} (s1_decode_ph (Array640.init (fun i => signing_key{2}.[128 + i]))).
-  auto => |> &2 * [Hfun Hrng].
-  split.
-  + (* FIXME: connect s1{1} (BitUnpack of skDecode output) to s1_decode_ph output *)
-    admit.
-  + exact Hrng.
+  auto => |> &1 &2 8? rr Hfun Hrng.
+  + rewrite Hfun tP => k kb.
+    rewrite initiE 1:/# /= mapiE 1:/# /=;do congr.
+    apply (eq_from_nth witness).
+    + by rewrite size_to_list /= size_take 1:/# size_drop 1:/# BytesSK.size_to_list /#.
+    move => i; rewrite size_to_list => ib.
+    rewrite get_to_list nth_take 1,2:/# nth_drop 1,2:/#  BytesSK.get_to_list  BytesSK.get_of_list 1:/# get_to_list  initiE 1:/# /= get_of_list 1:/# nth_sub 1:/# /= initiE /#.
 
 (* ── Step 6: Decode s2 (Jasmin) ──────────────────────────────────────────
    Jasmin: s2 <@ s2____decode(signing_key[768:1536]) *)
@@ -155,10 +158,13 @@ seq 0 1 : (#pre /\
     lifts_wpolykvec (kvec_unflatten256 s2{2}) = s2{1} /\
     wpolykvec_srng (kvec_unflatten256 s2{2}) Eta Eta).
 + ecall{2} (s2_decode_ph (Array768.init (fun i => signing_key{2}.[768 + i]))).
-  auto => |> &2 * [Hfun Hrng].
-  split.
-  + admit. (* FIXME: same functional connection as s1 *)
-  + exact Hrng.
+  auto => |> &1 &2 10? rr Hfun Hrng.
+  + rewrite Hfun tP => k kb.
+    rewrite initiE 1:/# /= mapiE 1:/# /=;do congr.
+    apply (eq_from_nth witness).
+    + by rewrite size_to_list /= size_take 1:/# size_drop 1:/# BytesSK.size_to_list /#.
+    move => i; rewrite size_to_list => ib.
+    rewrite get_to_list nth_take 1,2:/# nth_drop 1,2:/#  BytesSK.get_to_list  BytesSK.get_of_list 1:/# get_to_list  initiE 1:/# /= get_of_list 1:/# nth_sub 1:/# /= initiE /#.
 
 (* ── Step 7: Decode t0 (Jasmin) ──────────────────────────────────────────
    Jasmin: t0 <@ t0__decode(signing_key[1536:4032]) *)
@@ -166,35 +172,31 @@ seq 0 1 : (#pre /\
     lifts_wpolykvec (kvec_unflatten256 t0{2}) = t0{1} /\
     wpolykvec_srng (kvec_unflatten256 t0{2}) (dpow-1) dpow).
 + ecall{2} (t0_decode_ph (Array2496.init (fun i => signing_key{2}.[1536 + i]))).
-  auto => |> &2 * [Hfun Hrng].
-  split.
-  + admit. (* FIXME: t0 functional connection *)
-  + exact Hrng.
-
+  auto => |> &1 &2 12? rr Hfun Hrng.
+  + rewrite Hfun tP => k kb.
+    rewrite initiE 1:/# /= mapiE 1:/# /=;do congr; last 2 by smt().
+    apply (eq_from_nth witness).
+    + by rewrite size_to_list /= size_take 1:/# size_drop 1:/# BytesSK.size_to_list /#.
+    move => i; rewrite size_to_list => ib.
+    rewrite get_to_list nth_take 1,2:/# nth_drop 1,2:/#  BytesSK.get_to_list  BytesSK.get_of_list 1:/# get_to_list  initiE 1:/# /= get_of_list 1:/# nth_sub 1:/# /= initiE /#.
+    
 (* ── Step 8: NTT s1/s2/t0 (Jasmin), kappa/zh/exit_flag init ─────────────
    Jasmin: row_vector__ntt(s1); column_vector__ntt(s2); column_vector__ntt(t0)
    Spec: kappa <- 0; zh <- None (the spec NTTs were already done in Step 2)
    FIXME: NTT bridge lemmas for polylvec/polykvec are not yet proven.
    We admit this step and assert the invariant directly. *)
-seq 2 5 : (#pre /\
+seq 0 3 : (#pre /\
     (* Jasmin s1/s2/t0 are now NTT-domain representations matching s1h/s2h/t0h *)
     lifts_wpolylvec (lvec_unflatten256 s1{2}) = s1h{1} /\
     lifts_wpolykvec (kvec_unflatten256 s2{2}) = s2h{1} /\
     lifts_wpolykvec (kvec_unflatten256 t0{2}) = t0h{1} /\
-    (* Loop initialization *)
-    kappa{1} = 0 /\
-    zh{1} = None /\
-    W16.to_uint domain_separator_for_mask{2} = 0 /\
-    exit_rejection_sampling_loop{2} = W8.of_int 0).
-+ admit. (* FIXME:
-    - NTT bridge: need equiv between row_vector__ntt ~ nttv and column_vector__ntt ~ nttv
-    - Pure assigns: kappa <- 0, zh <- None (spec) and domain_sep/exit_flag inits (Jasmin) *)
+    (* NTT-domain range invariants on the word-level representations *)
+    wpolylvec_ntt_rng (lvec_unflatten256 s1{2}) /\
+    wpolykvec_ntt_rng (kvec_unflatten256 s2{2}) /\
+    wpolykvec_ntt_rng (kvec_unflatten256 t0{2})); 1: by admit.
 
-(* ── Step 9: Rejection-sampling while loop + sigEncode ──────────────────
-   This is the main novelty vs. keygen/verify: a rejection-sampling loop.
-
-   Loop invariant (informally):
-     kappa{1} = W16.to_uint domain_separator_for_mask{2}
+(* Loop initialization *)
+while     kappa{1} = W16.to_uint domain_separator_for_mask{2}
      /\ (zh{1} = None <=> exit_rejection_sampling_loop{2} <> W8.of_int 1)
      /\ seed_for_mask{2}, matrix_A, s1h/s2h/t0h, rho, mu, rhopp are stable
      /\ Glob.mem{2} = _m (memory unchanged throughout)

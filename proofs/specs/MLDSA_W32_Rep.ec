@@ -28,6 +28,10 @@ op wpoly_urng(b : int, pw : wpoly) = all (fun i => 0 <= W32.to_uint i < b) pw.
 op wpoly_srng(bl bh : int, pw : wpoly) = all (fun i => -bl <= W32.to_sint i <= bh) pw.
 op wpoly_infnorm_lt(b : int, pw : wpoly) = wpoly_srng (b-1) (b-1) pw.
 
+(* Abstract predicate: coefficients are in NTT-domain normal form.
+   To be instantiated once the NTT bridge lemmas are available. *)
+op wpoly_ntt_rng : wpoly -> bool.
+
 lemma wpoly_infnorm_liftE (b : int) (pw : wpoly) :
     0 < b <= q %/ 2 =>
     wpoly_infnorm_lt b pw => infnorm_lt (lifts_wpoly pw) b.
@@ -55,6 +59,7 @@ op polylvec_srng(p : polylvec, bl bh : int) = all (poly_srng bl bh) p.
 op wpolylvec_urng(pw : wpolylvec, b : int) = all (wpoly_urng b) pw.
 op wpolylvec_srng(pw : wpolylvec, bl bh : int) = all (wpoly_srng bl bh) pw.
 op wpolylvec_infnorm_lt(b : int, pw : wpolylvec) = wpolylvec_srng pw (b-1) (b-1).
+op wpolylvec_ntt_rng(pw : wpolylvec) = all wpoly_ntt_rng pw.
 
 lemma wpolylvec_infnorm_liftE (b : int) (pw : wpolylvec) :
     0 < b <= q %/ 2 =>
@@ -111,6 +116,7 @@ op polykvec_srng(p : polykvec, bl bh : int) = all (poly_srng bl bh) p.
 op wpolykvec_urng(pw : wpolykvec, b : int) = all (wpoly_urng b) pw.
 op wpolykvec_srng(pw : wpolykvec, bl bh : int) = all (wpoly_srng bl bh) pw.
 op wpolykvec_infnorm(b : int, pw : wpolykvec) = wpolykvec_srng pw (b-1) (b-1).
+op wpolykvec_ntt_rng(pw : wpolykvec) = all wpoly_ntt_rng pw.
 
 lemma wpolykvec_infnorm_liftE (b : int) (pw : wpolykvec) :
     0 < b <= q %/ 2 =>

@@ -5,7 +5,7 @@ from Spec require import GFq Rq Serialization Conversion Parameters VecMat MLDSA
 from JazzEC require import Array320 Array416 Array1280 Array640 Array1536 Array768 Array256 Array128 Array1920 Array3200 Array7680 Array2496.
 
 import LArray KArray.
-print Parameters.
+
 axiom mldsa65_lvec: lvec = 5.
 axiom mldsa65_kvec: kvec = 6.
 axiom mldsa65_w_hint : w_hint = 55.

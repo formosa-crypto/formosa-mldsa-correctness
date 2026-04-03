@@ -338,7 +338,6 @@ rewrite (IntID.exprS _ (h + 1)) 1:/#.
 rewrite (_ : k - (h + 1) = (k - 1) - h) 1:#ring.
 rewrite -mulrA ih ~-1:/# /= &(bitrev_extend) ~-1:/#.
 suff: 2^(k - (h+1)) <= 2^k by smt().
-search ((_^_)%IntID <= (_^_)%IntID).
 by apply: IntOrder.ler_weexpn2l => //#.
 qed.
 

@@ -436,7 +436,7 @@ if.
    by rewrite !to_uint_eq /=;smt( incoeffK).
 
  + auto => /> &1 &2 ???????????Hone; do split; 1..2,5..6,8:smt(Array3309.get_setE size_put). 
-print count_nonzero_prefix_one.
+
    + by smt(count_nonzero_prefix_one). 
    + move : Hone;rewrite /kvec_unflatten256 /count_nonzero_prefix ifT 1:/# ifT 1:/# /= (take_nth witness);1: by rewrite size_to_list /#.
      rewrite mapiE 1:/# /= initiE 1:/# /= mapiE 1:/# get_of_list 1:/# nth_sub 1:/# /= => -> /=.

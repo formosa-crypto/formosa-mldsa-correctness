@@ -305,9 +305,11 @@ module K = {
     var message_representative:W8.t Array64.t;
     var copied_32_bytes:W256.t;
     var prefix:W8.t Array66.t;
+    var trailb:W8.t;
     var state:W64.t Array26.t;
-    var buf:int;
+    var rate64:int;
     var len:int;
+    var buf:int;
     message_representative <- witness;
     prefix <- witness;
     state <- witness;
@@ -327,8 +329,11 @@ module K = {
     copied_32_bytes)));
     prefix.[64] <- (W8.of_int 0);
     prefix.[65] <- (truncateu8 (W64.of_int context_size));
-    state <@ M._init_updstate_avx2 (state, 17, 31);
-    state <@ M.a66___update_updstate_avx2 (state, prefix);
+    rate64 <- 17;
+    trailb <- (W8.of_int 31);
+    state <@ M._init_updstate_avx2 (state, rate64, trailb);
+    len <- 66;
+    state <@ M.a66___update_updstate_avx2 (state, prefix, len);
     buf <- context_pointer;
     len <- context_size;
     state <@ M._absorb_m_updstate_avx2 (state, buf, len);
@@ -336,8 +341,9 @@ module K = {
     len <- message_size;
     state <@ M._absorb_m_updstate_avx2 (state, buf, len);
     state <@ M._finish_updstate_avx2 (state);
+    len <- 64;
     (state, message_representative) <@ M.a64___squeeze_updstate_avx2 (state,
-    message_representative);
+    message_representative, len);
     return message_representative;
   }
 

@@ -121,7 +121,7 @@ seq 1 0 : (#pre /\
           (2^(q_bits - d) - 1))).
 + ecall{1} (pkDecode_corr pk{1}).
   by auto.
-  print signature_decode.
+
 seq 1 1 : (#pre /\
     ct{1} = BytesCT.init (fun i => signature{2}.[i]) /\
     lifts_wpolylvec (lvec_unflatten256 signer_response{2}) = z{1} /\

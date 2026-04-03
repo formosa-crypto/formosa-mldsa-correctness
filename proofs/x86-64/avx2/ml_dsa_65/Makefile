@@ -1,8 +1,8 @@
-SOURCE = ../../../../formosa-mldsa/x86-64/avx2/ml_dsa_65/
-COMMON = ../../../../formosa-mldsa/x86-64/avx2/common
+SOURCE = ../../../../submodules/formosa-mldsa/x86-64/avx2/ml_dsa_65/
+COMMON = ../../../../submodules/formosa-mldsa/x86-64/avx2/common
 OARRAYS = ../../../arrays
 JASMIN2EC = /usr/local/bin/jasmin2ec --output-array=$(OARRAYS)
-KECCAK = ../../../../formosa-mldsa/formosa-keccak/src/amd64/
+KECCAK = ../../../../submodules/formosa-mldsa/formosa-keccak/src/amd64/
 
 # --------------------------------------------------------------------
 all: ec

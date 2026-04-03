@@ -1405,8 +1405,7 @@ module M = {
   proc polynomial____make_hint (hints:W32.t Array256.t,
                                 low_coefficients:W32.t Array256.t,
                                 high_coefficients:W32.t Array256.t) : 
-  W32.t Array256.t * W64.t = {
-    var weight:W64.t;
+  W32.t Array256.t * int = {
     var temp:W64.t;
     var gamma2:W256.t;
     var minus_gamma2:W256.t;
@@ -1418,6 +1417,7 @@ module M = {
     var low_equals_minus_gamma2_and_high_is_nonzero:W256.t;
     var hint_block:W256.t;
     var num_hints:W64.t;
+    var weight:int;
     var  _0:bool;
     var  _1:bool;
     var  _2:bool;
@@ -1429,7 +1429,7 @@ module M = {
     temp <- (W64.of_int (- ((8380417 - 1) %/ 32)));
     minus_gamma2 <- (zeroextu256 (VMOV_64 temp));
     minus_gamma2 <- (VPBROADCAST_8u32 (truncateu32 minus_gamma2));
-    weight <- (W64.of_int 0);
+    weight <- 0;
     offset <- (W64.of_int 0);
     while ((offset \ult (W64.of_int ((256 * 32) %/ 8)))) {
       low <-
@@ -1457,7 +1457,7 @@ module M = {
       (WArray1024.set256_direct (WArray1024.init32 (fun i => hints.[i]))
       (W64.to_uint offset) hint_block)));
       offset <- (offset + (W64.of_int 32));
-      weight <- (weight + num_hints);
+      weight <- (weight + (W64.to_uint num_hints));
     }
     return (hints, weight);
   }
@@ -3461,7 +3461,7 @@ module M = {
     var t256:W256.t;
     var t128:W128.t;
     if (((l %% 2) = 0)) {
-      t128 <- (zeroextu128 x);
+      t128 <- (VMOV_64 x);
     } else {
       t128 <- (set0_128);
       t128 <- (VPINSR_2u64 t128 x (W8.of_int 1));
@@ -4171,13 +4171,13 @@ module M = {
     var t256:W256.t;
     t64 <- (W64.of_int 1);
     t64 <- (t64 `<<` (W8.of_int (((8 * rATE8) - 1) %% 64)));
-    t128 <- (zeroextu128 t64);
+    t128 <- (VMOV_64 t64);
     t256 <- (VPBROADCAST_4u64 (truncateu64 t128));
     t256 <- (t256 `^` st.[((rATE8 - 1) %/ 8)]);
     st.[((rATE8 - 1) %/ 8)] <- t256;
     return st;
   }
-  proc _init_updstate_avx2 (st:W64.t Array26.t, r64:int, trailb:int) : 
+  proc _init_updstate_avx2 (st:W64.t Array26.t, r64:int, trailb:W8.t) : 
   W64.t Array26.t = {
     var r256:W256.t;
     var i:int;
@@ -4193,9 +4193,10 @@ module M = {
       i <- (i + 1);
     }
     st.[24] <- (W64.of_int 0);
-    status <- (W64.of_int trailb);
+    status <- (zeroextu64 trailb);
     status <- (status `<<` (W8.of_int 8));
-    t <- (W64.of_int (r64 - 1));
+    r64 <- (W8.to_uint ((W8.of_int r64) - (W8.of_int 1)));
+    t <- (zeroextu64 (W8.of_int r64));
     status <- (status + t);
     status <- (status `<<` (W8.of_int 8));
     st.[25] <- status;
@@ -4456,7 +4457,7 @@ module M = {
         } else {
           (dELTA, lEN, tRAIL, aT16, t64_0) <@ a2____a_ilen_read_upto8_at (
           buf, offset, dELTA, lEN, tRAIL, 0, aT16);
-          w <- (zeroextu128 t64_0);
+          w <- (VMOV_64 t64_0);
           (dELTA, lEN, tRAIL, aT16, t64_1) <@ a2____a_ilen_read_upto8_at (
           buf, offset, dELTA, lEN, tRAIL, 8, aT16);
           w <- (VPINSR_2u64 w t64_1 (W8.of_int 1));
@@ -4528,7 +4529,7 @@ module M = {
         aT8 <- (aT - cUR);
         (dELTA, lEN, tRAIL, aT, w) <@ a2____a_ilen_read_upto8_at (buf,
         offset, dELTA, lEN, tRAIL, cUR, aT);
-        t128 <- (zeroextu128 w);
+        t128 <- (VMOV_64 w);
         w256 <- (VPBROADCAST_4u64 (truncateu64 t128));
         w256 <@ __SHLQ_256 (w256, aT8);
       }
@@ -4570,14 +4571,14 @@ module M = {
     if (((0 < _LEN) \/ (_TRAILB <> 0))) {
       (dELTA, _LEN, _TRAILB, aT, t64_2) <@ a2____a_ilen_read_upto8_at (
       buf, offset, dELTA, _LEN, _TRAILB, 40, aT);
-      t128_1 <- (zeroextu128 t64_2);
+      t128_1 <- (VMOV_64 t64_2);
       t128_2 <- (set0_128);
       if (((0 < _LEN) \/ (_TRAILB <> 0))) {
         (dELTA, _LEN, _TRAILB, aT, r3) <@ a2____a_ilen_read_upto32_at (
         buf, offset, dELTA, _LEN, _TRAILB, 48, aT);
         (dELTA, _LEN, _TRAILB, aT, t64_3) <@ a2____a_ilen_read_upto8_at (
         buf, offset, dELTA, _LEN, _TRAILB, 80, aT);
-        t128_2 <- (zeroextu128 t64_3);
+        t128_2 <- (VMOV_64 t64_3);
         (dELTA, _LEN, _TRAILB, aT, r4) <@ a2____a_ilen_read_upto32_at (
         buf, offset, dELTA, _LEN, _TRAILB, 88, aT);
         (dELTA, _LEN, _TRAILB, aT, t64_4) <@ a2____a_ilen_read_upto8_at (
@@ -4936,7 +4937,7 @@ module M = {
         } else {
           (dELTA, lEN, tRAIL, aT16, t64_0) <@ a32____a_ilen_read_upto8_at (
           buf, offset, dELTA, lEN, tRAIL, 0, aT16);
-          w <- (zeroextu128 t64_0);
+          w <- (VMOV_64 t64_0);
           (dELTA, lEN, tRAIL, aT16, t64_1) <@ a32____a_ilen_read_upto8_at (
           buf, offset, dELTA, lEN, tRAIL, 8, aT16);
           w <- (VPINSR_2u64 w t64_1 (W8.of_int 1));
@@ -5009,7 +5010,7 @@ module M = {
         aT8 <- (aT - cUR);
         (dELTA, lEN, tRAIL, aT, w) <@ a32____a_ilen_read_upto8_at (buf,
         offset, dELTA, lEN, tRAIL, cUR, aT);
-        t128 <- (zeroextu128 w);
+        t128 <- (VMOV_64 w);
         w256 <- (VPBROADCAST_4u64 (truncateu64 t128));
         w256 <@ __SHLQ_256 (w256, aT8);
       }
@@ -5051,14 +5052,14 @@ module M = {
     if (((0 < _LEN) \/ (_TRAILB <> 0))) {
       (dELTA, _LEN, _TRAILB, aT, t64_2) <@ a32____a_ilen_read_upto8_at (
       buf, offset, dELTA, _LEN, _TRAILB, 40, aT);
-      t128_1 <- (zeroextu128 t64_2);
+      t128_1 <- (VMOV_64 t64_2);
       t128_2 <- (set0_128);
       if (((0 < _LEN) \/ (_TRAILB <> 0))) {
         (dELTA, _LEN, _TRAILB, aT, r3) <@ a32____a_ilen_read_upto32_at (
         buf, offset, dELTA, _LEN, _TRAILB, 48, aT);
         (dELTA, _LEN, _TRAILB, aT, t64_3) <@ a32____a_ilen_read_upto8_at (
         buf, offset, dELTA, _LEN, _TRAILB, 80, aT);
-        t128_2 <- (zeroextu128 t64_3);
+        t128_2 <- (VMOV_64 t64_3);
         (dELTA, _LEN, _TRAILB, aT, r4) <@ a32____a_ilen_read_upto32_at (
         buf, offset, dELTA, _LEN, _TRAILB, 88, aT);
         (dELTA, _LEN, _TRAILB, aT, t64_4) <@ a32____a_ilen_read_upto8_at (
@@ -5319,7 +5320,7 @@ module M = {
         } else {
           (dELTA, lEN, tRAIL, aT16, t64_0) <@ a64____a_ilen_read_upto8_at (
           buf, offset, dELTA, lEN, tRAIL, 0, aT16);
-          w <- (zeroextu128 t64_0);
+          w <- (VMOV_64 t64_0);
           (dELTA, lEN, tRAIL, aT16, t64_1) <@ a64____a_ilen_read_upto8_at (
           buf, offset, dELTA, lEN, tRAIL, 8, aT16);
           w <- (VPINSR_2u64 w t64_1 (W8.of_int 1));
@@ -5392,7 +5393,7 @@ module M = {
         aT8 <- (aT - cUR);
         (dELTA, lEN, tRAIL, aT, w) <@ a64____a_ilen_read_upto8_at (buf,
         offset, dELTA, lEN, tRAIL, cUR, aT);
-        t128 <- (zeroextu128 w);
+        t128 <- (VMOV_64 w);
         w256 <- (VPBROADCAST_4u64 (truncateu64 t128));
         w256 <@ __SHLQ_256 (w256, aT8);
       }
@@ -5620,14 +5621,14 @@ module M = {
     if (((0 < _LEN) \/ (_TRAILB <> 0))) {
       (dELTA, _LEN, _TRAILB, aT, t64_2) <@ a64____a_ilen_read_upto8_at (
       buf, offset, dELTA, _LEN, _TRAILB, 40, aT);
-      t128_1 <- (zeroextu128 t64_2);
+      t128_1 <- (VMOV_64 t64_2);
       t128_2 <- (set0_128);
       if (((0 < _LEN) \/ (_TRAILB <> 0))) {
         (dELTA, _LEN, _TRAILB, aT, r3) <@ a64____a_ilen_read_upto32_at (
         buf, offset, dELTA, _LEN, _TRAILB, 48, aT);
         (dELTA, _LEN, _TRAILB, aT, t64_3) <@ a64____a_ilen_read_upto8_at (
         buf, offset, dELTA, _LEN, _TRAILB, 80, aT);
-        t128_2 <- (zeroextu128 t64_3);
+        t128_2 <- (VMOV_64 t64_3);
         (dELTA, _LEN, _TRAILB, aT, r4) <@ a64____a_ilen_read_upto32_at (
         buf, offset, dELTA, _LEN, _TRAILB, 88, aT);
         (dELTA, _LEN, _TRAILB, aT, t64_4) <@ a64____a_ilen_read_upto8_at (
@@ -6053,14 +6054,14 @@ module M = {
     at <- upto;
     return (at, off, buf);
   }
-  proc a64___squeeze_updstate_avx2 (st:W64.t Array26.t, buf:W8.t Array64.t) : 
-  W64.t Array26.t * W8.t Array64.t = {
+  proc a64___squeeze_updstate_avx2 (st:W64.t Array26.t, buf:W8.t Array64.t,
+                                    len:int) : W64.t Array26.t *
+                                               W8.t Array64.t = {
     var ststatus:W64.t;
     var stk:W64.t Array25.t;
     var r8:int;
     var at:int;
     var off:int;
-    var len:int;
     var  _0:W8.t;
     var  _1:int;
     stk <- witness;
@@ -6075,7 +6076,6 @@ module M = {
       
     }
     off <- 0;
-    len <- 64;
     len <- (len + at);
     while ((r8 < len)) {
       (at, off, buf) <@ a64___dump_updstate_avx2 (buf, off, stk, at, r8);
@@ -6236,14 +6236,13 @@ module M = {
     at <- upto;
     return (at, off, st);
   }
-  proc a66___update_updstate_avx2 (st:W64.t Array26.t, buf:W8.t Array66.t) : 
-  W64.t Array26.t = {
+  proc a66___update_updstate_avx2 (st:W64.t Array26.t, buf:W8.t Array66.t,
+                                   len:int) : W64.t Array26.t = {
     var ststatus:W64.t;
     var stk:W64.t Array25.t;
     var r8:int;
     var at:int;
     var off:int;
-    var len:int;
     var  _0:W8.t;
     var  _1:int;
     stk <- witness;
@@ -6252,7 +6251,6 @@ module M = {
     stk <- (Array25.init (fun i => st.[(0 + i)]));
     (* Erased call to spill *)
     off <- 0;
-    len <- 66;
     len <- (len + at);
     while ((r8 <= len)) {
       (at, off, stk) <@ a66___add_updstate_avx2 (stk, at, buf, off, r8);
@@ -6382,7 +6380,7 @@ module M = {
         } else {
           (dELTA, lEN, tRAIL, aT16, t64_0) <@ a128____a_ilen_read_upto8_at (
           buf, offset, dELTA, lEN, tRAIL, 0, aT16);
-          w <- (zeroextu128 t64_0);
+          w <- (VMOV_64 t64_0);
           (dELTA, lEN, tRAIL, aT16, t64_1) <@ a128____a_ilen_read_upto8_at (
           buf, offset, dELTA, lEN, tRAIL, 8, aT16);
           w <- (VPINSR_2u64 w t64_1 (W8.of_int 1));
@@ -6456,7 +6454,7 @@ module M = {
         aT8 <- (aT - cUR);
         (dELTA, lEN, tRAIL, aT, w) <@ a128____a_ilen_read_upto8_at (buf,
         offset, dELTA, lEN, tRAIL, cUR, aT);
-        t128 <- (zeroextu128 w);
+        t128 <- (VMOV_64 w);
         w256 <- (VPBROADCAST_4u64 (truncateu64 t128));
         w256 <@ __SHLQ_256 (w256, aT8);
       }
@@ -6623,14 +6621,14 @@ module M = {
     if (((0 < _LEN) \/ (_TRAILB <> 0))) {
       (dELTA, _LEN, _TRAILB, aT, t64_2) <@ a128____a_ilen_read_upto8_at (
       buf, offset, dELTA, _LEN, _TRAILB, 40, aT);
-      t128_1 <- (zeroextu128 t64_2);
+      t128_1 <- (VMOV_64 t64_2);
       t128_2 <- (set0_128);
       if (((0 < _LEN) \/ (_TRAILB <> 0))) {
         (dELTA, _LEN, _TRAILB, aT, r3) <@ a128____a_ilen_read_upto32_at (
         buf, offset, dELTA, _LEN, _TRAILB, 48, aT);
         (dELTA, _LEN, _TRAILB, aT, t64_3) <@ a128____a_ilen_read_upto8_at (
         buf, offset, dELTA, _LEN, _TRAILB, 80, aT);
-        t128_2 <- (zeroextu128 t64_3);
+        t128_2 <- (VMOV_64 t64_3);
         (dELTA, _LEN, _TRAILB, aT, r4) <@ a128____a_ilen_read_upto32_at (
         buf, offset, dELTA, _LEN, _TRAILB, 88, aT);
         (dELTA, _LEN, _TRAILB, aT, t64_4) <@ a128____a_ilen_read_upto8_at (
@@ -7634,7 +7632,7 @@ module M = {
         } else {
           (dELTA, lEN, tRAIL, aT16, t64_0) <@ a_COMMITMENT_HASH____a_ilen_read_upto8_at (
           buf, offset, dELTA, lEN, tRAIL, 0, aT16);
-          w <- (zeroextu128 t64_0);
+          w <- (VMOV_64 t64_0);
           (dELTA, lEN, tRAIL, aT16, t64_1) <@ a_COMMITMENT_HASH____a_ilen_read_upto8_at (
           buf, offset, dELTA, lEN, tRAIL, 8, aT16);
           w <- (VPINSR_2u64 w t64_1 (W8.of_int 1));
@@ -7711,7 +7709,7 @@ module M = {
         aT8 <- (aT - cUR);
         (dELTA, lEN, tRAIL, aT, w) <@ a_COMMITMENT_HASH____a_ilen_read_upto8_at (
         buf, offset, dELTA, lEN, tRAIL, cUR, aT);
-        t128 <- (zeroextu128 w);
+        t128 <- (VMOV_64 w);
         w256 <- (VPBROADCAST_4u64 (truncateu64 t128));
         w256 <@ __SHLQ_256 (w256, aT8);
       }
@@ -7882,14 +7880,14 @@ module M = {
     if (((0 < _LEN) \/ (_TRAILB <> 0))) {
       (dELTA, _LEN, _TRAILB, aT, t64_2) <@ a_COMMITMENT_HASH____a_ilen_read_upto8_at (
       buf, offset, dELTA, _LEN, _TRAILB, 40, aT);
-      t128_1 <- (zeroextu128 t64_2);
+      t128_1 <- (VMOV_64 t64_2);
       t128_2 <- (set0_128);
       if (((0 < _LEN) \/ (_TRAILB <> 0))) {
         (dELTA, _LEN, _TRAILB, aT, r3) <@ a_COMMITMENT_HASH____a_ilen_read_upto32_at (
         buf, offset, dELTA, _LEN, _TRAILB, 48, aT);
         (dELTA, _LEN, _TRAILB, aT, t64_3) <@ a_COMMITMENT_HASH____a_ilen_read_upto8_at (
         buf, offset, dELTA, _LEN, _TRAILB, 80, aT);
-        t128_2 <- (zeroextu128 t64_3);
+        t128_2 <- (VMOV_64 t64_3);
         (dELTA, _LEN, _TRAILB, aT, r4) <@ a_COMMITMENT_HASH____a_ilen_read_upto32_at (
         buf, offset, dELTA, _LEN, _TRAILB, 88, aT);
         (dELTA, _LEN, _TRAILB, aT, t64_4) <@ a_COMMITMENT_HASH____a_ilen_read_upto8_at (
@@ -8270,7 +8268,7 @@ module M = {
         } else {
           (dELTA, lEN, tRAIL, aT16, t64_0) <@ a_VERIFICATION_KEY____a_ilen_read_upto8_at (
           buf, offset, dELTA, lEN, tRAIL, 0, aT16);
-          w <- (zeroextu128 t64_0);
+          w <- (VMOV_64 t64_0);
           (dELTA, lEN, tRAIL, aT16, t64_1) <@ a_VERIFICATION_KEY____a_ilen_read_upto8_at (
           buf, offset, dELTA, lEN, tRAIL, 8, aT16);
           w <- (VPINSR_2u64 w t64_1 (W8.of_int 1));
@@ -8351,7 +8349,7 @@ module M = {
         aT8 <- (aT - cUR);
         (dELTA, lEN, tRAIL, aT, w) <@ a_VERIFICATION_KEY____a_ilen_read_upto8_at (
         buf, offset, dELTA, lEN, tRAIL, cUR, aT);
-        t128 <- (zeroextu128 w);
+        t128 <- (VMOV_64 w);
         w256 <- (VPBROADCAST_4u64 (truncateu64 t128));
         w256 <@ __SHLQ_256 (w256, aT8);
       }
@@ -8394,14 +8392,14 @@ module M = {
     if (((0 < _LEN) \/ (_TRAILB <> 0))) {
       (dELTA, _LEN, _TRAILB, aT, t64_2) <@ a_VERIFICATION_KEY____a_ilen_read_upto8_at (
       buf, offset, dELTA, _LEN, _TRAILB, 40, aT);
-      t128_1 <- (zeroextu128 t64_2);
+      t128_1 <- (VMOV_64 t64_2);
       t128_2 <- (set0_128);
       if (((0 < _LEN) \/ (_TRAILB <> 0))) {
         (dELTA, _LEN, _TRAILB, aT, r3) <@ a_VERIFICATION_KEY____a_ilen_read_upto32_at (
         buf, offset, dELTA, _LEN, _TRAILB, 48, aT);
         (dELTA, _LEN, _TRAILB, aT, t64_3) <@ a_VERIFICATION_KEY____a_ilen_read_upto8_at (
         buf, offset, dELTA, _LEN, _TRAILB, 80, aT);
-        t128_2 <- (zeroextu128 t64_3);
+        t128_2 <- (VMOV_64 t64_3);
         (dELTA, _LEN, _TRAILB, aT, r4) <@ a_VERIFICATION_KEY____a_ilen_read_upto32_at (
         buf, offset, dELTA, _LEN, _TRAILB, 88, aT);
         (dELTA, _LEN, _TRAILB, aT, t64_4) <@ a_VERIFICATION_KEY____a_ilen_read_upto8_at (
@@ -8578,7 +8576,7 @@ module M = {
         } else {
           (dELTA, lEN, tRAIL, aT16, t64_0) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto8_at (
           buf, offset, dELTA, lEN, tRAIL, 0, aT16);
-          w <- (zeroextu128 t64_0);
+          w <- (VMOV_64 t64_0);
           (dELTA, lEN, tRAIL, aT16, t64_1) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto8_at (
           buf, offset, dELTA, lEN, tRAIL, 8, aT16);
           w <- (VPINSR_2u64 w t64_1 (W8.of_int 1));
@@ -8655,7 +8653,7 @@ module M = {
         aT8 <- (aT - cUR);
         (dELTA, lEN, tRAIL, aT, w) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto8_at (
         buf, offset, dELTA, lEN, tRAIL, cUR, aT);
-        t128 <- (zeroextu128 w);
+        t128 <- (VMOV_64 w);
         w256 <- (VPBROADCAST_4u64 (truncateu64 t128));
         w256 <@ __SHLQ_256 (w256, aT8);
       }
@@ -8699,14 +8697,14 @@ module M = {
     if (((0 < _LEN) \/ (_TRAILB <> 0))) {
       (dELTA, _LEN, _TRAILB, aT, t64_2) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto8_at (
       buf, offset, dELTA, _LEN, _TRAILB, 40, aT);
-      t128_1 <- (zeroextu128 t64_2);
+      t128_1 <- (VMOV_64 t64_2);
       t128_2 <- (set0_128);
       if (((0 < _LEN) \/ (_TRAILB <> 0))) {
         (dELTA, _LEN, _TRAILB, aT, r3) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto32_at (
         buf, offset, dELTA, _LEN, _TRAILB, 48, aT);
         (dELTA, _LEN, _TRAILB, aT, t64_3) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto8_at (
         buf, offset, dELTA, _LEN, _TRAILB, 80, aT);
-        t128_2 <- (zeroextu128 t64_3);
+        t128_2 <- (VMOV_64 t64_3);
         (dELTA, _LEN, _TRAILB, aT, r4) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto32_at (
         buf, offset, dELTA, _LEN, _TRAILB, 88, aT);
         (dELTA, _LEN, _TRAILB, aT, t64_4) <@ a_ENCODED_COMMITMENT____a_ilen_read_upto8_at (
@@ -8873,9 +8871,11 @@ module M = {
     var message_representative:W8.t Array64.t;
     var copied_32_bytes:W256.t;
     var prefix:W8.t Array66.t;
+    var trailb:W8.t;
     var state:W64.t Array26.t;
-    var buf:int;
+    var rate64:int;
     var len:int;
+    var buf:int;
     message_representative <- witness;
     prefix <- witness;
     state <- witness;
@@ -8896,8 +8896,11 @@ module M = {
     prefix.[64] <- (W8.of_int 0);
     prefix.[65] <- (truncateu8 (W64.of_int context_size));
     (* Erased call to spill *)
-    state <@ _init_updstate_avx2 (state, 17, 31);
-    state <@ a66___update_updstate_avx2 (state, prefix);
+    rate64 <- 17;
+    trailb <- (W8.of_int 31);
+    state <@ _init_updstate_avx2 (state, rate64, trailb);
+    len <- 66;
+    state <@ a66___update_updstate_avx2 (state, prefix, len);
     (* Erased call to unspill *)
     buf <- context_pointer;
     len <- context_size;
@@ -8907,8 +8910,9 @@ module M = {
     len <- message_size;
     state <@ _absorb_m_updstate_avx2 (state, buf, len);
     state <@ _finish_updstate_avx2 (state);
+    len <- 64;
     (state, message_representative) <@ a64___squeeze_updstate_avx2 (state,
-    message_representative);
+    message_representative, len);
     return message_representative;
   }
   proc hash_verification_key (verification_key_hash:W8.t Array64.t,
@@ -10641,7 +10645,7 @@ module M = {
     shuffle_table_idx <- good;
     shuffle_table_idx <- (shuffle_table_idx `<<` (W8.of_int 3));
     shuffles <-
-    (zeroextu128
+    (VMOV_64
     (get64_direct (WArray2048.init8 (fun i => shuffle_table_pointer.[i]))
     (W64.to_uint shuffle_table_idx)));
     error_coefficients_128 <- (VPSHUFB_128 coefficient_block shuffles);
@@ -11554,38 +11558,38 @@ module M = {
   proc __compute_z_and_check_norm (s1:W32.t Array1280.t,
                                    verifier_challenge:W32.t Array256.t,
                                    mask:W32.t Array1280.t,
-                                   signer_response:W32.t Array1280.t) : 
+                                   signer_response:W32.t Array1280.t,
+                                   infinity_norm_check_result:W64.t) : 
   W32.t Array1280.t * W64.t = {
     var aux:W32.t Array256.t;
-    var infinity_norm_check_result:W64.t;
-    var i:int;
-    infinity_norm_check_result <- (W64.of_int 0);
-    i <- 0;
-    while ((i < 5)) {
+    var base:int;
+    base <- 0;
+    infinity_norm_check_result <- infinity_norm_check_result;
+    if ((infinity_norm_check_result <> (W64.of_int 0))) {
+      base <- (5 * 256);
+    } else {
+      
+    }
+    while ((base < (5 * 256))) {
+      aux <@ __compute_signer_response_element ((Array256.init
+                                                (fun i => s1.[(base + i)])),
+      verifier_challenge, (Array256.init (fun i => mask.[(base + i)])),
+      (Array256.init (fun i => signer_response.[(base + i)])));
+      signer_response <-
+      (Array1280.init
+      (fun i => (if (base <= i < (base + 256)) then aux.[(i - base)] else 
+                signer_response.[i]))
+      );
+      infinity_norm_check_result <@ polynomial____check_infinity_norm (
+      (Array256.init (fun i => signer_response.[(base + i)])),
+      ((1 `<<` 19) - (49 * 4)));
+      base <- (base + 256);
       infinity_norm_check_result <- infinity_norm_check_result;
-      if ((infinity_norm_check_result = (W64.of_int 0))) {
-        aux <@ __compute_signer_response_element ((Array256.init
-                                                  (fun i_0 => s1.[((i * 256) +
-                                                                  i_0)])
-                                                  ),
-        verifier_challenge,
-        (Array256.init (fun i_0 => mask.[((i * 256) + i_0)])),
-        (Array256.init (fun i_0 => signer_response.[((i * 256) + i_0)])));
-        signer_response <-
-        (Array1280.init
-        (fun i_0 => (if ((i * 256) <= i_0 < ((i * 256) + 256)) then aux.[
-                                                                    (
-                                                                    i_0 -
-                                                                    (i * 256))] else 
-                    signer_response.[i_0]))
-        );
-        infinity_norm_check_result <@ polynomial____check_infinity_norm (
-        (Array256.init (fun i_0 => signer_response.[((i * 256) + i_0)])),
-        ((1 `<<` 19) - (49 * 4)));
+      if ((infinity_norm_check_result <> (W64.of_int 0))) {
+        base <- (5 * 256);
       } else {
         
       }
-      i <- (i + 1);
     }
     return (signer_response, infinity_norm_check_result);
   }
@@ -11597,48 +11601,44 @@ module M = {
   W32.t Array1536.t * W64.t = {
     var aux:W32.t Array256.t;
     var cs2:W32.t Array256.t;
-    var i:int;
+    var base:int;
     cs2 <- witness;
-    i <- 0;
-    while ((i < 6)) {
+    base <- 0;
+    infinity_norm_check_result <- infinity_norm_check_result;
+    if ((infinity_norm_check_result <> (W64.of_int 0))) {
+      base <- (6 * 256);
+    } else {
+      
+    }
+    while ((base < (6 * 256))) {
+      cs2 <@ polynomial__pointwise_montgomery_multiply_and_reduce (cs2,
+      (Array256.init (fun i => s2.[(base + i)])), verifier_challenge);
+      cs2 <@ polynomial__invert_ntt_montgomery (cs2);
+      aux <@ polynomial__subtract ((Array256.init
+                                   (fun i => w0_minus_cs2.[(base + i)])),
+      (Array256.init (fun i => w0.[(base + i)])), cs2);
+      w0_minus_cs2 <-
+      (Array1536.init
+      (fun i => (if (base <= i < (base + 256)) then aux.[(i - base)] else 
+                w0_minus_cs2.[i]))
+      );
+      aux <@ polynomial__reduce32 ((Array256.init
+                                   (fun i => w0_minus_cs2.[(base + i)])));
+      w0_minus_cs2 <-
+      (Array1536.init
+      (fun i => (if (base <= i < (base + 256)) then aux.[(i - base)] else 
+                w0_minus_cs2.[i]))
+      );
+      infinity_norm_check_result <@ polynomial____check_infinity_norm (
+      (Array256.init (fun i => w0_minus_cs2.[(base + i)])),
+      (((8380417 - 1) %/ 32) - (49 * 4)));
+      base <- (base + 256);
       infinity_norm_check_result <- infinity_norm_check_result;
-      if ((infinity_norm_check_result = (W64.of_int 0))) {
-        cs2 <@ polynomial__pointwise_montgomery_multiply_and_reduce (
-        cs2, (Array256.init (fun i_0 => s2.[((i * 256) + i_0)])),
-        verifier_challenge);
-        cs2 <@ polynomial__invert_ntt_montgomery (cs2);
-        aux <@ polynomial__subtract ((Array256.init
-                                     (fun i_0 => w0_minus_cs2.[((i * 256) +
-                                                               i_0)])
-                                     ),
-        (Array256.init (fun i_0 => w0.[((i * 256) + i_0)])), cs2);
-        w0_minus_cs2 <-
-        (Array1536.init
-        (fun i_0 => (if ((i * 256) <= i_0 < ((i * 256) + 256)) then aux.[
-                                                                    (
-                                                                    i_0 -
-                                                                    (i * 256))] else 
-                    w0_minus_cs2.[i_0]))
-        );
-        aux <@ polynomial__reduce32 ((Array256.init
-                                     (fun i_0 => w0_minus_cs2.[((i * 256) +
-                                                               i_0)])
-                                     ));
-        w0_minus_cs2 <-
-        (Array1536.init
-        (fun i_0 => (if ((i * 256) <= i_0 < ((i * 256) + 256)) then aux.[
-                                                                    (
-                                                                    i_0 -
-                                                                    (i * 256))] else 
-                    w0_minus_cs2.[i_0]))
-        );
-        infinity_norm_check_result <@ polynomial____check_infinity_norm (
-        (Array256.init (fun i_0 => w0_minus_cs2.[((i * 256) + i_0)])),
-        (((8380417 - 1) %/ 32) - (49 * 4)));
+      if ((infinity_norm_check_result <> (W64.of_int 0))) {
+        base <- (6 * 256);
       } else {
         
       }
-      i <- (i + 1);
     }
     return (w0_minus_cs2, infinity_norm_check_result);
   }
@@ -11650,40 +11650,43 @@ module M = {
   W32.t Array1536.t * W64.t = {
     var aux:W32.t Array256.t;
     var ct0:W32.t Array256.t;
-    var i:int;
+    var base:int;
     ct0 <- witness;
-    i <- 0;
-    while ((i < 6)) {
+    base <- 0;
+    infinity_norm_check_result <- infinity_norm_check_result;
+    if ((infinity_norm_check_result <> (W64.of_int 0))) {
+      base <- (6 * 256);
+    } else {
+      
+    }
+    while ((base < (6 * 256))) {
+      ct0 <@ polynomial__pointwise_montgomery_multiply_and_reduce (ct0,
+      (Array256.init (fun i => t0.[(base + i)])), verifier_challenge);
+      ct0 <@ polynomial__invert_ntt_montgomery (ct0);
+      ct0 <@ polynomial__reduce32 (ct0);
+      infinity_norm_check_result <@ polynomial____check_infinity_norm (
+      ct0, ((8380417 - 1) %/ 32));
       infinity_norm_check_result <- infinity_norm_check_result;
       if ((infinity_norm_check_result = (W64.of_int 0))) {
-        ct0 <@ polynomial__pointwise_montgomery_multiply_and_reduce (
-        ct0, (Array256.init (fun i_0 => t0.[((i * 256) + i_0)])),
-        verifier_challenge);
-        ct0 <@ polynomial__invert_ntt_montgomery (ct0);
-        ct0 <@ polynomial__reduce32 (ct0);
-        infinity_norm_check_result <@ polynomial____check_infinity_norm (
-        ct0, ((8380417 - 1) %/ 32));
-        infinity_norm_check_result <- infinity_norm_check_result;
-        if ((infinity_norm_check_result = (W64.of_int 0))) {
-          aux <@ polynomial__add ((Array256.init
-                                  (fun i_0 => w0_minus_cs2_plus_ct0.[
-                                              ((i * 256) + i_0)])
-                                  ),
-          (Array256.init (fun i_0 => w0_minus_cs2.[((i * 256) + i_0)])),
-          ct0);
-          w0_minus_cs2_plus_ct0 <-
-          (Array1536.init
-          (fun i_0 => (if ((i * 256) <= i_0 < ((i * 256) + 256)) then 
-                      aux.[(i_0 - (i * 256))] else w0_minus_cs2_plus_ct0.[
-                                                   i_0]))
-          );
-        } else {
-          
-        }
+        aux <@ polynomial__add ((Array256.init
+                                (fun i => w0_minus_cs2_plus_ct0.[(base + i)])
+                                ),
+        (Array256.init (fun i => w0_minus_cs2.[(base + i)])), ct0);
+        w0_minus_cs2_plus_ct0 <-
+        (Array1536.init
+        (fun i => (if (base <= i < (base + 256)) then aux.[(i - base)] else 
+                  w0_minus_cs2_plus_ct0.[i]))
+        );
       } else {
         
       }
-      i <- (i + 1);
+      base <- (base + 256);
+      infinity_norm_check_result <- infinity_norm_check_result;
+      if ((infinity_norm_check_result <> (W64.of_int 0))) {
+        base <- (6 * 256);
+      } else {
+        
+      }
     }
     return (w0_minus_cs2_plus_ct0, infinity_norm_check_result);
   }
@@ -11691,53 +11694,54 @@ module M = {
                            w1:W32.t Array1536.t, hint_0:W32.t Array1536.t,
                            infinity_norm_check_result:W64.t) : W32.t Array1536.t *
                                                                W64.t = {
-    var total_ones_in_hint:W64.t;
-    var i:int;
     var hint_element:W32.t Array256.t;
-    var ones_in_hint:W64.t;
+    var hint_count_exceeded:bool;
+    var hint_count_fail:W8.t;
+    var hint_count_fail_64:W64.t;
+    var total_ones_in_hint:int;
+    var base:int;
+    var ones_in_hint:int;
     hint_element <- witness;
-    total_ones_in_hint <- (W64.of_int 0);
-    i <- 0;
-    while ((i < 6)) {
-      infinity_norm_check_result <- infinity_norm_check_result;
-      if ((infinity_norm_check_result = (W64.of_int 0))) {
-        hint_element <-
-        (Array256.init (fun i_0 => hint_0.[((i * 256) + i_0)]));
-        (hint_element, ones_in_hint) <@ polynomial____make_hint (hint_element,
-        (Array256.init (fun i_0 => w0_minus_cs2_plus_ct0.[((i * 256) + i_0)])
-        ), (Array256.init (fun i_0 => w1.[((i * 256) + i_0)])));
-        hint_0 <-
-        (Array1536.init
-        (fun i_0 => (if ((i * 256) <= i_0 < ((i * 256) + 256)) then hint_element.[
-                                                                    (
-                                                                    i_0 -
-                                                                    (i * 256))] else 
-                    hint_0.[i_0]))
-        );
-        total_ones_in_hint <- (total_ones_in_hint + ones_in_hint);
-      } else {
-        
-      }
-      i <- (i + 1);
-    }
+    total_ones_in_hint <- 0;
+    base <- 0;
     infinity_norm_check_result <- infinity_norm_check_result;
-    if ((infinity_norm_check_result = (W64.of_int 0))) {
-      total_ones_in_hint <- total_ones_in_hint;
-      if ((total_ones_in_hint \ule (W64.of_int 55))) {
-        infinity_norm_check_result <- (W64.of_int 0);
-      } else {
-        infinity_norm_check_result <- (W64.of_int 1);
-      }
+    if ((infinity_norm_check_result <> (W64.of_int 0))) {
+      base <- (6 * 256);
     } else {
       
     }
+    while ((base < (6 * 256))) {
+      hint_element <- (Array256.init (fun i => hint_0.[(base + i)]));
+      (hint_element, ones_in_hint) <@ polynomial____make_hint (hint_element,
+      (Array256.init (fun i => w0_minus_cs2_plus_ct0.[(base + i)])),
+      (Array256.init (fun i => w1.[(base + i)])));
+      hint_0 <-
+      (Array1536.init
+      (fun i => (if (base <= i < (base + 256)) then hint_element.[(i - base)] else 
+                hint_0.[i]))
+      );
+      total_ones_in_hint <- (total_ones_in_hint + ones_in_hint);
+      base <- (base + 256);
+      infinity_norm_check_result <- infinity_norm_check_result;
+      if ((infinity_norm_check_result <> (W64.of_int 0))) {
+        base <- (6 * 256);
+      } else {
+        
+      }
+    }
+    hint_count_exceeded <- (55 < total_ones_in_hint);
+    hint_count_fail <- (SETcc hint_count_exceeded);
+    hint_count_fail_64 <- (zeroextu64 hint_count_fail);
+    infinity_norm_check_result <-
+    (infinity_norm_check_result `|` hint_count_fail_64);
     return (hint_0, infinity_norm_check_result);
   }
   proc __sign_internal (signature:W8.t Array3309.t,
                         signing_key:W8.t Array4032.t, context_pointer:int,
                         context_size:int, message_pointer:int,
                         message_size:int, randomness:W8.t Array32.t) : 
-  W8.t Array3309.t = {
+  W8.t Array3309.t * W64.t = {
+    var result:W64.t;
     var seed_for_matrix_A:W8.t Array32.t;
     var matrix_A:W32.t Array7680.t;
     var message_representative:W8.t Array64.t;
@@ -11747,6 +11751,7 @@ module M = {
     var t0:W32.t Array1536.t;
     var domain_separator_for_mask:W16.t;
     var exit_rejection_sampling_loop:W8.t;
+    var kappa_exceeded:W8.t;
     var mask:W32.t Array1280.t;
     var j:W64.t;
     var copied_32_bytes:W256.t;
@@ -11757,11 +11762,18 @@ module M = {
     var commitment_encoded:W8.t Array768.t;
     var commitment_hash:W8.t Array48.t;
     var verifier_challenge:W32.t Array256.t;
-    var signer_response:W32.t Array1280.t;
     var infinity_norm_check_result:W64.t;
     var w0_minus_cs2:W32.t Array1536.t;
     var w0_minus_cs2_plus_ct0:W32.t Array1536.t;
+    var signer_response:W32.t Array1280.t;
     var hint_0:W32.t Array1536.t;
+    var kappa_diff:W32.t;
+    var kappa_zf:bool;
+    var kappa_bit:W8.t;
+    var  _0:bool;
+    var  _1:bool;
+    var  _2:bool;
+    var  _3:bool;
     commitment_encoded <- witness;
     commitment_hash <- witness;
     hint_0 <- witness;
@@ -11811,6 +11823,7 @@ module M = {
     t0 <@ column_vector__ntt (t0);
     domain_separator_for_mask <- (W16.of_int 0);
     exit_rejection_sampling_loop <- (W8.of_int 0);
+    kappa_exceeded <- (W8.of_int 0);
     while ((exit_rejection_sampling_loop <> (W8.of_int 1))) {
       (mask, domain_separator_for_mask) <@ sample____mask (seed_for_mask,
       domain_separator_for_mask);
@@ -11841,13 +11854,16 @@ module M = {
       commitment_hash);
       (* Erased call to unspill *)
       verifier_challenge <@ polynomial__ntt (verifier_challenge);
-      (signer_response, infinity_norm_check_result) <@ __compute_z_and_check_norm (
-      s1, verifier_challenge, mask, signer_response);
+      infinity_norm_check_result <- (W64.of_int 0);
       (w0_minus_cs2, infinity_norm_check_result) <@ __apply_cs2_and_check_norm (
       w0_minus_cs2, w0, s2, verifier_challenge, infinity_norm_check_result);
       (w0_minus_cs2_plus_ct0, infinity_norm_check_result) <@ __apply_ct0_and_check_norm (
       w0_minus_cs2_plus_ct0, w0_minus_cs2, t0, verifier_challenge,
       infinity_norm_check_result);
+      (signer_response, infinity_norm_check_result) <@ __compute_z_and_check_norm (
+      s1, verifier_challenge, mask, signer_response,
+      infinity_norm_check_result);
+      w0_minus_cs2_plus_ct0 <- w0_minus_cs2_plus_ct0;
       (hint_0, infinity_norm_check_result) <@ __make_hint_vector (w0_minus_cs2_plus_ct0,
       w1, hint_0, infinity_norm_check_result);
       infinity_norm_check_result <- infinity_norm_check_result;
@@ -11856,6 +11872,13 @@ module M = {
       } else {
         exit_rejection_sampling_loop <- (W8.of_int 0);
       }
+      kappa_diff <- (zeroextu32 domain_separator_for_mask);
+      kappa_diff <- (kappa_diff `^` (W32.of_int (((65535 - 5) %/ 5) * 5)));
+      ( _0,  _1,  _2,  _3, kappa_zf) <- (TEST_32 kappa_diff kappa_diff);
+      kappa_bit <- (SETcc kappa_zf);
+      kappa_exceeded <- (kappa_exceeded `|` kappa_bit);
+      exit_rejection_sampling_loop <-
+      (exit_rejection_sampling_loop `|` kappa_exceeded);
     }
     (* Erased call to unspill *)
     hint_0 <- hint_0;
@@ -11863,7 +11886,10 @@ module M = {
     signer_response <- signer_response;
     signature <@ signature____encode (signature, commitment_hash,
     signer_response, hint_0);
-    return signature;
+    result <- (zeroextu64 kappa_exceeded);
+    result <- (result `<<` (W8.of_int 63));
+    result <- (result `|>>` (W8.of_int 63));
+    return (signature, result);
   }
   proc __compare_commitment_hashes (lhs:W8.t Array48.t, rhs:W8.t Array48.t) : 
   W64.t = {
@@ -12034,9 +12060,9 @@ module M = {
     context_pointer <- (W64.to_uint context.[0]);
     context_size <- (W64.to_uint context.[1]);
     if ((context_size <= 255)) {
-      signature <@ __sign_internal (signature, signing_key, context_pointer,
-      context_size, message_pointer, message_size, randomness);
-      result <- (W64.of_int 0);
+      (signature, result) <@ __sign_internal (signature, signing_key,
+      context_pointer, context_size, message_pointer, message_size,
+      randomness);
     } else {
       result <- (W64.of_int (- 1));
     }

@@ -210,7 +210,7 @@ lemma t0_decode_to_polynomial _a :
        /\ wpoly_srng (dpow-1) dpow res
    ].
 proc => /=;inline *.
-print BSWAS_416u8_128_slicegetE.
+
 proc change ^while.1 : { bytestream <- if (0 <= input_offset*8 <= 416*8-128)
                                        then BSWAS_416u8_128.sliceget t0_encoded (input_offset*8)
                                        else get128_direct (WArray416.init8 (fun (i : int) => t0_encoded.[i])) input_offset ;}.

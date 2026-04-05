@@ -458,6 +458,28 @@ qed.
 require import Array48 Array640 Array1280 Array3200 WArray48 Array3309 WArray3309.
 
 (* --------------------------------------------------------------- *)
+(*                  Lossless Lemmas                                   *)
+(* ---------------------------------------------------------------- *)
+
+lemma signature____encode_hint_ll : islossless M.signature____encode_hint.
+proof.
+proc;wp.
+while (0<=i<=6 /\ condition1 = (i<6)) (6-i); last by unroll for ^while; auto => /> /#. 
++ move => ?; wp; while (0<=i<=6 /\ condition1 = (i<6) /\ (i < 6) /\
+                        0<=j<=256 /\ condition2 = (j<256)) (256-j); last by auto => /#.
+by move => ?; auto => /> /#.
+qed.
+
+lemma signature____encode_ll : islossless M.signature____encode.
+proof.
+proc.
+call signature____encode_hint_ll.
+wp. print Gamma1.
+call (: true ==> true); first by apply gamma1_encode_ll.
+by while true (48 - i); auto => /#.
+qed.
+
+(* --------------------------------------------------------------- *)
 (*                  Full Signature Encode Lemma                      *)
 (* ---------------------------------------------------------------- *)
 import BytesCT.

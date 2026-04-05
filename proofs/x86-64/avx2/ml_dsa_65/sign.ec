@@ -250,7 +250,7 @@ liftu_wpolymat (mat_unflatten256 matrix_A{2}) = _A{1} /\
 + if {1}; last first.
   (* failure: zh = None /\ kappa_max <= kappa, so last_norm_check_result = W64.one *)
   + wp; call {2} (: true ==> true).
-    + admit. (* lossless. *)
+    + exact signature____encode_ll.
     auto => |> &1 &2 *.
     have -> : last_norm_check_result{2} = W64.one by smt().
     rewrite wordP => i ib.

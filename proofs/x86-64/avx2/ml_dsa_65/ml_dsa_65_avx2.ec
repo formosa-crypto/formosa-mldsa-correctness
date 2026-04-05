@@ -11750,8 +11750,8 @@ module M = {
     var s2:W32.t Array1536.t;
     var t0:W32.t Array1536.t;
     var domain_separator_for_mask:W16.t;
-    var exit_rejection_sampling_loop:W8.t;
-    var kappa_exceeded:W8.t;
+    var exit_rejection_sampling_loop:W64.t;
+    var kappa_exceeded:W64.t;
     var mask:W32.t Array1280.t;
     var j:W64.t;
     var copied_32_bytes:W256.t;
@@ -11767,9 +11767,11 @@ module M = {
     var w0_minus_cs2_plus_ct0:W32.t Array1536.t;
     var signer_response:W32.t Array1280.t;
     var hint_0:W32.t Array1536.t;
+    var last_norm_check_result:W64.t;
     var kappa_diff:W32.t;
     var kappa_zf:bool;
     var kappa_bit:W8.t;
+    var kappa_bit_64:W64.t;
     var  _0:bool;
     var  _1:bool;
     var  _2:bool;
@@ -11822,9 +11824,9 @@ module M = {
     s2 <@ column_vector__ntt (s2);
     t0 <@ column_vector__ntt (t0);
     domain_separator_for_mask <- (W16.of_int 0);
-    exit_rejection_sampling_loop <- (W8.of_int 0);
-    kappa_exceeded <- (W8.of_int 0);
-    while ((exit_rejection_sampling_loop <> (W8.of_int 1))) {
+    exit_rejection_sampling_loop <- (W64.of_int 0);
+    kappa_exceeded <- (W64.of_int 0);
+    while ((exit_rejection_sampling_loop = (W64.of_int 0))) {
       (mask, domain_separator_for_mask) <@ sample____mask (seed_for_mask,
       domain_separator_for_mask);
       j <- (W64.of_int 0);
@@ -11867,16 +11869,16 @@ module M = {
       (hint_0, infinity_norm_check_result) <@ __make_hint_vector (w0_minus_cs2_plus_ct0,
       w1, hint_0, infinity_norm_check_result);
       infinity_norm_check_result <- infinity_norm_check_result;
-      if ((infinity_norm_check_result = (W64.of_int 0))) {
-        exit_rejection_sampling_loop <- (W8.of_int 1);
-      } else {
-        exit_rejection_sampling_loop <- (W8.of_int 0);
-      }
+      last_norm_check_result <- infinity_norm_check_result;
+      exit_rejection_sampling_loop <- infinity_norm_check_result;
+      exit_rejection_sampling_loop <-
+      (exit_rejection_sampling_loop `^` (W64.of_int 1));
       kappa_diff <- (zeroextu32 domain_separator_for_mask);
       kappa_diff <- (kappa_diff `^` (W32.of_int (((65535 - 5) %/ 5) * 5)));
       ( _0,  _1,  _2,  _3, kappa_zf) <- (TEST_32 kappa_diff kappa_diff);
       kappa_bit <- (SETcc kappa_zf);
-      kappa_exceeded <- (kappa_exceeded `|` kappa_bit);
+      kappa_bit_64 <- (zeroextu64 kappa_bit);
+      kappa_exceeded <- (kappa_exceeded `|` kappa_bit_64);
       exit_rejection_sampling_loop <-
       (exit_rejection_sampling_loop `|` kappa_exceeded);
     }
@@ -11886,7 +11888,7 @@ module M = {
     signer_response <- signer_response;
     signature <@ signature____encode (signature, commitment_hash,
     signer_response, hint_0);
-    result <- (zeroextu64 kappa_exceeded);
+    result <- last_norm_check_result;
     result <- (result `<<` (W8.of_int 63));
     result <- (result `|>>` (W8.of_int 63));
     return (signature, result);

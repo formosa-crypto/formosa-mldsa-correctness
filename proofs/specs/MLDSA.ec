@@ -25,12 +25,13 @@ module MLDSA(XOFA : XOF_RejNTTPoly, XOFS : XOF_RejBPoly, XOFSIB : XOF_SIB, RO : 
      return (sk,pk);
   }
 
-  proc sign_derand(sk : BytesSK.t, m : W8.t list, coins : rnd_) : BytesSig.t  * Leakage list= {
+  proc sign_derand(sk : BytesSK.t, m : W8.t list, coins : rnd_) : BytesSig.t option * Leakage list= {
      var rho,_K,tr,s1,s2,t0,s1h,s2h,t0h,_A,mu,rhopp,kappa,y,w,w1,ctl,ct,c,ch,cs1,
          cs2,z,r0,ct0,h,leakage,sigma,bz,bh;
      var zh : (polylvec * polykvec) option;
      ct <- witness;
      ctl <- witness;
+     sigma <- witness;
      leakage <- [];
      (rho,_K,tr,s1,s2,t0) <@ SkEncDec.skDecode(sk);
      s1h <- nttv s1;
@@ -41,8 +42,8 @@ module MLDSA(XOFA : XOF_RejNTTPoly, XOFS : XOF_RejBPoly, XOFSIB : XOF_SIB, RO : 
      rhopp <- H_rhopp _K coins mu;
      kappa <- 0;
      zh <- None;
-     while (zh = None) {
-       y <@ ExpandMask.sample(rhopp,kappa);
+     while (zh = None && ! (kappa_max <= kappa)) {
+       y <@ ExpandMask.sample(rhopp,kappa * lvec);
        w <- invnttv (ntt_mulmxv _A (nttv y));
        w1 <- polykvec_HighBits w;
        ctl <@ RO(XOFSIB).get(mu,w1Encode w1);
@@ -53,7 +54,7 @@ module MLDSA(XOFA : XOF_RejNTTPoly, XOFS : XOF_RejBPoly, XOFSIB : XOF_SIB, RO : 
        cs2 <- invnttv (ntt_smul ch s2);
        z <- y + cs1;
        r0 <- polykvec_LowBits (w - cs2);
-       bz <- infnorm_lt z (gamma1 - Beta) && 
+       bz <- infnorm_lt z (gamma1 - Beta) &&
                   infnorm r0 (gamma2 - Beta);
        leakage <- leakage ++ [ CheckZ bz ];
        if (bz) {
@@ -63,10 +64,12 @@ module MLDSA(XOFA : XOF_RejNTTPoly, XOFS : XOF_RejBPoly, XOFSIB : XOF_SIB, RO : 
           leakage <- leakage ++ [ CheckH bh ];
           if (bh) { zh <- Some (z,h); }
        }
-       kappa <- kappa + lvec;
+       kappa <- kappa + 1;
      }
-     sigma <@ SigEncDec.sigEncode(ct,mods (oget zh).`1 q,(oget zh).`2);
-     return (sigma, leakage);
+     if (zh <> None) {
+       sigma <@ SigEncDec.sigEncode(ct,(oget zh).`1,(oget zh).`2);
+     }
+     return (if zh = None then None else Some sigma, leakage);
   }
 
   proc verify(pk : BytesPK.t, sigma : BytesSig.t, m : W8.t list) : bool = {

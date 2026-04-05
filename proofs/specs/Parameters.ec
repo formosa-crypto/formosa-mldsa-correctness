@@ -15,6 +15,7 @@ op lvec : int.               (*    4              5             7      : number 
 op Eta : int.                (*    2              4             2      : private key range *)
 op Beta : int = tau * Eta.   (*   78             196           120     *)
 op w_hint : int.             (*   80              55            75     : max number of 1s in the hint *)
+op kappa_max : int.          (* abstract bound on rejection sampling iterations *)
 
 axiom param_sets : 
    (tau,lambda,gamma1,gamma2,kvec,lvec,Eta,w_hint) \in [ (* (39,128,2^17,(q-1)%/88,4,4,2,80); ub_d Fails! *)

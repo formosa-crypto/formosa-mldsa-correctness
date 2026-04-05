@@ -30,9 +30,10 @@ import BitChunking.
      - coins via rnd_to_list (abstract rnd_ type) to the Jasmin randomness (Array32)
      - m (W8.t list) to the context-prefixed message read from memory
    The postcondition connects the output signatures byte-for-byte and confirms
-   the Jasmin result code is 0 (success). *)
+   the Jasmin result code is 0 (success, kappa not exceeded). *)
 
 lemma ml_dsa_65_sign_correct _m :
+    kappa_max = (65535 - lvec) %/ lvec =>
     equiv [ MLDSA(MLDSA_XOFA, MLDSA_XOFS, MLDSA_XOF_SIB, SIB_RO).sign_derand
             ~ M.ml_dsa_65_sign :
        Glob.mem{2} = _m
@@ -49,8 +50,10 @@ lemma ml_dsa_65_sign_correct _m :
     /\ valid_s2_bytes (Array768.init (fun i => signing_key{2}.[768 + i]))
        ==>
        Glob.mem{2} = _m
-    /\ BytesSig.to_list res{1}.`1 = to_list res{2}.`1
-    /\ res{2}.`2 = W64.of_int 0
+    /\ (res{1}.`1 = None <=> res{2}.`2 = -W64.one)
+    /\ (res{1}.`1 <> None =>
+          BytesSig.to_list (oget res{1}.`1) = to_list res{2}.`1 /\
+          res{2}.`2 = W64.zero)
     ].
 proof.
 have Hlvec   := mldsa65_lvec.
@@ -58,9 +61,13 @@ have Hkvec   := mldsa65_kvec.
 have HEta    := mldsa65_Eta.
 have Hgamma1 := mldsa65_gamma1.
 have Htau    := mldsa65_tau.
-
-proc => /=; conseq |>.
-
+move => Hkappa_max.
+proc => /=.
+conseq (: _ ==>
+        (zh{1} = None <=> result{2} = - one) /\
+  (zh{1} <> None =>
+   BytesSig.to_list sigma{1} = to_list signature{2} /\ result{2} = zero)); 1: by smt().
+   
 (* Jasmin: compute context_pointer and context_size from context array *)
 sp 0 2.
 
@@ -71,9 +78,11 @@ rcondt {2} ^if; 1: by auto => /> /#.
 inline {2} M.__sign_internal.
 
 sp 0 7.
-seq 2 19 : #pre;1: by auto.
-sp 1 1.
+seq 4 19 : #pre; 1: by auto.
 
+(* ── Step 1: SkDecode (spec only) ────────────────────────────────────────
+   Spec: (rho,_K,tr,s1,s2,t0) <@ SkEncDec.skDecode(sk)
+   Jasmin: nothing yet (Jasmin decodes each piece separately below) *)
 seq 1 0 : (#pre /\
     rho{1} = Bytes32.of_list (take 32 (BytesSK.to_list sk{1})) /\
     _K{1} = Bytes32.of_list (take 32 (drop 32 (BytesSK.to_list sk{1}))) /\
@@ -91,17 +100,25 @@ seq 1 0 : (#pre /\
                         (drop (128 + s1_bytes + s2_bytes + i * ((n * d) %/ 8)) (BytesSK.to_list sk{1})))
                   (2^(d-1)-1) (2^(d-1))));
    1: by ecall{1} (skDecode_corr sk{1}); auto => |> *; smt().
-   
-sp 3 0.
- seq 1 1 : (#pre /\
+
+(* ── Step 3: ExpandA (spec) ~ sample____matrix_A (Jasmin) ───────────────
+   Jasmin: matrix_A <@ sample____matrix_A(seed_for_matrix_A) *)
+sp;seq 1 1 : (#pre /\
     liftu_wpolymat (mat_unflatten256 matrix_A{2}) = _A{1} /\
     wpolymat_urng (mat_unflatten256 matrix_A{2}) 1).
 + ecall{1} (ExpandA_correct rho{1}).
-  ecall{2} (matrix_A_correct (Array32.init (fun i => signing_key{2}.[0 + i]))).
-  auto => |> &1 &2 Hrnd ?????? rr -> ?;congr;rewrite Bytes32.tP => k kb.
-  by rewrite !Bytes32.get_of_list // get_to_list initiE 1:/# nth_take 1,2:/# BytesSK.of_listK ?size_to_list /#.
+  ecall{2} (matrix_A_correct seed_for_matrix_A{2}).
+  auto => |> &1 &2 H ??????rr  -> Hr;congr; rewrite Bytes32.tP => k kb.
+  by rewrite !Bytes32.get_of_list // get_to_list initiE 1:/# /= nth_take 1,2:/# /= BytesSK.get_of_list 1:/# get_to_list.
 
+(* ── Step 4: mu = H_mu tr m (spec simple) ───────────────────────────────
+   Spec: mu <- H_mu tr m
+   Jasmin: nothing (message representative computed next) *)
 sp 1 0.
+
+(* ── Step 5: derive_message_representative (Jasmin) ─────────────────────
+   Spec: (mu already assigned above)
+   Jasmin: message_representative <@ __derive_message_representative(...) *)
 seq 0 1 : (#pre /\
     message_representative{2} =
       Array64.of_list witness (Bytes64.to_list mu{1})).
@@ -110,17 +127,22 @@ seq 0 1 : (#pre /\
               (memread _m context_pointer{2} context_size{2})
               (memread _m message_pointer{2} message_size{2})).
   wp; skip => |> &1 &2 *; do split.
-  + by rewrite size_memread; smt(W64.to_uint_cmp).
-  + by rewrite size_memread; smt(W64.to_uint_cmp).
-  + by rewrite size_memread; smt(W64.to_uint_cmp).
-  + by rewrite size_memread; smt(W64.to_uint_cmp).
+  + rewrite size_memread; smt(W64.to_uint_cmp). 
+  + rewrite size_memread; smt(W64.to_uint_cmp). 
+  + rewrite size_memread; smt(W64.to_uint_cmp). 
+  + rewrite size_memread; smt(W64.to_uint_cmp). 
   move => ????; congr;congr;congr.
-  + rewrite Bytes64.tP => k kb. 
+  + rewrite Bytes64.tP => k kb.
     by rewrite !Bytes64.get_of_list // get_to_list initiE 1:/# /= nth_take 1,2:/# nth_drop 1,2:/# BytesSK.of_listK ?size_to_list /#.
-    by rewrite size_memread /=;1:smt(W64.to_uint_cmp).
+  by rewrite size_memread; smt(W64.to_uint_cmp). 
 
-    
+(* ── Step 6: rhopp = H_rhopp _K coins mu (spec simple) ─────────────────
+   Spec: rhopp <- H_rhopp _K coins mu *)
 sp 1 0.
+
+(* ── Step 7: derive_seed_for_mask (Jasmin) ──────────────────────────────
+   Spec: (rhopp already assigned above)
+   Jasmin: seed_for_mask <@ derive_seed_for_mask(k, randomness, message_representative) *)
 seq 0 1 : (#pre /\
     seed_for_mask{2} = Array64.of_list witness (Bytes64.to_list rhopp{1})).
 + ecall{2} (derive_seed_for_mask_ph
@@ -136,10 +158,11 @@ seq 0 1 : (#pre /\
   + congr;apply (eq_from_nth witness); 1: by rewrite size_to_list // size_take // size_drop // size_to_list /#.
     move => i; rewrite size_to_list /= => ib; rewrite nth_take 1,2:/# initiE 1:/# /= nth_drop /#.
     by rewrite of_listK ?Keccak1600_Spec.size_SHAKE256 //.
-  
-(* ── Step 5: Decode s1 (Jasmin) ──────────────────────────────────────────
-   Spec: (s1 already decoded in Step 1, via skDecode)
-   Jasmin: s1 <@ s1____decode(signing_key[128:768]) *)
+
+
+(* ── Step 9: Decode s1 (Jasmin) ─────────────────────────────────────────
+   Jasmin: s1 <@ s1____decode(signing_key[128:768])
+   Spec: (s1 already decoded in Step 1, via skDecode) *)
 seq 0 1 : (#pre /\
     lifts_wpolylvec (lvec_unflatten256 s1{2}) = s1{1} /\
     wpolylvec_srng (lvec_unflatten256 s1{2}) Eta Eta).
@@ -151,8 +174,8 @@ seq 0 1 : (#pre /\
     + by rewrite size_to_list /= size_take 1:/# size_drop 1:/# BytesSK.size_to_list /#.
     move => i; rewrite size_to_list => ib.
     rewrite get_to_list nth_take 1,2:/# nth_drop 1,2:/#  BytesSK.get_to_list  BytesSK.get_of_list 1:/# get_to_list  initiE 1:/# /= get_of_list 1:/# nth_sub 1:/# /= initiE /#.
-
-(* ── Step 6: Decode s2 (Jasmin) ──────────────────────────────────────────
+    
+(* ── Step 10: Decode s2 (Jasmin) ────────────────────────────────────────
    Jasmin: s2 <@ s2____decode(signing_key[768:1536]) *)
 seq 0 1 : (#pre /\
     lifts_wpolykvec (kvec_unflatten256 s2{2}) = s2{1} /\
@@ -166,7 +189,8 @@ seq 0 1 : (#pre /\
     move => i; rewrite size_to_list => ib.
     rewrite get_to_list nth_take 1,2:/# nth_drop 1,2:/#  BytesSK.get_to_list  BytesSK.get_of_list 1:/# get_to_list  initiE 1:/# /= get_of_list 1:/# nth_sub 1:/# /= initiE /#.
 
-(* ── Step 7: Decode t0 (Jasmin) ──────────────────────────────────────────
+   
+(* ── Step 11: Decode t0 (Jasmin) ────────────────────────────────────────
    Jasmin: t0 <@ t0__decode(signing_key[1536:4032]) *)
 seq 0 1 : (#pre /\
     lifts_wpolykvec (kvec_unflatten256 t0{2}) = t0{1} /\
@@ -180,43 +204,95 @@ seq 0 1 : (#pre /\
     move => i; rewrite size_to_list => ib.
     rewrite get_to_list nth_take 1,2:/# nth_drop 1,2:/#  BytesSK.get_to_list  BytesSK.get_of_list 1:/# get_to_list  initiE 1:/# /= get_of_list 1:/# nth_sub 1:/# /= initiE /#.
     
-(* ── Step 8: NTT s1/s2/t0 (Jasmin), kappa/zh/exit_flag init ─────────────
+(* ── Step 12: NTT s1/s2/t0 + loop variable inits ───────────────────────
    Jasmin: row_vector__ntt(s1); column_vector__ntt(s2); column_vector__ntt(t0)
-   Spec: kappa <- 0; zh <- None (the spec NTTs were already done in Step 2)
-   FIXME: NTT bridge lemmas for polylvec/polykvec are not yet proven.
-   We admit this step and assert the invariant directly. *)
+           domain_separator_for_mask <- 0
+           exit_rejection_sampling_loop <- 0
+           kappa_exceeded <- 0
+   Spec: (kappa <- 0, zh <- None already done; s1h/s2h/t0h from Step 2 above)
+   FIXME: NTT bridge lemmas are not yet proven. *)
 seq 0 3 : (#pre /\
-    (* Jasmin s1/s2/t0 are now NTT-domain representations matching s1h/s2h/t0h *)
     lifts_wpolylvec (lvec_unflatten256 s1{2}) = s1h{1} /\
     lifts_wpolykvec (kvec_unflatten256 s2{2}) = s2h{1} /\
     lifts_wpolykvec (kvec_unflatten256 t0{2}) = t0h{1} /\
-    (* NTT-domain range invariants on the word-level representations *)
     wpolylvec_ntt_rng (lvec_unflatten256 s1{2}) /\
     wpolykvec_ntt_rng (kvec_unflatten256 s2{2}) /\
     wpolykvec_ntt_rng (kvec_unflatten256 t0{2})); 1: by admit.
 
-(* Loop initialization *)
-while     kappa{1} = W16.to_uint domain_separator_for_mask{2}
-     /\ (zh{1} = None <=> exit_rejection_sampling_loop{2} <> W8.of_int 1)
-     /\ seed_for_mask{2}, matrix_A, s1h/s2h/t0h, rho, mu, rhopp are stable
-     /\ Glob.mem{2} = _m (memory unchanged throughout)
+(* ── Rejection sampling loop + post-loop ──────────────────────────────── *)
 
-   Loop body at each iteration:
-     - ExpandMask ~ sample____mask  (mask_correct)
-     - w = Ay (polynomial multiply + reduce): ADMIT
-     - decompose into w0/w1: ADMIT
-     - w1Encode ~ commitment____encode: ADMIT
-     - H_ct ~ derive_commitment_hash_ph
-     - SampleInBall ~ sample____challenge  (sample_challenge_correct)
-     - z = y + c*s1, check ||z|| < gamma1 - beta: ADMIT
-     - r0 = w0 - c*s2, check ||r0|| < gamma2 - beta: ADMIT
-     - ct0 = c*t0, check ||ct0|| < gamma2: ADMIT
-     - MakeHint, check hammw <= w_hint: ADMIT
-     - acceptance check sets exit_flag / updates zh
+seq 3 4 : (
+liftu_wpolymat (mat_unflatten256 matrix_A{2}) = _A{1} /\
+    seed_for_mask{2} = Array64.of_list witness (Bytes64.to_list rhopp{1}) /\
+    message_representative{2} = Array64.of_list witness (Bytes64.to_list mu{1}) /\
+    lifts_wpolylvec (lvec_unflatten256 s1{2}) = s1h{1} /\
+    lifts_wpolykvec (kvec_unflatten256 s2{2}) = s2h{1} /\
+    lifts_wpolykvec (kvec_unflatten256 t0{2}) = t0h{1} /\
+    wpolylvec_ntt_rng (lvec_unflatten256 s1{2}) /\
+    wpolykvec_ntt_rng (kvec_unflatten256 s2{2}) /\
+    wpolykvec_ntt_rng (kvec_unflatten256 t0{2}) /\
+    W16.to_uint domain_separator_for_mask{2} = kappa{1} * lvec /\
+    (kappa_exceeded{2} = one) = (kappa_max <= kappa{1}) /\
+    (kappa_exceeded{2} <> one => kappa_exceeded{2} = zero) /\
+    (exit_rejection_sampling_loop{2} = zero) = (zh{1} = None /\ ! (kappa_max <= kappa{1})) /\
+    (zh{1} = None => (kappa_max <= kappa{1})) /\
+    (zh{1} <> None => last_norm_check_result{2} = W64.zero) /\
+    (zh{1} = None /\ kappa_max <= kappa{1} => last_norm_check_result{2} = W64.one) /\
+    (zh{1} <> None =>
+       (ct{1} = BytesCT.init (fun i => commitment_hash{2}.[i]) /\
+       lifts_wpolylvec (lvec_unflatten256 signer_response{2}) =  (oget zh{1}).`1 /\
+       liftu_wpolykvec (kvec_unflatten256 hint_0{2}) = (oget zh{1}).`2 /\
+       wpolykvec_urng (kvec_unflatten256 hint_0{2}) 2 /\
+       count_nonzero_coeffs_kvec (liftu_wpolykvec (kvec_unflatten256 hint_0{2})) <= w_hint /\
+       wpolylvec_srng (lvec_unflatten256 signer_response{2}) (gamma1-1) gamma1))
+); last first.
+(* ── Post-loop goal ─────────────────────────────────────────────────── *)
++ if {1}; last first.
+  (* failure: zh = None /\ kappa_max <= kappa, so last_norm_check_result = W64.one *)
+  + wp; call {2} (: true ==> true).
+    + admit. (* lossless. *)
+    auto => |> &1 &2 *.
+    have -> : last_norm_check_result{2} = W64.one by smt().
+    rewrite wordP => i ib.
+    by rewrite minus_one /= /(`<<`) /(`|>>`) /= ib /= sarE initiE 1:/# /= nth_one /#.
+  (* success: zh <> None, so last_norm_check_result = W64.zero *)
+  wp; ecall (signature_encode commitment_hash{2} signer_response{2} hint_0{2}).
+  auto => |> &1 &2 ????????????; do split; 1..6:smt().
+  + move => ?????? rr1 rr2 ?.
+    have -> : last_norm_check_result{2} = W64.zero by smt().
+    split; 1: by rewrite wordP /= minus_one /= /(`<<`) /(`|>>`) /= sarE negb_forall; exists 0 => /=.
+    rewrite wordP => i ib.
+    by rewrite  /(`<<`) /(`|>>`) /= sarE initiE 1:/# /=. 
+     
 
-   Post-loop (using signature_encode):
-     - ecall (signature_encode commitment_hash{2} signer_response{2} hint_0{2})
-     - Requires: ct, mods z q, h connected between spec and Jasmin *)
-admit. (* FIXME: loop + sigEncode *)
+(* ── Rejection sampling loop  ──────────────────────────────── *)
 
+while (
+    liftu_wpolymat (mat_unflatten256 matrix_A{2}) = _A{1} /\
+    seed_for_mask{2} = Array64.of_list witness (Bytes64.to_list rhopp{1}) /\
+    message_representative{2} = Array64.of_list witness (Bytes64.to_list mu{1}) /\
+    lifts_wpolylvec (lvec_unflatten256 s1{2}) = s1h{1} /\
+    lifts_wpolykvec (kvec_unflatten256 s2{2}) = s2h{1} /\
+    lifts_wpolykvec (kvec_unflatten256 t0{2}) = t0h{1} /\
+    wpolylvec_ntt_rng (lvec_unflatten256 s1{2}) /\
+    wpolykvec_ntt_rng (kvec_unflatten256 s2{2}) /\
+    wpolykvec_ntt_rng (kvec_unflatten256 t0{2}) /\
+    W16.to_uint domain_separator_for_mask{2} = kappa{1} * lvec /\
+    (kappa_exceeded{2} = W64.of_int 1) = (kappa_max <= kappa{1}) /\
+    (kappa_exceeded{2} <> W64.of_int 1 => kappa_exceeded{2} = W64.zero) /\
+    (exit_rejection_sampling_loop{2} = W64.of_int 0) =
+      (zh{1} = None /\ ! (kappa_max <= kappa{1})) /\
+    (zh{1} <> None => last_norm_check_result{2} = W64.zero) /\
+    (zh{1} = None /\ kappa_max <= kappa{1} => last_norm_check_result{2} = W64.one) /\
+    (zh{1} <> None =>
+       ct{1} = BytesCT.init (fun i => commitment_hash{2}.[i]) /\
+       lifts_wpolylvec (lvec_unflatten256 signer_response{2}) = (oget zh{1}).`1 /\
+       liftu_wpolykvec (kvec_unflatten256 hint_0{2}) = (oget zh{1}).`2 /\
+       wpolykvec_urng (kvec_unflatten256 hint_0{2}) 2 /\
+       count_nonzero_coeffs_kvec (liftu_wpolykvec (kvec_unflatten256 hint_0{2})) <= w_hint /\
+       wpolylvec_srng (lvec_unflatten256 signer_response{2}) (gamma1-1) gamma1)); last
+         by auto => |>  &1 &2 *; rewrite !W64.to_uint_eq /=; do split;smt().
+
+ (* Loop body *)
++ admit. 
 qed.

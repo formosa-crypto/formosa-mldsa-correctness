@@ -63,13 +63,15 @@ while (0 <= i <= 5 /\ threshold = _threshold /\ vector = _a /\ _threshold = 5240
  rewrite /(`<<`) /=; auto => |> &hr ??Hrng Ht Hf ?;split.
  + split.
    + by rewrite tP => k kb; rewrite initiE 1:/# /= /lvec_unflatten256 initiE 1:/# /= get_of_list /= 1:/# nth_sub /#.
-   + by move : Hrng; rewrite /wpolylvec_srng !allP /#.
+   +  move : Hrng; rewrite /wpolylvec_srng /wpoly_srng !allP /= => H.
+      have := H _i _;1:smt().
+      by rewrite allP /#. 
 
 move => H H0 rr0 Htp Hfp;do split;1,2,5..:smt().
 + case (result{hr} = W64.zero) => ?; smt(W64.or0w).
 + case (result{hr} = W64.zero) => HH.
-  + move => ?; have ? : !wpoly_srng 524091 524091 (lvec_unflatten256 _a).[_i] by smt().
-    by smt(W64.or0w).
+  + move => ?; have Hj : !wpoly_srng 524091 524091 (lvec_unflatten256 _a).[_i] by smt().
+    move : Hfp; rewrite /wpoly_infnorm_lt /= Hj /= => ->;apply or64_ne0; smt(W64.to_uint_eq W64.of_uintK W64.to_uintK W64.to_uint_cmp pow2_64).
   + move => ?; move : HH.
-    smt(or64_ne0).
+    by smt(or64_ne0).
 qed.

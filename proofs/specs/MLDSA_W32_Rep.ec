@@ -28,9 +28,25 @@ op wpoly_urng(b : int, pw : wpoly) = all (fun i => 0 <= W32.to_uint i < b) pw.
 op wpoly_srng(bl bh : int, pw : wpoly) = all (fun i => -bl <= W32.to_sint i <= bh) pw.
 op wpoly_infnorm_lt(b : int, pw : wpoly) = wpoly_srng (b-1) (b-1) pw.
 
-(* Abstract predicate: coefficients are in NTT-domain normal form.
-   To be instantiated once the NTT bridge lemmas are available. *)
-op wpoly_ntt_rng : wpoly -> bool.
+(* ------------------------------------------------------------------ *)
+(* Abstract range predicates for the three word-level polynomial ops.  *)
+(*                                                                      *)
+(* Each operation has an input range and an output range that may      *)
+(* differ from each other and from the other operations' ranges.       *)
+(* All six are left abstract here and will be made concrete once the   *)
+(* NTT bridge lemmas are fully worked out.                             *)
+(*                                                                      *)
+(* Expected instantiation path:                                        *)
+(*   ntt_orng  => bmul_irng   (NTT output is valid basemul input)      *)
+(*   bmul_orng => intt_irng   (basemul output is valid INTT input)     *)
+(*   intt_orng => wpoly_srng B_lo B_hi  (INTT output has concrete rng) *)
+(* ------------------------------------------------------------------ *)
+op wpoly_ntt_irng  : wpoly -> bool.  (* valid input  to   NTT   *)
+op wpoly_ntt_orng  : wpoly -> bool.  (* valid output from NTT   *)
+op wpoly_intt_irng : wpoly -> bool.  (* valid input  to   INTT  *)
+op wpoly_intt_orng : wpoly -> bool.  (* valid output from INTT  *)
+op wpoly_bmul_irng : wpoly -> bool.  (* valid input  to   basemul *)
+op wpoly_bmul_orng : wpoly -> bool.  (* valid output from basemul *)
 
 lemma wpoly_infnorm_liftE (b : int) (pw : wpoly) :
     0 < b <= q %/ 2 =>
@@ -59,7 +75,12 @@ op polylvec_srng(p : polylvec, bl bh : int) = all (poly_srng bl bh) p.
 op wpolylvec_urng(pw : wpolylvec, b : int) = all (wpoly_urng b) pw.
 op wpolylvec_srng(pw : wpolylvec, bl bh : int) = all (wpoly_srng bl bh) pw.
 op wpolylvec_infnorm_lt(b : int, pw : wpolylvec) = wpolylvec_srng pw (b-1) (b-1).
-op wpolylvec_ntt_rng(pw : wpolylvec) = all wpoly_ntt_rng pw.
+op wpolylvec_ntt_irng (pw : wpolylvec) = all wpoly_ntt_irng  pw.
+op wpolylvec_ntt_orng (pw : wpolylvec) = all wpoly_ntt_orng  pw.
+op wpolylvec_intt_irng(pw : wpolylvec) = all wpoly_intt_irng pw.
+op wpolylvec_intt_orng(pw : wpolylvec) = all wpoly_intt_orng pw.
+op wpolylvec_bmul_irng(pw : wpolylvec) = all wpoly_bmul_irng pw.
+op wpolylvec_bmul_orng(pw : wpolylvec) = all wpoly_bmul_orng pw.
 
 lemma wpolylvec_infnorm_liftE (b : int) (pw : wpolylvec) :
     0 < b <= q %/ 2 =>
@@ -116,7 +137,12 @@ op polykvec_srng(p : polykvec, bl bh : int) = all (poly_srng bl bh) p.
 op wpolykvec_urng(pw : wpolykvec, b : int) = all (wpoly_urng b) pw.
 op wpolykvec_srng(pw : wpolykvec, bl bh : int) = all (wpoly_srng bl bh) pw.
 op wpolykvec_infnorm(b : int, pw : wpolykvec) = wpolykvec_srng pw (b-1) (b-1).
-op wpolykvec_ntt_rng(pw : wpolykvec) = all wpoly_ntt_rng pw.
+op wpolykvec_ntt_irng (pw : wpolykvec) = all wpoly_ntt_irng  pw.
+op wpolykvec_ntt_orng (pw : wpolykvec) = all wpoly_ntt_orng  pw.
+op wpolykvec_intt_irng(pw : wpolykvec) = all wpoly_intt_irng pw.
+op wpolykvec_intt_orng(pw : wpolykvec) = all wpoly_intt_orng pw.
+op wpolykvec_bmul_irng(pw : wpolykvec) = all wpoly_bmul_irng pw.
+op wpolykvec_bmul_orng(pw : wpolykvec) = all wpoly_bmul_orng pw.
 
 lemma wpolykvec_infnorm_liftE (b : int) (pw : wpolykvec) :
     0 < b <= q %/ 2 =>

@@ -10,7 +10,8 @@ axiom mldsa65_lvec: lvec = 5.
 axiom mldsa65_kvec: kvec = 6.
 axiom mldsa65_w_hint : w_hint = 55.
 axiom mldsa65_lambda : lambda = 192.
-axiom mldsa65_gamma1 : gamma1 = 524288. (* 2**19 *) 
+axiom mldsa65_gamma1 : gamma1 = 524288. (* 2**19 *)
+axiom mldsa65_gamma2 : gamma2 = 261888. (* (q-1)/32 *)
 axiom mldsa65_Eta : Eta = 4.
 axiom mldsa65_tau : tau = 49.
 

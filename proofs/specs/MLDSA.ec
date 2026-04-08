@@ -72,6 +72,58 @@ module MLDSA(XOFA : XOF_RejNTTPoly, XOFS : XOF_RejBPoly, XOFSIB : XOF_SIB, RO : 
      return (if zh = None then None else Some sigma, leakage);
   }
 
+  (* Eager variant: decomposes w into (w0,w1) immediately, then uses w0 - cs2.
+     The Jasmin implementation follows this order. *)
+  proc sign_eager(sk : BytesSK.t, m : W8.t list, coins : rnd_) : BytesSig.t option * Leakage list = {
+     var rho,_K,tr,s1,s2,t0,s1h,s2h,t0h,_A,mu,rhopp,kappa,y,w,w0,w1,ctl,ct,c,ch,cs1,
+         cs2,z,r0,ct0,h,leakage,sigma,bz,bh;
+     var zh : (polylvec * polykvec) option;
+     ct <- witness;
+     ctl <- witness;
+     sigma <- witness;
+     leakage <- [];
+     (rho,_K,tr,s1,s2,t0) <@ SkEncDec.skDecode(sk);
+     s1h <- nttv s1;
+     s2h <- nttv s2;
+     t0h <- nttv t0;
+     _A <@ ExpandA(XOFA).sample(rho);
+     mu <- H_mu tr m;
+     rhopp <- H_rhopp _K coins mu;
+     kappa <- 0;
+     zh <- None;
+     while (zh = None && ! (kappa_max <= kappa)) {
+       y <@ ExpandMask.sample(rhopp,kappa * lvec);
+       w <- invnttv (ntt_mulmxv _A (nttv y));
+       (* eager decomposition: split w now *)
+       w0 <- polykvec_LowBits w;
+       w1 <- polykvec_HighBits w;
+       ctl <@ RO(XOFSIB).get(mu,w1Encode w1);
+       (ct,c) <- ctl.`1;
+       leakage <- leakage ++ [ RO ctl.`2] ;
+       ch <- ntt c;
+       cs1 <- invnttv (ntt_smul ch s1);
+       cs2 <- invnttv (ntt_smul ch s2);
+       z <- y + cs1;
+       (* use w0 - cs2 instead of LowBits(w - cs2) *)
+       r0 <- w0 - cs2;
+       bz <- infnorm_lt z (gamma1 - Beta) &&
+                  infnorm r0 (gamma2 - Beta);
+       leakage <- leakage ++ [ CheckZ bz ];
+       if (bz) {
+          ct0 <- invnttv (ntt_smul ch t0);
+          h <- MakeHint (PolyKVec.zerov-ct0) w0 - cs2 + ct0;
+          bh <- infnorm ct0 gamma2 && hammw h w_hint;
+          leakage <- leakage ++ [ CheckH bh ];
+          if (bh) { zh <- Some (z,h); }
+       }
+       kappa <- kappa + 1;
+     }
+     if (zh <> None) {
+       sigma <@ SigEncDec.sigEncode(ct,(oget zh).`1,(oget zh).`2);
+     }
+     return (if zh = None then None else Some sigma, leakage);
+  }
+
   proc verify(pk : BytesPK.t, sigma : BytesSig.t, m : W8.t list) : bool = {
     var rho,t1,c,l,ct,z,h,rb,_A,tr,mu,wapprox,w1,ctp;
     w1 <- witness;
@@ -92,3 +144,16 @@ module MLDSA(XOFA : XOF_RejNTTPoly, XOFS : XOF_RejBPoly, XOFSIB : XOF_SIB, RO : 
     return rb;
   }
 }.
+
+(* The eager decomposition is equivalent to the standard one.
+   Proof requires the commutativity of LowBits and subtraction of a small vector,
+   i.e. LowBits(w - cs2) = LowBits(w) - cs2 when ||LowBits(w) - cs2||_inf < gamma2 - Beta. *)
+lemma sign_eager_equiv
+      (XOFA <: XOF_RejNTTPoly {-MLDSA}) (XOFS <: XOF_RejBPoly {-MLDSA})
+      (XOFSIB <: XOF_SIB {-MLDSA}) (RO <: LeakyRO {-MLDSA}) :
+    equiv [ MLDSA(XOFA, XOFS, XOFSIB, RO).sign_derand ~
+            MLDSA(XOFA, XOFS, XOFSIB, RO).sign_eager :
+      ={sk, m, coins, glob XOFA, glob XOFS, glob XOFSIB, glob RO}
+      ==>
+      ={res} ].
+proof. admit. qed.

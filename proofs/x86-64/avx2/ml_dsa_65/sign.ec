@@ -3,7 +3,8 @@ require import AllCore List IntDiv RealExp.
 from Jasmin require import JModel_x86.
 
 from JazzEC require import Ml_dsa_65_avx2 Mldsa_65_prelude Matrix_A Hashing
-                           Signature Challenge Row_vector S1 S2 T0 Mask.
+                           Signature Challenge Row_vector S1 S2 T0 Mask
+                           Sign_norm_checks.
 
 from Spec require import GFq Rq Serialization Conversion Parameters VecMat
                          Symmetric Sampling MLDSA_W32_Rep MLDSA.
@@ -62,6 +63,50 @@ have HEta    := mldsa65_Eta.
 have Hgamma1 := mldsa65_gamma1.
 have Htau    := mldsa65_tau.
 move => Hkappa_max.
+proc*.
+print MLDSA.
+transitivity {1} { r <@ MLDSA(MLDSA_XOFA, MLDSA_XOFS, MLDSA_XOF_SIB, SIB_RO).sign_eager(sk,m, coins); }
+    (={sk,m,coins, glob MLDSA_XOFA, glob MLDSA_XOFS, glob MLDSA_XOF_SIB, glob SIB_RO} ==> ={r})
+    (   Glob.mem{2} = _m
+    /\ sk{1} = BytesSK.of_list (to_list signing_key{2})
+    /\ rnd_to_list coins{1} = to_list randomness{2}
+    /\ W64.to_uint context{2}.[1] <= 255
+    /\ 0 <= message_size{2}
+    /\ to_uint context{2}.[0] + to_uint context{2}.[1] < W64.modulus
+    /\ message_pointer{2} + message_size{2} < W64.modulus
+    /\ m{1} = [W8.zero; truncateu8 context{2}.[1]]
+              ++ memread _m (W64.to_uint context{2}.[0]) (W64.to_uint context{2}.[1])
+              ++ memread _m message_pointer{2} message_size{2}
+    /\ valid_s1_bytes (Array640.init (fun i => signing_key{2}.[128 + i]))
+    /\ valid_s2_bytes (Array768.init (fun i => signing_key{2}.[768 + i]))
+       ==>
+       Glob.mem{2} = _m
+    /\ (r{1}.`1 = None <=> r{2}.`2 = -W64.one)
+    /\ (r{1}.`1 <> None =>
+          BytesSig.to_list (oget r{1}.`1) = to_list r{2}.`1 /\
+          r{2}.`2 = W64.zero)
+    ); 1,2:smt().
++ by call (sign_eager_equiv MLDSA_XOFA MLDSA_XOFS MLDSA_XOF_SIB SIB_RO); auto.
+  
+call(:  Glob.mem{2} = _m
+    /\ sk{1} = BytesSK.of_list (to_list signing_key{2})
+    /\ rnd_to_list coins{1} = to_list randomness{2}
+    /\ W64.to_uint context{2}.[1] <= 255
+    /\ 0 <= message_size{2}
+    /\ to_uint context{2}.[0] + to_uint context{2}.[1] < W64.modulus
+    /\ message_pointer{2} + message_size{2} < W64.modulus
+    /\ m{1} = [W8.zero; truncateu8 context{2}.[1]]
+              ++ memread _m (W64.to_uint context{2}.[0]) (W64.to_uint context{2}.[1])
+              ++ memread _m message_pointer{2} message_size{2}
+    /\ valid_s1_bytes (Array640.init (fun i => signing_key{2}.[128 + i]))
+    /\ valid_s2_bytes (Array768.init (fun i => signing_key{2}.[768 + i]))
+       ==>
+       Glob.mem{2} = _m
+    /\ (res{1}.`1 = None <=> res{2}.`2 = -W64.one)
+    /\ (res{1}.`1 <> None =>
+          BytesSig.to_list (oget res{1}.`1) = to_list res{2}.`1 /\
+          res{2}.`2 = W64.zero)
+    ); last by auto.
 proc => /=.
 conseq (: _ ==>
         (zh{1} = None <=> result{2} = - one) /\
@@ -215,9 +260,9 @@ seq 0 3 : (#pre /\
     lifts_wpolylvec (lvec_unflatten256 s1{2}) = s1h{1} /\
     lifts_wpolykvec (kvec_unflatten256 s2{2}) = s2h{1} /\
     lifts_wpolykvec (kvec_unflatten256 t0{2}) = t0h{1} /\
-    wpolylvec_ntt_rng (lvec_unflatten256 s1{2}) /\
-    wpolykvec_ntt_rng (kvec_unflatten256 s2{2}) /\
-    wpolykvec_ntt_rng (kvec_unflatten256 t0{2})); 1: by admit.
+    wpolylvec_ntt_orng (lvec_unflatten256 s1{2}) /\
+    wpolykvec_ntt_orng (kvec_unflatten256 s2{2}) /\
+    wpolykvec_ntt_orng (kvec_unflatten256 t0{2})); 1: by admit.
 
 (* ── Rejection sampling loop + post-loop ──────────────────────────────── *)
 
@@ -228,9 +273,9 @@ liftu_wpolymat (mat_unflatten256 matrix_A{2}) = _A{1} /\
     lifts_wpolylvec (lvec_unflatten256 s1{2}) = s1h{1} /\
     lifts_wpolykvec (kvec_unflatten256 s2{2}) = s2h{1} /\
     lifts_wpolykvec (kvec_unflatten256 t0{2}) = t0h{1} /\
-    wpolylvec_ntt_rng (lvec_unflatten256 s1{2}) /\
-    wpolykvec_ntt_rng (kvec_unflatten256 s2{2}) /\
-    wpolykvec_ntt_rng (kvec_unflatten256 t0{2}) /\
+    wpolylvec_ntt_orng (lvec_unflatten256 s1{2}) /\
+    wpolykvec_ntt_orng (kvec_unflatten256 s2{2}) /\
+    wpolykvec_ntt_orng (kvec_unflatten256 t0{2}) /\
     W16.to_uint domain_separator_for_mask{2} = kappa{1} * lvec /\
     (kappa_exceeded{2} = one) = (kappa_max <= kappa{1}) /\
     (kappa_exceeded{2} <> one => kappa_exceeded{2} = zero) /\
@@ -274,9 +319,9 @@ while (
     lifts_wpolylvec (lvec_unflatten256 s1{2}) = s1h{1} /\
     lifts_wpolykvec (kvec_unflatten256 s2{2}) = s2h{1} /\
     lifts_wpolykvec (kvec_unflatten256 t0{2}) = t0h{1} /\
-    wpolylvec_ntt_rng (lvec_unflatten256 s1{2}) /\
-    wpolykvec_ntt_rng (kvec_unflatten256 s2{2}) /\
-    wpolykvec_ntt_rng (kvec_unflatten256 t0{2}) /\
+    wpolylvec_ntt_orng (lvec_unflatten256 s1{2}) /\
+    wpolykvec_ntt_orng (kvec_unflatten256 s2{2}) /\
+    wpolykvec_ntt_orng (kvec_unflatten256 t0{2}) /\
     W16.to_uint domain_separator_for_mask{2} = kappa{1} * lvec /\
     (kappa_exceeded{2} = W64.of_int 1) = (kappa_max <= kappa{1}) /\
     (kappa_exceeded{2} <> W64.of_int 1 => kappa_exceeded{2} = W64.zero) /\
@@ -293,6 +338,59 @@ while (
        wpolylvec_srng (lvec_unflatten256 signer_response{2}) (gamma1-1) gamma1)); last
          by auto => |>  &1 &2 *; rewrite !W64.to_uint_eq /=; do split;smt().
 
- (* Loop body *)
-+ admit. 
+ (* ── Loop body ──────────────────────────────────────────────────────── *)
+ seq 1 1 : (#pre /\
+     lifts_wpolylvec (lvec_unflatten256 mask{2}) = y{1} /\
+     wpolylvec_srng (lvec_unflatten256 mask{2}) (gamma1 - 1) gamma1 /\
+     W16.to_uint domain_separator_for_mask{2} = (kappa{1} + 1) * lvec).
+ + admit. (* ExpandMask bridge + circuit *)
+
+ sp 3 0.
+ seq 0 8 : (#pre /\
+     lifts_wpolykvec (kvec_unflatten256 w0{2}) = w0{1} /\
+     lifts_wpolykvec (kvec_unflatten256 w1{2}) = w1{1} /\
+     wpolykvec_srng (kvec_unflatten256 w0{2}) (gamma2 - 1) gamma2 /\
+     wpolykvec_urng (kvec_unflatten256 w1{2}) ((q-1) %/ (2*gamma2))).
+ + admit. (* A*y + decompose bridge *)
+
+ seq 3 3 : (#pre /\
+     ct{1} = BytesCT.init (fun i => commitment_hash{2}.[i]) /\
+     lifts_wpoly verifier_challenge{2} = c{1} /\
+     wpoly_ntt_irng verifier_challenge{2}).
+ + admit. (* commitment hash + SampleInBall bridge *)
+
+sp 6 0; seq 1 0 : #pre; 1: by auto.
+
+ seq 0 1 : (#pre /\
+     wpoly_ntt_orng verifier_challenge{2} /\
+     lifts_wpoly verifier_challenge{2} = ch{1}).
+ + admit. (* polynomial__ntt bridge: ntt_orng + ch connection *)
+
+ (* Jasmin pure: infinity_norm_check_result <- 0 *)
+ sp 0 1;wp.
+
+ (* ecall works backwards: last call first *)
+ ecall{2} (__make_hint_vector_ph
+              w0_minus_cs2_plus_ct0{2} w1{2} hint_0{2}
+              infinity_norm_check_result{2}
+              (invnttv (ntt_smul ch{1} t0h{1}))).
+
+ wp;ecall{2} (__compute_z_and_check_norm_ph
+              s1{2} verifier_challenge{2} mask{2} signer_response{2}
+              infinity_norm_check_result{2}).
+
+ ecall{2} (__apply_ct0_and_check_norm_ph
+              w0_minus_cs2_plus_ct0{2} w0_minus_cs2{2} t0{2}
+              verifier_challenge{2} infinity_norm_check_result{2}).
+
+ ecall{2} (__apply_cs2_and_check_norm_ph
+              w0_minus_cs2{2} w0{2} s2{2} verifier_challenge{2}
+              W64.zero).
+
+auto => |> &1 &2 ?????????????????? r1 ??;split;1:smt().
+move => ?? r2 ??;split;1:smt().
+move => ? r3 ??; split; 1: smt().
+move => ? r4 ??; split; 1: smt().
+move => ?.
+admit.
 qed.

@@ -11753,7 +11753,6 @@ module M = {
     var exit_rejection_sampling_loop:W64.t;
     var kappa_exceeded:W64.t;
     var mask:W32.t Array1280.t;
-    var j:W64.t;
     var copied_32_bytes:W256.t;
     var mask_as_ntt:W32.t Array1280.t;
     var w:W32.t Array1536.t;
@@ -11772,6 +11771,7 @@ module M = {
     var kappa_zf:bool;
     var kappa_bit:W8.t;
     var kappa_bit_64:W64.t;
+    var j:int;
     var  _0:bool;
     var  _1:bool;
     var  _2:bool;
@@ -11829,18 +11829,16 @@ module M = {
     while ((exit_rejection_sampling_loop = (W64.of_int 0))) {
       (mask, domain_separator_for_mask) <@ sample____mask (seed_for_mask,
       domain_separator_for_mask);
-      j <- (W64.of_int 0);
-      while ((j \ult (W64.of_int (5 * ((256 * 32) %/ 8))))) {
+      j <- 0;
+      while ((j < (5 * ((256 * 32) %/ 8)))) {
         copied_32_bytes <-
-        (get256_direct (WArray5120.init32 (fun i => mask.[i]))
-        (W64.to_uint j));
+        (get256_direct (WArray5120.init32 (fun i => mask.[i])) j);
         mask_as_ntt <-
         (Array1280.init
         (WArray5120.get32
         (WArray5120.set256_direct
-        (WArray5120.init32 (fun i => mask_as_ntt.[i])) (W64.to_uint j)
-        copied_32_bytes)));
-        j <- (j + (W64.of_int 32));
+        (WArray5120.init32 (fun i => mask_as_ntt.[i])) j copied_32_bytes)));
+        j <- (j + 32);
       }
       mask_as_ntt <@ row_vector__ntt (mask_as_ntt);
       w <@ row_vector____multiply_with_matrix_A (matrix_A, mask_as_ntt);

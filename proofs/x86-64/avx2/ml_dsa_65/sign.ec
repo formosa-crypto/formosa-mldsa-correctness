@@ -266,7 +266,7 @@ seq 0 3 : (#pre /\
 
 (* ── Rejection sampling loop + post-loop ──────────────────────────────── *)
 
-seq 3 4 : (
+seq 3 5 : (
 liftu_wpolymat (mat_unflatten256 matrix_A{2}) = _A{1} /\
     seed_for_mask{2} = Array64.of_list witness (Bytes64.to_list rhopp{1}) /\
     message_representative{2} = Array64.of_list witness (Bytes64.to_list mu{1}) /\

@@ -1409,7 +1409,6 @@ module M = {
     var temp:W64.t;
     var gamma2:W256.t;
     var minus_gamma2:W256.t;
-    var offset:W64.t;
     var low:W256.t;
     var high:W256.t;
     var abs_low:W256.t;
@@ -1418,6 +1417,7 @@ module M = {
     var hint_block:W256.t;
     var num_hints:W64.t;
     var weight:int;
+    var offset:int;
     var  _0:bool;
     var  _1:bool;
     var  _2:bool;
@@ -1430,14 +1430,14 @@ module M = {
     minus_gamma2 <- (zeroextu256 (VMOV_64 temp));
     minus_gamma2 <- (VPBROADCAST_8u32 (truncateu32 minus_gamma2));
     weight <- 0;
-    offset <- (W64.of_int 0);
-    while ((offset \ult (W64.of_int ((256 * 32) %/ 8)))) {
+    offset <- 0;
+    while ((offset < ((256 * 32) %/ 8))) {
       low <-
       (get256_direct (WArray1024.init32 (fun i => low_coefficients.[i]))
-      (W64.to_uint offset));
+      offset);
       high <-
       (get256_direct (WArray1024.init32 (fun i => high_coefficients.[i]))
-      (W64.to_uint offset));
+      offset);
       abs_low <- (VPABS_8u32 low);
       low_out_of_bounds <- (VPCMPGT_8u32 abs_low gamma2);
       low_equals_minus_gamma2_and_high_is_nonzero <-
@@ -1455,8 +1455,8 @@ module M = {
       (Array256.init
       (WArray1024.get32
       (WArray1024.set256_direct (WArray1024.init32 (fun i => hints.[i]))
-      (W64.to_uint offset) hint_block)));
-      offset <- (offset + (W64.of_int 32));
+      offset hint_block)));
+      offset <- (offset + 32);
       weight <- (weight + (W64.to_uint num_hints));
     }
     return (hints, weight);
@@ -1468,19 +1468,18 @@ module M = {
     var half_t0_bits:W256.t;
     var temp:W64.t;
     var ones_vector:W256.t;
-    var offset:W64.t;
     var coefficients:W256.t;
     var high:W256.t;
     var low:W256.t;
+    var offset:int;
     half_t0_bits <- hALF_OF_BITS_IN_T0_VECTOR;
     temp <- (W64.of_int 1);
     ones_vector <- (zeroextu256 (VMOV_64 temp));
     ones_vector <- (VPBROADCAST_8u32 (truncateu32 ones_vector));
-    offset <- (W64.of_int 0);
-    while ((offset \ult (W64.of_int ((256 * 32) %/ 8)))) {
+    offset <- 0;
+    while ((offset < ((256 * 32) %/ 8))) {
       coefficients <-
-      (get256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-      (W64.to_uint offset));
+      (get256_direct (WArray1024.init32 (fun i => polynomial.[i])) offset);
       high <- (VPADD_8u32 coefficients half_t0_bits);
       high <- (VPSUB_8u32 high ones_vector);
       high <- (VPSRA_8u32 high (W128.of_int 13));
@@ -1490,13 +1489,13 @@ module M = {
       (Array256.init
       (WArray1024.get32
       (WArray1024.set256_direct (WArray1024.init32 (fun i => highbits.[i]))
-      (W64.to_uint offset) high)));
+      offset high)));
       lowbits <-
       (Array256.init
       (WArray1024.get32
       (WArray1024.set256_direct (WArray1024.init32 (fun i => lowbits.[i]))
-      (W64.to_uint offset) low)));
-      offset <- (offset + (W64.of_int 32));
+      offset low)));
+      offset <- (offset + 32);
     }
     return (highbits, lowbits);
   }
@@ -1527,40 +1526,36 @@ module M = {
                                                              lhs:W32.t Array256.t,
                                                              rhs:W32.t Array256.t) : 
   W32.t Array256.t = {
-    var offset:W64.t;
     var lhs_coeffs:W256.t;
     var rhs_coeffs:W256.t;
     var product_coeffs:W256.t;
-    offset <- (W64.of_int 0);
-    while ((offset \ult (W64.of_int ((256 * 32) %/ 8)))) {
+    var offset:int;
+    offset <- 0;
+    while ((offset < ((256 * 32) %/ 8))) {
       lhs_coeffs <-
-      (get256_direct (WArray1024.init32 (fun i => lhs.[i]))
-      (W64.to_uint offset));
+      (get256_direct (WArray1024.init32 (fun i => lhs.[i])) offset);
       rhs_coeffs <-
-      (get256_direct (WArray1024.init32 (fun i => rhs.[i]))
-      (W64.to_uint offset));
+      (get256_direct (WArray1024.init32 (fun i => rhs.[i])) offset);
       product_coeffs <@ montgomery_multiply_and_reduce (lhs_coeffs,
       rhs_coeffs);
       product <-
       (Array256.init
       (WArray1024.get32
       (WArray1024.set256_direct (WArray1024.init32 (fun i => product.[i]))
-      (W64.to_uint offset) product_coeffs)));
-      offset <- (offset + (W64.of_int 32));
+      offset product_coeffs)));
+      offset <- (offset + 32);
       lhs_coeffs <-
-      (get256_direct (WArray1024.init32 (fun i => lhs.[i]))
-      (W64.to_uint offset));
+      (get256_direct (WArray1024.init32 (fun i => lhs.[i])) offset);
       rhs_coeffs <-
-      (get256_direct (WArray1024.init32 (fun i => rhs.[i]))
-      (W64.to_uint offset));
+      (get256_direct (WArray1024.init32 (fun i => rhs.[i])) offset);
       product_coeffs <@ montgomery_multiply_and_reduce (lhs_coeffs,
       rhs_coeffs);
       product <-
       (Array256.init
       (WArray1024.get32
       (WArray1024.set256_direct (WArray1024.init32 (fun i => product.[i]))
-      (W64.to_uint offset) product_coeffs)));
-      offset <- (offset + (W64.of_int 32));
+      offset product_coeffs)));
+      offset <- (offset + 32);
     }
     return product;
   }
@@ -1568,17 +1563,16 @@ module M = {
   W32.t Array256.t = {
     var modulus:W256.t;
     var zero:W256.t;
-    var offset:W64.t;
     var lhs:W256.t;
     var mask:W256.t;
     var rhs:W256.t;
+    var offset:int;
     modulus <- mODULUS_VECTOR;
     zero <- (set0_256);
-    offset <- (W64.of_int 0);
-    while ((offset \ult (W64.of_int ((256 * 32) %/ 8)))) {
+    offset <- 0;
+    while ((offset < ((256 * 32) %/ 8))) {
       lhs <-
-      (get256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-      (W64.to_uint offset));
+      (get256_direct (WArray1024.init32 (fun i => polynomial.[i])) offset);
       mask <- (VPCMPGT_8u32 zero lhs);
       rhs <- (VPAND_256 modulus mask);
       lhs <- (VPADD_8u32 lhs rhs);
@@ -1586,24 +1580,23 @@ module M = {
       (Array256.init
       (WArray1024.get32
       (WArray1024.set256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-      (W64.to_uint offset) lhs)));
-      offset <- (offset + (W64.of_int 32));
+      offset lhs)));
+      offset <- (offset + 32);
     }
     return polynomial;
   }
   proc polynomial__reduce32 (polynomial:W32.t Array256.t) : W32.t Array256.t = {
     var two_pow_22:W256.t;
     var modulus:W256.t;
-    var offset:W64.t;
     var a:W256.t;
     var t:W256.t;
+    var offset:int;
     two_pow_22 <- tWO_POW_22_VECTOR;
     modulus <- mODULUS_VECTOR;
-    offset <- (W64.of_int 0);
-    while ((offset \ult (W64.of_int ((256 * 32) %/ 8)))) {
+    offset <- 0;
+    while ((offset < ((256 * 32) %/ 8))) {
       a <-
-      (get256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-      (W64.to_uint offset));
+      (get256_direct (WArray1024.init32 (fun i => polynomial.[i])) offset);
       t <- (VPADD_8u32 a two_pow_22);
       t <- (VPSRA_8u32 t (W128.of_int 23));
       t <- (VPMULL_8u32 t modulus);
@@ -1612,8 +1605,8 @@ module M = {
       (Array256.init
       (WArray1024.get32
       (WArray1024.set256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-      (W64.to_uint offset) a)));
-      offset <- (offset + (W64.of_int 32));
+      offset a)));
+      offset <- (offset + 32);
     }
     return polynomial;
   }
@@ -1786,66 +1779,64 @@ module M = {
     }
     return polynomial;
   }
-  proc polynomial__ntt_round (polynomial:W32.t Array256.t, step:W64.t,
-                              step_by:W64.t, start:W64.t, zetas:W256.t) : 
+  proc polynomial__ntt_round (polynomial:W32.t Array256.t, step:int,
+                              step_by:int, start:int, zetas:W256.t) : 
   W32.t Array256.t = {
-    var offset:W64.t;
-    var i:W64.t;
-    var bound:W64.t;
-    var index:W64.t;
     var coeffs_i:W256.t;
-    var index_plus_step:W64.t;
     var coeffs_i_plus_step:W256.t;
     var product:W256.t;
+    var offset:int;
+    var i:int;
+    var bound:int;
+    var index:int;
+    var index_plus_step:int;
     offset <- start;
     offset <- (offset * step);
-    offset <- (offset * (W64.of_int 2));
-    offset <- (offset `>>` (W8.of_int 3));
+    offset <- (offset * 2);
+    offset <- (offset `|>>` 3);
     i <- offset;
     bound <- offset;
     bound <- (bound + step_by);
-    while ((i \ult bound)) {
+    while ((i < bound)) {
       index <- i;
-      index <- (index * (W64.of_int 32));
+      index <- (index * 32);
       coeffs_i <-
-      (get256_direct (WArray1024.init32 (fun i_0 => polynomial.[i_0]))
-      (W64.to_uint index));
+      (get256_direct (WArray1024.init32 (fun i_0 => polynomial.[i_0])) index);
       index_plus_step <- i;
       index_plus_step <- (index_plus_step + step_by);
-      index_plus_step <- (index_plus_step * (W64.of_int 32));
+      index_plus_step <- (index_plus_step * 32);
       coeffs_i_plus_step <-
       (get256_direct (WArray1024.init32 (fun i_0 => polynomial.[i_0]))
-      (W64.to_uint index_plus_step));
+      index_plus_step);
       product <@ montgomery_multiply_and_reduce (coeffs_i_plus_step, zetas);
       coeffs_i_plus_step <- (VPSUB_8u32 coeffs_i product);
       polynomial <-
       (Array256.init
       (WArray1024.get32
       (WArray1024.set256_direct
-      (WArray1024.init32 (fun i_0 => polynomial.[i_0]))
-      (W64.to_uint index_plus_step) coeffs_i_plus_step)));
+      (WArray1024.init32 (fun i_0 => polynomial.[i_0])) index_plus_step
+      coeffs_i_plus_step)));
       coeffs_i <- (VPADD_8u32 coeffs_i product);
       polynomial <-
       (Array256.init
       (WArray1024.get32
       (WArray1024.set256_direct
-      (WArray1024.init32 (fun i_0 => polynomial.[i_0])) (W64.to_uint index)
-      coeffs_i)));
-      i <- (i + (W64.of_int 1));
+      (WArray1024.init32 (fun i_0 => polynomial.[i_0])) index coeffs_i)));
+      i <- (i + 1);
     }
     return polynomial;
   }
   proc polynomial__ntt_at_layer_3 (polynomial:W32.t Array256.t) : W32.t Array256.t = {
-    var step:W64.t;
-    var step_by:W64.t;
     var i:int;
-    var start:W64.t;
     var zetas:W256.t;
-    step <- (W64.of_int (1 `<<` 3));
-    step_by <- (W64.of_int ((1 `<<` 3) %/ 8));
+    var step:int;
+    var step_by:int;
+    var start:int;
+    step <- (1 `<<` 3);
+    step_by <- ((1 `<<` 3) %/ 8);
     i <- 0;
     while ((i < 16)) {
-      start <- (W64.of_int i);
+      start <- i;
       zetas <- lAYER_3_ZETAS.[i];
       polynomial <@ polynomial__ntt_round (polynomial, step, step_by, 
       start, zetas);
@@ -1854,16 +1845,16 @@ module M = {
     return polynomial;
   }
   proc polynomial__ntt_at_layer_4 (polynomial:W32.t Array256.t) : W32.t Array256.t = {
-    var step:W64.t;
-    var step_by:W64.t;
     var i:int;
-    var start:W64.t;
     var zetas:W256.t;
-    step <- (W64.of_int (1 `<<` 4));
-    step_by <- (W64.of_int ((1 `<<` 4) %/ 8));
+    var step:int;
+    var step_by:int;
+    var start:int;
+    step <- (1 `<<` 4);
+    step_by <- ((1 `<<` 4) %/ 8);
     i <- 0;
     while ((i < 8)) {
-      start <- (W64.of_int i);
+      start <- i;
       zetas <- lAYER_4_ZETAS.[i];
       polynomial <@ polynomial__ntt_round (polynomial, step, step_by, 
       start, zetas);
@@ -1872,16 +1863,16 @@ module M = {
     return polynomial;
   }
   proc polynomial__ntt_at_layer_5 (polynomial:W32.t Array256.t) : W32.t Array256.t = {
-    var step:W64.t;
-    var step_by:W64.t;
     var i:int;
-    var start:W64.t;
     var zetas:W256.t;
-    step <- (W64.of_int (1 `<<` 5));
-    step_by <- (W64.of_int ((1 `<<` 5) %/ 8));
+    var step:int;
+    var step_by:int;
+    var start:int;
+    step <- (1 `<<` 5);
+    step_by <- ((1 `<<` 5) %/ 8);
     i <- 0;
     while ((i < 4)) {
-      start <- (W64.of_int i);
+      start <- i;
       zetas <- lAYER_5_ZETAS.[i];
       polynomial <@ polynomial__ntt_round (polynomial, step, step_by, 
       start, zetas);
@@ -2009,27 +2000,27 @@ module M = {
     polynomial <@ polynomial__ntt_at_layer_0 (polynomial);
     return polynomial;
   }
-  proc polynomial__invert_at_layer_0 (polynomial:W32.t Array256.t,
-                                      start:W64.t, zetas:W256.t) : W32.t Array256.t = {
-    var coeffs_i_start:W64.t;
+  proc polynomial__invert_at_layer_0 (polynomial:W32.t Array256.t, start:int,
+                                      zetas:W256.t) : W32.t Array256.t = {
     var coeffs_i:W256.t;
-    var coeffs_i_plus_1_start:W64.t;
     var coeffs_i_plus_1:W256.t;
     var low_values:W256.t;
     var high_values:W256.t;
     var differences:W256.t;
     var sums:W256.t;
+    var coeffs_i_start:int;
+    var coeffs_i_plus_1_start:int;
     coeffs_i_start <- start;
-    coeffs_i_start <- (coeffs_i_start * (W64.of_int 32));
+    coeffs_i_start <- (coeffs_i_start * 32);
     coeffs_i <-
     (get256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-    (W64.to_uint coeffs_i_start));
+    coeffs_i_start);
     coeffs_i <- (VPSHUFD_256 coeffs_i (W8.of_int 216));
     coeffs_i_plus_1_start <- coeffs_i_start;
-    coeffs_i_plus_1_start <- (coeffs_i_plus_1_start + (W64.of_int 32));
+    coeffs_i_plus_1_start <- (coeffs_i_plus_1_start + 32);
     coeffs_i_plus_1 <-
     (get256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-    (W64.to_uint coeffs_i_plus_1_start));
+    coeffs_i_plus_1_start);
     coeffs_i_plus_1 <- (VPSHUFD_256 coeffs_i_plus_1 (W8.of_int 216));
     low_values <- (VPUNPCKL_4u64 coeffs_i coeffs_i_plus_1);
     high_values <- (VPUNPCKH_4u64 coeffs_i coeffs_i_plus_1);
@@ -2044,48 +2035,48 @@ module M = {
     (Array256.init
     (WArray1024.get32
     (WArray1024.set256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-    (W64.to_uint coeffs_i_start) coeffs_i)));
+    coeffs_i_start coeffs_i)));
     polynomial <-
     (Array256.init
     (WArray1024.get32
     (WArray1024.set256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-    (W64.to_uint coeffs_i_plus_1_start) coeffs_i_plus_1)));
+    coeffs_i_plus_1_start coeffs_i_plus_1)));
     return polynomial;
   }
   proc polynomial__invert_ntt_at_layer_0 (polynomial:W32.t Array256.t) : 
   W32.t Array256.t = {
     var i:int;
-    var start:W64.t;
     var zetas:W256.t;
+    var start:int;
     i <- 0;
     while ((i < 16)) {
-      start <- (W64.of_int (i * 2));
+      start <- (i * 2);
       zetas <- zETAS_TO_INVERT_LAYER_0.[i];
       polynomial <@ polynomial__invert_at_layer_0 (polynomial, start, zetas);
       i <- (i + 1);
     }
     return polynomial;
   }
-  proc polynomial__invert_at_layer_1 (polynomial:W32.t Array256.t,
-                                      start:W64.t, zetas:W256.t) : W32.t Array256.t = {
-    var coeffs_i_start:W64.t;
+  proc polynomial__invert_at_layer_1 (polynomial:W32.t Array256.t, start:int,
+                                      zetas:W256.t) : W32.t Array256.t = {
     var coeffs_i:W256.t;
-    var coeffs_i_plus_1_start:W64.t;
     var coeffs_i_plus_1:W256.t;
     var low_values:W256.t;
     var high_values:W256.t;
     var differences:W256.t;
     var sums:W256.t;
+    var coeffs_i_start:int;
+    var coeffs_i_plus_1_start:int;
     coeffs_i_start <- start;
-    coeffs_i_start <- (coeffs_i_start * (W64.of_int 32));
+    coeffs_i_start <- (coeffs_i_start * 32);
     coeffs_i <-
     (get256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-    (W64.to_uint coeffs_i_start));
+    coeffs_i_start);
     coeffs_i_plus_1_start <- coeffs_i_start;
-    coeffs_i_plus_1_start <- (coeffs_i_plus_1_start + (W64.of_int 32));
+    coeffs_i_plus_1_start <- (coeffs_i_plus_1_start + 32);
     coeffs_i_plus_1 <-
     (get256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-    (W64.to_uint coeffs_i_plus_1_start));
+    coeffs_i_plus_1_start);
     low_values <- (VPUNPCKL_4u64 coeffs_i coeffs_i_plus_1);
     high_values <- (VPUNPCKH_4u64 coeffs_i coeffs_i_plus_1);
     differences <- (VPSUB_8u32 high_values low_values);
@@ -2097,48 +2088,48 @@ module M = {
     (Array256.init
     (WArray1024.get32
     (WArray1024.set256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-    (W64.to_uint coeffs_i_start) coeffs_i)));
+    coeffs_i_start coeffs_i)));
     polynomial <-
     (Array256.init
     (WArray1024.get32
     (WArray1024.set256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-    (W64.to_uint coeffs_i_plus_1_start) coeffs_i_plus_1)));
+    coeffs_i_plus_1_start coeffs_i_plus_1)));
     return polynomial;
   }
   proc polynomial__invert_ntt_at_layer_1 (polynomial:W32.t Array256.t) : 
   W32.t Array256.t = {
     var i:int;
-    var start:W64.t;
     var zetas:W256.t;
+    var start:int;
     i <- 0;
     while ((i < 16)) {
-      start <- (W64.of_int (i * 2));
+      start <- (i * 2);
       zetas <- zETAS_TO_INVERT_LAYER_1.[i];
       polynomial <@ polynomial__invert_at_layer_1 (polynomial, start, zetas);
       i <- (i + 1);
     }
     return polynomial;
   }
-  proc polynomial__invert_at_layer_2 (polynomial:W32.t Array256.t,
-                                      start:W64.t, zetas:W256.t) : W32.t Array256.t = {
-    var coeffs_i_start:W64.t;
+  proc polynomial__invert_at_layer_2 (polynomial:W32.t Array256.t, start:int,
+                                      zetas:W256.t) : W32.t Array256.t = {
     var coeffs_i:W256.t;
-    var coeffs_i_plus_1_start:W64.t;
     var coeffs_i_plus_1:W256.t;
     var low_values:W256.t;
     var high_values:W256.t;
     var differences:W256.t;
     var sums:W256.t;
+    var coeffs_i_start:int;
+    var coeffs_i_plus_1_start:int;
     coeffs_i_start <- start;
-    coeffs_i_start <- (coeffs_i_start * (W64.of_int 32));
+    coeffs_i_start <- (coeffs_i_start * 32);
     coeffs_i <-
     (get256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-    (W64.to_uint coeffs_i_start));
+    coeffs_i_start);
     coeffs_i_plus_1_start <- coeffs_i_start;
-    coeffs_i_plus_1_start <- (coeffs_i_plus_1_start + (W64.of_int 32));
+    coeffs_i_plus_1_start <- (coeffs_i_plus_1_start + 32);
     coeffs_i_plus_1 <-
     (get256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-    (W64.to_uint coeffs_i_plus_1_start));
+    coeffs_i_plus_1_start);
     low_values <- (VPERM2I128 coeffs_i coeffs_i_plus_1 (W8.of_int 32));
     high_values <- (VPERM2I128 coeffs_i coeffs_i_plus_1 (W8.of_int 49));
     differences <- (VPSUB_8u32 high_values low_values);
@@ -2150,54 +2141,53 @@ module M = {
     (Array256.init
     (WArray1024.get32
     (WArray1024.set256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-    (W64.to_uint coeffs_i_start) coeffs_i)));
+    coeffs_i_start coeffs_i)));
     polynomial <-
     (Array256.init
     (WArray1024.get32
     (WArray1024.set256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-    (W64.to_uint coeffs_i_plus_1_start) coeffs_i_plus_1)));
+    coeffs_i_plus_1_start coeffs_i_plus_1)));
     return polynomial;
   }
   proc polynomial__invert_ntt_at_layer_2 (polynomial:W32.t Array256.t) : 
   W32.t Array256.t = {
     var i:int;
-    var start:W64.t;
     var zetas:W256.t;
+    var start:int;
     i <- 0;
     while ((i < 16)) {
-      start <- (W64.of_int (i * 2));
+      start <- (i * 2);
       zetas <- zETAS_TO_INVERT_LAYER_2.[i];
       polynomial <@ polynomial__invert_at_layer_2 (polynomial, start, zetas);
       i <- (i + 1);
     }
     return polynomial;
   }
-  proc polynomial__invert_ntt_round (polynomial:W32.t Array256.t,
-                                     offset:W64.t, step_by:W64.t,
-                                     zeta_0:W32.t) : W32.t Array256.t = {
+  proc polynomial__invert_ntt_round (polynomial:W32.t Array256.t, offset:int,
+                                     step_by:int, zeta_0:W32.t) : W32.t Array256.t = {
     var zetas:W256.t;
-    var i:W64.t;
-    var index_i:W64.t;
     var coeffs_i:W256.t;
-    var index_i_plus_step_by:W64.t;
     var coeffs_i_plus_step_by:W256.t;
     var a_minus_b:W256.t;
+    var i:int;
+    var index_i:int;
+    var index_i_plus_step_by:int;
     zetas <- (zeroextu256 (VMOV_32 zeta_0));
     zetas <- (VPBROADCAST_8u32 (truncateu32 zetas));
     i <- offset;
     offset <- (offset + step_by);
-    while ((i \ult offset)) {
+    while ((i < offset)) {
       index_i <- i;
-      index_i <- (index_i * (W64.of_int 32));
+      index_i <- (index_i * 32);
       coeffs_i <-
       (get256_direct (WArray1024.init32 (fun i_0 => polynomial.[i_0]))
-      (W64.to_uint index_i));
+      index_i);
       index_i_plus_step_by <- i;
       index_i_plus_step_by <- (index_i_plus_step_by + step_by);
-      index_i_plus_step_by <- (index_i_plus_step_by * (W64.of_int 32));
+      index_i_plus_step_by <- (index_i_plus_step_by * 32);
       coeffs_i_plus_step_by <-
       (get256_direct (WArray1024.init32 (fun i_0 => polynomial.[i_0]))
-      (W64.to_uint index_i_plus_step_by));
+      index_i_plus_step_by);
       a_minus_b <- (VPSUB_8u32 coeffs_i_plus_step_by coeffs_i);
       coeffs_i <- (VPADD_8u32 coeffs_i coeffs_i_plus_step_by);
       coeffs_i_plus_step_by <@ montgomery_multiply_and_reduce (a_minus_b,
@@ -2206,15 +2196,14 @@ module M = {
       (Array256.init
       (WArray1024.get32
       (WArray1024.set256_direct
-      (WArray1024.init32 (fun i_0 => polynomial.[i_0])) (W64.to_uint index_i)
-      coeffs_i)));
+      (WArray1024.init32 (fun i_0 => polynomial.[i_0])) index_i coeffs_i)));
       polynomial <-
       (Array256.init
       (WArray1024.get32
       (WArray1024.set256_direct
-      (WArray1024.init32 (fun i_0 => polynomial.[i_0]))
-      (W64.to_uint index_i_plus_step_by) coeffs_i_plus_step_by)));
-      i <- (i + (W64.of_int 1));
+      (WArray1024.init32 (fun i_0 => polynomial.[i_0])) index_i_plus_step_by
+      coeffs_i_plus_step_by)));
+      i <- (i + 1);
     }
     return polynomial;
   }
@@ -2223,15 +2212,15 @@ module M = {
     var sTEP:int;
     var sTEP_BY:int;
     var i:int;
-    var offset:W64.t;
-    var step_by:W64.t;
     var zeta_0:W32.t;
+    var offset:int;
+    var step_by:int;
     sTEP <- 8;
     sTEP_BY <- (sTEP %/ 8);
     i <- 0;
     while ((i < 16)) {
-      offset <- (W64.of_int (((i * sTEP) * 2) %/ 8));
-      step_by <- (W64.of_int sTEP_BY);
+      offset <- (((i * sTEP) * 2) %/ 8);
+      step_by <- sTEP_BY;
       zeta_0 <- zETAS_TO_INVERT_LAYER_3.[i];
       polynomial <@ polynomial__invert_ntt_round (polynomial, offset,
       step_by, zeta_0);
@@ -2244,15 +2233,15 @@ module M = {
     var sTEP:int;
     var sTEP_BY:int;
     var i:int;
-    var offset:W64.t;
-    var step_by:W64.t;
     var zeta_0:W32.t;
+    var offset:int;
+    var step_by:int;
     sTEP <- 16;
     sTEP_BY <- (sTEP %/ 8);
     i <- 0;
     while ((i < 8)) {
-      offset <- (W64.of_int (((i * sTEP) * 2) %/ 8));
-      step_by <- (W64.of_int sTEP_BY);
+      offset <- (((i * sTEP) * 2) %/ 8);
+      step_by <- sTEP_BY;
       zeta_0 <- zETAS_TO_INVERT_LAYER_4.[i];
       polynomial <@ polynomial__invert_ntt_round (polynomial, offset,
       step_by, zeta_0);
@@ -2265,15 +2254,15 @@ module M = {
     var sTEP:int;
     var sTEP_BY:int;
     var i:int;
-    var offset:W64.t;
-    var step_by:W64.t;
     var zeta_0:W32.t;
+    var offset:int;
+    var step_by:int;
     sTEP <- 32;
     sTEP_BY <- (sTEP %/ 8);
     i <- 0;
     while ((i < 4)) {
-      offset <- (W64.of_int (((i * sTEP) * 2) %/ 8));
-      step_by <- (W64.of_int sTEP_BY);
+      offset <- (((i * sTEP) * 2) %/ 8);
+      step_by <- sTEP_BY;
       zeta_0 <- zETAS_TO_INVERT_LAYER_5.[i];
       polynomial <@ polynomial__invert_ntt_round (polynomial, offset,
       step_by, zeta_0);
@@ -2286,15 +2275,15 @@ module M = {
     var sTEP:int;
     var sTEP_BY:int;
     var i:int;
-    var offset:W64.t;
-    var step_by:W64.t;
     var zeta_0:W32.t;
+    var offset:int;
+    var step_by:int;
     sTEP <- 64;
     sTEP_BY <- (sTEP %/ 8);
     i <- 0;
     while ((i < 2)) {
-      offset <- (W64.of_int (((i * sTEP) * 2) %/ 8));
-      step_by <- (W64.of_int sTEP_BY);
+      offset <- (((i * sTEP) * 2) %/ 8);
+      step_by <- sTEP_BY;
       zeta_0 <- zETAS_TO_INVERT_LAYER_6.[i];
       polynomial <@ polynomial__invert_ntt_round (polynomial, offset,
       step_by, zeta_0);
@@ -2307,15 +2296,15 @@ module M = {
     var sTEP:int;
     var sTEP_BY:int;
     var i:int;
-    var offset:W64.t;
-    var step_by:W64.t;
     var zeta_0:W32.t;
+    var offset:int;
+    var step_by:int;
     sTEP <- 128;
     sTEP_BY <- (sTEP %/ 8);
     i <- 0;
     while ((i < 1)) {
-      offset <- (W64.of_int (((i * sTEP) * 2) %/ 8));
-      step_by <- (W64.of_int sTEP_BY);
+      offset <- (((i * sTEP) * 2) %/ 8);
+      step_by <- sTEP_BY;
       zeta_0 <- (W32.of_int 25847);
       polynomial <@ polynomial__invert_ntt_round (polynomial, offset,
       step_by, zeta_0);
@@ -2327,8 +2316,8 @@ module M = {
   W32.t Array256.t = {
     var temp:W64.t;
     var twiddle_factors:W256.t;
-    var i:W64.t;
     var coefficients:W256.t;
+    var i:int;
     polynomial <@ polynomial__invert_ntt_at_layer_0 (polynomial);
     polynomial <@ polynomial__invert_ntt_at_layer_1 (polynomial);
     polynomial <@ polynomial__invert_ntt_at_layer_2 (polynomial);
@@ -2340,20 +2329,18 @@ module M = {
     temp <- (W64.of_int 41978);
     twiddle_factors <- (zeroextu256 (VMOV_32 (truncateu32 temp)));
     twiddle_factors <- (VPBROADCAST_8u32 (truncateu32 twiddle_factors));
-    i <- (W64.of_int 0);
-    while ((i \ult (W64.of_int ((256 * 32) %/ 8)))) {
+    i <- 0;
+    while ((i < ((256 * 32) %/ 8))) {
       coefficients <-
-      (get256_direct (WArray1024.init32 (fun i_0 => polynomial.[i_0]))
-      (W64.to_uint i));
+      (get256_direct (WArray1024.init32 (fun i_0 => polynomial.[i_0])) i);
       coefficients <@ montgomery_multiply_and_reduce (coefficients,
       twiddle_factors);
       polynomial <-
       (Array256.init
       (WArray1024.get32
       (WArray1024.set256_direct
-      (WArray1024.init32 (fun i_0 => polynomial.[i_0])) (W64.to_uint i)
-      coefficients)));
-      i <- (i + (W64.of_int 32));
+      (WArray1024.init32 (fun i_0 => polynomial.[i_0])) i coefficients)));
+      i <- (i + 32);
     }
     return polynomial;
   }
@@ -9633,92 +9620,84 @@ module M = {
   proc polynomial__add (sum_pointer:W32.t Array256.t,
                         lhs_pointer:W32.t Array256.t,
                         rhs_pointer:W32.t Array256.t) : W32.t Array256.t = {
-    var offset:W64.t;
     var lhs:W256.t;
     var rhs:W256.t;
     var sum:W256.t;
-    offset <- (W64.of_int 0);
-    while ((offset \ult (W64.of_int ((256 * 32) %/ 8)))) {
+    var offset:int;
+    offset <- 0;
+    while ((offset < ((256 * 32) %/ 8))) {
       lhs <-
-      (get256_direct (WArray1024.init32 (fun i => lhs_pointer.[i]))
-      (W64.to_uint offset));
+      (get256_direct (WArray1024.init32 (fun i => lhs_pointer.[i])) offset);
       rhs <-
-      (get256_direct (WArray1024.init32 (fun i => rhs_pointer.[i]))
-      (W64.to_uint offset));
+      (get256_direct (WArray1024.init32 (fun i => rhs_pointer.[i])) offset);
       sum <- (VPADD_8u32 lhs rhs);
       sum_pointer <-
       (Array256.init
       (WArray1024.get32
       (WArray1024.set256_direct
-      (WArray1024.init32 (fun i => sum_pointer.[i])) (W64.to_uint offset) 
-      sum)));
-      offset <- (offset + (W64.of_int 32));
+      (WArray1024.init32 (fun i => sum_pointer.[i])) offset sum)));
+      offset <- (offset + 32);
     }
     return sum_pointer;
   }
   proc polynomial__subtract (difference_pointer:W32.t Array256.t,
                              lhs_pointer:W32.t Array256.t,
                              rhs_pointer:W32.t Array256.t) : W32.t Array256.t = {
-    var offset:W64.t;
     var lhs:W256.t;
     var rhs:W256.t;
     var difference:W256.t;
-    offset <- (W64.of_int 0);
-    while ((offset \ult (W64.of_int ((256 * 32) %/ 8)))) {
+    var offset:int;
+    offset <- 0;
+    while ((offset < ((256 * 32) %/ 8))) {
       lhs <-
-      (get256_direct (WArray1024.init32 (fun i => lhs_pointer.[i]))
-      (W64.to_uint offset));
+      (get256_direct (WArray1024.init32 (fun i => lhs_pointer.[i])) offset);
       rhs <-
-      (get256_direct (WArray1024.init32 (fun i => rhs_pointer.[i]))
-      (W64.to_uint offset));
+      (get256_direct (WArray1024.init32 (fun i => rhs_pointer.[i])) offset);
       difference <- (VPSUB_8u32 lhs rhs);
       difference_pointer <-
       (Array256.init
       (WArray1024.get32
       (WArray1024.set256_direct
-      (WArray1024.init32 (fun i => difference_pointer.[i]))
-      (W64.to_uint offset) difference)));
-      offset <- (offset + (W64.of_int 32));
+      (WArray1024.init32 (fun i => difference_pointer.[i])) offset difference
+      )));
+      offset <- (offset + 32);
     }
     return difference_pointer;
   }
   proc polynomial____pointwise_add_to_total (total:W32.t Array256.t,
                                              polynomial:W32.t Array256.t) : 
   W32.t Array256.t = {
-    var offset:W64.t;
     var lhs:W256.t;
     var rhs:W256.t;
     var sum:W256.t;
-    offset <- (W64.of_int 0);
-    while ((offset \ult (W64.of_int ((256 * 32) %/ 8)))) {
+    var offset:int;
+    offset <- 0;
+    while ((offset < ((256 * 32) %/ 8))) {
       lhs <-
-      (get256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-      (W64.to_uint offset));
-      rhs <-
-      (get256_direct (WArray1024.init32 (fun i => total.[i]))
-      (W64.to_uint offset));
+      (get256_direct (WArray1024.init32 (fun i => polynomial.[i])) offset);
+      rhs <- (get256_direct (WArray1024.init32 (fun i => total.[i])) offset);
       sum <- (VPADD_8u32 lhs rhs);
       total <-
       (Array256.init
       (WArray1024.get32
       (WArray1024.set256_direct (WArray1024.init32 (fun i => total.[i]))
-      (W64.to_uint offset) sum)));
-      offset <- (offset + (W64.of_int 32));
+      offset sum)));
+      offset <- (offset + 32);
     }
     return total;
   }
   proc polynomial____zero (polynomial:W32.t Array256.t) : W32.t Array256.t = {
     var zero_u256:W256.t;
-    var offset:W64.t;
+    var offset:int;
     zero_u256 <- (set0_256);
-    offset <- (W64.of_int 0);
-    while ((offset \ult (W64.of_int ((256 * 32) %/ 8)))) {
+    offset <- 0;
+    while ((offset < ((256 * 32) %/ 8))) {
       polynomial <-
       (Array256.init
       (WArray1024.get32
       (WArray1024.set256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-      (W64.to_uint offset) zero_u256)));
-      offset <- (offset + (W64.of_int 32));
+      offset zero_u256)));
+      offset <- (offset + 32);
     }
     return polynomial;
   }
@@ -11752,6 +11731,7 @@ module M = {
     var domain_separator_for_mask:W16.t;
     var exit_rejection_sampling_loop:W64.t;
     var kappa_exceeded:W64.t;
+    var last_norm_check_result:W64.t;
     var mask:W32.t Array1280.t;
     var copied_32_bytes:W256.t;
     var mask_as_ntt:W32.t Array1280.t;
@@ -11766,7 +11746,6 @@ module M = {
     var w0_minus_cs2_plus_ct0:W32.t Array1536.t;
     var signer_response:W32.t Array1280.t;
     var hint_0:W32.t Array1536.t;
-    var last_norm_check_result:W64.t;
     var kappa_diff:W32.t;
     var kappa_zf:bool;
     var kappa_bit:W8.t;
@@ -11826,6 +11805,7 @@ module M = {
     domain_separator_for_mask <- (W16.of_int 0);
     exit_rejection_sampling_loop <- (W64.of_int 0);
     kappa_exceeded <- (W64.of_int 0);
+    last_norm_check_result <- (W64.of_int 1);
     while ((exit_rejection_sampling_loop = (W64.of_int 0))) {
       (mask, domain_separator_for_mask) <@ sample____mask (seed_for_mask,
       domain_separator_for_mask);

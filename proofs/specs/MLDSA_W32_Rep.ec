@@ -136,7 +136,7 @@ op polykvec_srng(p : polykvec, bl bh : int) = all (poly_srng bl bh) p.
 
 op wpolykvec_urng(pw : wpolykvec, b : int) = all (wpoly_urng b) pw.
 op wpolykvec_srng(pw : wpolykvec, bl bh : int) = all (wpoly_srng bl bh) pw.
-op wpolykvec_infnorm(b : int, pw : wpolykvec) = wpolykvec_srng pw (b-1) (b-1).
+op wpolykvec_infnorm_lt(b : int, pw : wpolykvec) = wpolykvec_srng pw (b-1) (b-1).
 op wpolykvec_ntt_irng (pw : wpolykvec) = all wpoly_ntt_irng  pw.
 op wpolykvec_ntt_orng (pw : wpolykvec) = all wpoly_ntt_orng  pw.
 op wpolykvec_intt_irng(pw : wpolykvec) = all wpoly_intt_irng pw.
@@ -146,11 +146,11 @@ op wpolykvec_bmul_orng(pw : wpolykvec) = all wpoly_bmul_orng pw.
 
 lemma wpolykvec_infnorm_liftE (b : int) (pw : wpolykvec) :
     0 < b <= q %/ 2 =>
-    wpolykvec_infnorm b pw => PolyKVec.infnorm (lifts_wpolykvec pw) b.
+    wpolykvec_infnorm_lt b pw => PolyKVec.infnorm_lt (lifts_wpolykvec pw) b.
 proof.
 move => Hb.
-rewrite /wpolykvec_infnorm /wpolykvec_srng /polykvec_infnorm /lifts_wpolykvec allP /= => H.
-rewrite /infnorm allP => i; rewrite mem_iota /= => Hi.
+rewrite /wpolykvec_infnorm_lt /wpolykvec_srng /polykvec_infnorm_lt /lifts_wpolykvec allP /= => H.
+rewrite /infnorm_lt allP => i; rewrite mem_iota /= => Hi.
 rewrite allP => k; rewrite mem_iota /= => Hk.
 rewrite mapiE 1:/# /= mapiE 1:/# /=.
 have := H i _; 1: smt().

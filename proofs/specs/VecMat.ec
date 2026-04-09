@@ -104,7 +104,7 @@ op UseHint(h : polykvec, r : polykvec) : polykvec =
 op MakeHint(v1 : polykvec, v2 : polykvec) : polykvec =
     map2 poly_MakeHint v1 v2.
 
-op infnorm(v : polykvec, bound : int) : bool = 
+op infnorm_lt(v : polykvec, bound : int) : bool = 
   all (fun ii => all (fun jj => `|v.[ii].[jj]| < bound) (iota_ 0 256)) (iota_ 0 kvec).
 
 import Bigint BIA. 

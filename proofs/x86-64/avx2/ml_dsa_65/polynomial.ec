@@ -124,3 +124,71 @@ lemma polynomial____check_infinity_norm_ph (_a : W32.t Array256.t) (_threshold :
        (!wpoly_infnorm_lt _threshold _a => res = W64.one)
    ] = 1%r
  by conseq polynomial____check_infinity_norm_ll (polynomial____check_infinity_norm_correct _a _threshold).
+
+(* ================================================================== *)
+(* polynomial__add                                                      *)
+(* Pointwise addition without reduction.                               *)
+(* Spec: lifts_wpoly res = lifts_wpoly _lhs + lifts_wpoly _rhs        *)
+(* No range restriction: result may need reduce32 afterwards.          *)
+(* ================================================================== *)
+
+lemma polynomial__add_ll : islossless M.polynomial__add.
+proof.
+proc.
+wp; while (0 <= offset <= (256 * 32) %/ 8 /\ offset %% 32 = 0)
+         ((256 * 32) %/ 8 - offset); last by auto => /#.
+by move => *; auto => /#.
+qed.
+
+lemma polynomial__add_correct
+      (_sum : W32.t Array256.t) (_lhs : W32.t Array256.t) (_rhs : W32.t Array256.t) :
+    hoare [ M.polynomial__add :
+        sum_pointer = _sum /\ lhs_pointer = _lhs /\ rhs_pointer = _rhs
+        ==>
+        lifts_wpoly res = lifts_wpoly _lhs &+ lifts_wpoly _rhs
+    ].
+proof.
+admitted.
+
+lemma polynomial__add_ph
+      (_sum : W32.t Array256.t) (_lhs : W32.t Array256.t) (_rhs : W32.t Array256.t) :
+    phoare [ M.polynomial__add :
+        sum_pointer = _sum /\ lhs_pointer = _lhs /\ rhs_pointer = _rhs
+        ==>
+        lifts_wpoly res = lifts_wpoly _lhs &+ lifts_wpoly _rhs
+    ] = 1%r
+  by conseq polynomial__add_ll (polynomial__add_correct _sum _lhs _rhs).
+
+(* ================================================================== *)
+(* polynomial__subtract                                                 *)
+(* Pointwise subtraction without reduction.                            *)
+(* Spec: lifts_wpoly res = lifts_wpoly _lhs - lifts_wpoly _rhs        *)
+(* No range restriction: result may need reduce32 afterwards.          *)
+(* ================================================================== *)
+
+lemma polynomial__subtract_ll : islossless M.polynomial__subtract.
+proof.
+proc.
+wp; while (0 <= offset <= (256 * 32) %/ 8 /\ offset %% 32 = 0)
+         ((256 * 32) %/ 8 - offset); last by auto => /#.
+by move => *; auto => /#.
+qed.
+
+lemma polynomial__subtract_correct
+      (_diff : W32.t Array256.t) (_lhs : W32.t Array256.t) (_rhs : W32.t Array256.t) :
+    hoare [ M.polynomial__subtract :
+        difference_pointer = _diff /\ lhs_pointer = _lhs /\ rhs_pointer = _rhs
+        ==>
+        lifts_wpoly res = lifts_wpoly _lhs &+ ((&-) (lifts_wpoly _rhs))
+    ].
+proof.
+admitted.
+
+lemma polynomial__subtract_ph
+      (_diff : W32.t Array256.t) (_lhs : W32.t Array256.t) (_rhs : W32.t Array256.t) :
+    phoare [ M.polynomial__subtract :
+        difference_pointer = _diff /\ lhs_pointer = _lhs /\ rhs_pointer = _rhs
+        ==>
+        lifts_wpoly res = lifts_wpoly _lhs &+ ((&-) (lifts_wpoly _rhs))
+    ] = 1%r
+  by conseq polynomial__subtract_ll (polynomial__subtract_correct _diff _lhs _rhs).

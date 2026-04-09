@@ -2,10 +2,10 @@ require import AllCore List IntDiv RealExp.
 
 from Jasmin require import JModel_x86.
 
-from JazzEC require import Ml_dsa_65_avx2 Mldsa_65_prelude Signature.
+from JazzEC require import Ml_dsa_65_avx2 Mldsa_65_prelude Signature
+                           Modular Invert_ntt Rounding.
 
 from Spec require import GFq Rq Parameters VecMat MLDSA_W32_Rep.
-
 import PolyLVec PolyKVec.
 import CDR Round Zq PolyReduceZq BigZMod.
 
@@ -17,10 +17,64 @@ require import Polynomial Row_vector.
 lemma __apply_cs2_and_check_norm_ll : islossless M.__apply_cs2_and_check_norm.
 proof.
 proc.
-wp; while (0 <= base <= 6 * n /\ base %% n = 0) (6*n - base); last by auto => /#.  
+wp; while (0 <= base <= 6 * n /\ base %% n = 0) (6*n - base); last by auto => /#.
 move => ?.
-admit. (* lossless *)
+wp; call polynomial____check_infinity_norm_ll.
+wp; call polynomial__reduce32_ll.
+wp; call polynomial__subtract_ll.
+wp; call polynomial__invert_ntt_montgomery_ll.
+wp; call polynomial__pointwise_montgomery_multiply_and_reduce_ll.
+by auto => /#.
 qed.
+
+(* ================================================================== *)
+(* __compute_signer_response_element                                    *)
+(* Computes one column of z = mask + c*s1:                             *)
+(*   cs1 = invntt(basemul(s1_element, verifier_challenge))            *)
+(*   result = reduce32(mask_element + cs1)                             *)
+(* ================================================================== *)
+
+lemma __compute_signer_response_element_ll : islossless M.__compute_signer_response_element.
+proof.
+proc.
+wp; call polynomial__reduce32_ll.
+wp; call polynomial__add_ll.
+wp; call polynomial__invert_ntt_montgomery_ll.
+wp; call polynomial__pointwise_montgomery_multiply_and_reduce_ll.
+by auto.
+qed.
+
+lemma __compute_signer_response_element_correct
+      (_s1e : W32.t Array256.t) (_c : W32.t Array256.t)
+      (_mask_e : W32.t Array256.t) (_sre : W32.t Array256.t) :
+    hoare [ M.__compute_signer_response_element :
+        s1_element = _s1e /\ verifier_challenge = _c /\
+        mask_element = _mask_e /\ signer_response_element = _sre /\
+        wpoly_ntt_orng _s1e /\ wpoly_ntt_orng _c
+        ==>
+        (* z = mask + invntt(c * s1) coefficient-wise *)
+        lifts_wpoly res =
+          lifts_wpoly _mask_e &+ invntt (basemul (lifts_wpoly _s1e) (lifts_wpoly _c)) /\
+        (* output is reduced to centered representatives *)
+        wpoly_srng ((q-1) %/ 2) ((q-1) %/ 2) res
+    ].
+proof.
+admitted.
+
+lemma __compute_signer_response_element_ph
+      (_s1e : W32.t Array256.t) (_c : W32.t Array256.t)
+      (_mask_e : W32.t Array256.t) (_sre : W32.t Array256.t) :
+    phoare [ M.__compute_signer_response_element :
+        s1_element = _s1e /\ verifier_challenge = _c /\
+        mask_element = _mask_e /\ signer_response_element = _sre /\
+        wpoly_ntt_orng _s1e /\ wpoly_ntt_orng _c
+        ==>
+        lifts_wpoly res =
+          lifts_wpoly _mask_e &+ invntt (basemul (lifts_wpoly _s1e) (lifts_wpoly _c)) /\
+        wpoly_srng ((q-1) %/ 2) ((q-1) %/ 2) res
+    ] = 1%r
+  by conseq __compute_signer_response_element_ll
+            (__compute_signer_response_element_correct _s1e _c _mask_e _sre).
 
 lemma __apply_cs2_and_check_norm_correct
       (_w0mc : W32.t Array1536.t) (_w0 : W32.t Array1536.t)
@@ -40,7 +94,7 @@ lemma __apply_cs2_and_check_norm_correct
         (_incr = W64.zero =>
            res.`2 = W64.zero =>
            (* ||w0 - cs2||_inf < gamma2 - Beta = 261692 *)
-           wpolykvec_infnorm (gamma2 - Beta) (kvec_unflatten256 res.`1) /\
+           wpolykvec_infnorm_lt (gamma2 - Beta) (kvec_unflatten256 res.`1) /\
            lifts_wpolykvec (kvec_unflatten256 res.`1) =
              (lifts_wpolykvec (kvec_unflatten256 _w0)) -
              (PolyKVec.invnttv (PolyKVec.ntt_smul
@@ -59,7 +113,7 @@ case (infinity_norm_check_result <> zero).
   by auto => /#.
 conseq (: _ ==>
   infinity_norm_check_result = zero =>
-   (wpolykvec_infnorm (gamma2 - Beta) (kvec_unflatten256 w0_minus_cs2) /\
+   (wpolykvec_infnorm_lt (gamma2 - Beta) (kvec_unflatten256 w0_minus_cs2) /\
    lifts_wpolykvec (kvec_unflatten256 w0_minus_cs2) =
    lifts_wpolykvec (kvec_unflatten256 _w0) -
    invnttv (ntt_smul (lifts_wpoly _c) (lifts_wpolykvec (kvec_unflatten256 _s2)))));
@@ -83,7 +137,7 @@ while (#{/~_incr}{~infinity_norm_check_result}pre /\
 
 + auto => /> ???; split; 1:smt().
   move => bs wmcs *;do split. 
-  + by rewrite /wpolykvec_infnorm /wpolykvec_srng allP => *; smt().
+  + by rewrite /wpolykvec_infnorm_lt /wpolykvec_srng allP => *; smt().
   by apply KArray.tP => *;smt().
 
 (* ── Loop body: one row at index i = base %/ n ──────────────────────── *)
@@ -97,7 +151,7 @@ seq 6 : (#pre /\
     (* coefficients are centered representatives: to_sint = crepr *)
     wpoly_srng ((q-1) %/ 2) ((q-1) %/ 2)
                (Array256.init (fun i => w0_minus_cs2.[base + i]))).
-+ admit.
++ admit. (* Claude: look here to see what stubs to generate *)
 
 wp.
 ecall (polynomial____check_infinity_norm_correct
@@ -140,7 +194,7 @@ lemma __apply_cs2_and_check_norm_ph
         (_incr = W64.zero =>
            res.`2 = W64.zero =>
            (* ||w0 - cs2||_inf < gamma2 - Beta = 261692 *)
-           wpolykvec_infnorm (gamma2 - Beta) (kvec_unflatten256 res.`1) /\
+           wpolykvec_infnorm_lt (gamma2 - Beta) (kvec_unflatten256 res.`1) /\
            lifts_wpolykvec (kvec_unflatten256 res.`1) =
              (lifts_wpolykvec (kvec_unflatten256 _w0)) -
              (PolyKVec.invnttv (PolyKVec.ntt_smul
@@ -162,7 +216,22 @@ lemma __apply_cs2_and_check_norm_ph
 lemma __apply_ct0_and_check_norm_ll : islossless M.__apply_ct0_and_check_norm.
 proof.
 proc.
-admit.
+wp; while (0 <= base <= 6 * n /\ base %% n = 0) (6*n - base); last by auto => /#.
+move => ?.
+wp; conseq (: true==>true); 1: by smt().
+seq 5 : true.
++ by auto.
++ wp; call polynomial____check_infinity_norm_ll.
+  wp; call polynomial__reduce32_ll.
+  wp; call polynomial__invert_ntt_montgomery_ll.
+  wp; call polynomial__pointwise_montgomery_multiply_and_reduce_ll.
+  by auto.
++ if; last by auto.
+  wp; call polynomial__add_ll.
+  by auto.
+
++ hoare; by auto.
++ by auto.
 qed.
 
 lemma __apply_ct0_and_check_norm_correct
@@ -179,7 +248,7 @@ lemma __apply_ct0_and_check_norm_correct
         wpolykvec_ntt_orng (kvec_unflatten256 _t0) /\
         (* only needed when _incr = 0 (loop runs): w0mc passed cs2 norm check *)
         (_incr = W64.zero =>
-          wpolykvec_infnorm (gamma2 - Beta) (kvec_unflatten256 _w0mc))
+          wpolykvec_infnorm_lt (gamma2 - Beta) (kvec_unflatten256 _w0mc))
         ==>
         (_incr = W64.one => res.`2 = W64.one) /\
         (_incr = W64.zero =>
@@ -188,12 +257,11 @@ lemma __apply_ct0_and_check_norm_correct
                        (lifts_wpoly _c)
                        (lifts_wpolykvec (kvec_unflatten256 _t0))) in
            (* ||ct0||_inf < gamma2 = 261888 *)
-           PolyKVec.infnorm ct0 gamma2 /\
+           PolyKVec.infnorm_lt ct0 gamma2 /\
            lifts_wpolykvec (kvec_unflatten256 res.`1) =
              (lifts_wpolykvec (kvec_unflatten256 _w0mc)) + ct0)
     ].
 proof.
-admitted. (* 
 have kvec_val := mldsa65_kvec.
 have gamma2_val := mldsa65_gamma2.
 have tau_val  := mldsa65_tau.
@@ -203,15 +271,16 @@ case (infinity_norm_check_result <> zero).
 + rcondt ^if; 1: by auto.
   rcondf ^while; 1: by auto.
   by auto => /#.
+  
 conseq (: _ ==>
   infinity_norm_check_result = zero =>
   (let ct0 = PolyKVec.invnttv (PolyKVec.ntt_smul
                (lifts_wpoly _c) (lifts_wpolykvec (kvec_unflatten256 _t0))) in
-   PolyKVec.infnorm ct0 gamma2 /\
+   PolyKVec.infnorm_lt ct0 gamma2 /\
    lifts_wpolykvec (kvec_unflatten256 w0_minus_cs2_plus_ct0) =
      lifts_wpolykvec (kvec_unflatten256 _w0mc) + ct0));
  1: by move => |> &hr ?? infncr rr => ?; rewrite to_uint_eq /= /#.
-rcondf ^if; 1: by auto.
+rcondf ^if; 1: by auto. print poly. locate t.
 while (#{/~_incr}{~infinity_norm_check_result}pre /\
        (infinity_norm_check_result = zero \/ infinity_norm_check_result = one) /\
        0 <= base <= 6*n /\ base %% n = 0 /\
@@ -220,17 +289,24 @@ while (#{/~_incr}{~infinity_norm_check_result}pre /\
          let ct0 = PolyKVec.invnttv (PolyKVec.ntt_smul
                      (lifts_wpoly _c) (lifts_wpolykvec (kvec_unflatten256 _t0))) in
          (forall k, 0 <= k < base %/ n =>
-           PolyKVec.infnorm_poly ct0.[k] gamma2) /\
+           infnorm_lt ct0.[k] gamma2) /\
          (forall k, 0 <= k < base %/ n =>
            (lifts_wpolykvec (kvec_unflatten256 w0_minus_cs2_plus_ct0)).[k] =
-           (lifts_wpolykvec (kvec_unflatten256 _w0mc)).[k] + ct0.[k]))
+           (lifts_wpolykvec (kvec_unflatten256 _w0mc)).[k] &+ ct0.[k]))
       ); last first.
 + auto => /> ???; split; 1: smt().
-  move => bs r *; do split.
-  + move => k ?; rewrite /PolyKVec.infnorm_poly; smt().
-  + by apply KArray.tP => *; smt().
-admit. (* loop body: gamma2 threshold not yet in polynomial____check_infinity_norm_correct *)
-qed. *)
+  move => bs r ???[H H0]; do split.
+  + rewrite /infnorm_lt allP => ii; rewrite mem_iota /= => Hii.
+    have := H ii _;1:smt().
+    by rewrite /infnorm_lt allP; smt(mem_iota).
+  + apply KArray.tP => ii iib.
+    have -> := H0 ii _;1:smt().
+    admit. (* FIXME : PY *)
+
+
+    
+admit. (* Claude: loook here to synthethize stubs *)
+qed. 
 
 lemma __apply_ct0_and_check_norm_ph
       (_r : W32.t Array1536.t) (_w0mc : W32.t Array1536.t)
@@ -245,7 +321,7 @@ lemma __apply_ct0_and_check_norm_ph
         wpoly_ntt_orng _c /\
         wpolykvec_ntt_orng (kvec_unflatten256 _t0) /\
         (_incr = W64.zero =>
-          wpolykvec_infnorm (gamma2 - Beta) (kvec_unflatten256 _w0mc))
+          wpolykvec_infnorm_lt (gamma2 - Beta) (kvec_unflatten256 _w0mc))
         ==>
         (_incr = W64.one => res.`2 = W64.one) /\
         (_incr = W64.zero =>
@@ -253,25 +329,22 @@ lemma __apply_ct0_and_check_norm_ph
            let ct0 = PolyKVec.invnttv (PolyKVec.ntt_smul
                        (lifts_wpoly _c)
                        (lifts_wpolykvec (kvec_unflatten256 _t0))) in
-           PolyKVec.infnorm ct0 gamma2 /\
+           PolyKVec.infnorm_lt ct0 gamma2 /\
            lifts_wpolykvec (kvec_unflatten256 res.`1) =
              (lifts_wpolykvec (kvec_unflatten256 _w0mc)) + ct0)
     ] = 1%r
   by conseq (__apply_ct0_and_check_norm_ll)
             (__apply_ct0_and_check_norm_correct _r _w0mc _t0 _c _incr).
 
-(* ================================================================== *)
-(* __compute_z_and_check_norm                                          *)
-(* Called third; incr = combined result of cs2+ct0 checks (0 or 1).  *)
-(* Computes z = mask + c*s1 per column (L=5); checks infnorm < gamma1-Beta *)
-(* Spec: z = y + invnttv (ntt_smul ch s1h)                           *)
-(* Threshold: gamma1 - Beta = 2^19 - tau*Eta = 524092                *)
-(* ================================================================== *)
 
 lemma __compute_z_and_check_norm_ll : islossless M.__compute_z_and_check_norm.
 proof.
 proc.
-admit.
+wp; while (0 <= base <= 5 * n /\ base %% n = 0) (5*n - base); last by auto => /#.
+move => ?.
+wp; call polynomial____check_infinity_norm_ll.
+wp; call __compute_signer_response_element_ll.
+by auto => /#.
 qed.
 
 lemma __compute_z_and_check_norm_correct
@@ -419,7 +492,14 @@ lemma __compute_z_and_check_norm_ph
 lemma __make_hint_vector_ll : islossless M.__make_hint_vector.
 proof.
 proc.
-admit.
+wp. (* post-loop: SETcc + OR *)
+while (0 <= base <= 6 * n /\ base %% n = 0) (6*n - base); last by auto => /#.
+move => ?.
+wp. (* total_ones_in_hint += ones_in_hint *)
+wp. (* hint_0 writeback *)
+call polynomial____make_hint_ll.
+wp. (* hint_element <- Array256.init *)
+by auto => /#.
 qed.
 
 lemma __make_hint_vector_correct

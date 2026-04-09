@@ -103,12 +103,12 @@ module MLDSA_SP(S : Samplers, XOFSIB : XOF_SIB, RO : LeakyRO) = {
        z <- y + cs1;
        r0 <- polykvec_LowBits (w - cs2);
        bz <- infnorm_lt z (gamma1 - Beta) && 
-                  infnorm r0 (gamma2 - Beta);
+                  infnorm_lt r0 (gamma2 - Beta);
        leakage <- leakage ++ [ CheckZ bz ];
        if (bz) {
           ct0 <- invnttv (ntt_smul ch t0);
           h <- MakeHint (PolyKVec.zerov-ct0) w - cs2 + ct0;
-          bh <- infnorm ct0 gamma2 && hammw h w_hint;
+          bh <- infnorm_lt ct0 gamma2 && hammw h w_hint;
           leakage <- leakage ++ [ CheckH bh ];
           if (bh) { zh <- Some (z,h); }
        }

@@ -141,23 +141,29 @@ by move => *; auto => /#.
 qed.
 
 lemma polynomial__add_correct
-      (_sum : W32.t Array256.t) (_lhs : W32.t Array256.t) (_rhs : W32.t Array256.t) :
+      (_sum : W32.t Array256.t) (_lhs : W32.t Array256.t) (_rhs : W32.t Array256.t)
+      (A B : int) :
     hoare [ M.polynomial__add :
-        sum_pointer = _sum /\ lhs_pointer = _lhs /\ rhs_pointer = _rhs
+        sum_pointer = _sum /\ lhs_pointer = _lhs /\ rhs_pointer = _rhs /\
+        wpoly_srng A A _lhs /\ wpoly_srng B B _rhs /\ A + B < 2^31
         ==>
-        lifts_wpoly res = lifts_wpoly _lhs &+ lifts_wpoly _rhs
+        lifts_wpoly res = lifts_wpoly _lhs &+ lifts_wpoly _rhs /\
+        wpoly_srng (A + B) (A + B) res
     ].
 proof.
 admitted.
 
 lemma polynomial__add_ph
-      (_sum : W32.t Array256.t) (_lhs : W32.t Array256.t) (_rhs : W32.t Array256.t) :
+      (_sum : W32.t Array256.t) (_lhs : W32.t Array256.t) (_rhs : W32.t Array256.t)
+      (A B : int) :
     phoare [ M.polynomial__add :
-        sum_pointer = _sum /\ lhs_pointer = _lhs /\ rhs_pointer = _rhs
+        sum_pointer = _sum /\ lhs_pointer = _lhs /\ rhs_pointer = _rhs /\
+        wpoly_srng A A _lhs /\ wpoly_srng B B _rhs /\ A + B < 2^31
         ==>
-        lifts_wpoly res = lifts_wpoly _lhs &+ lifts_wpoly _rhs
+        lifts_wpoly res = lifts_wpoly _lhs &+ lifts_wpoly _rhs /\
+        wpoly_srng (A + B) (A + B) res
     ] = 1%r
-  by conseq polynomial__add_ll (polynomial__add_correct _sum _lhs _rhs).
+  by conseq polynomial__add_ll (polynomial__add_correct _sum _lhs _rhs A B).
 
 (* ================================================================== *)
 (* polynomial__subtract                                                 *)
@@ -175,20 +181,26 @@ by move => *; auto => /#.
 qed.
 
 lemma polynomial__subtract_correct
-      (_diff : W32.t Array256.t) (_lhs : W32.t Array256.t) (_rhs : W32.t Array256.t) :
+      (_diff : W32.t Array256.t) (_lhs : W32.t Array256.t) (_rhs : W32.t Array256.t)
+      (A B : int) :
     hoare [ M.polynomial__subtract :
-        difference_pointer = _diff /\ lhs_pointer = _lhs /\ rhs_pointer = _rhs
+        difference_pointer = _diff /\ lhs_pointer = _lhs /\ rhs_pointer = _rhs /\
+        wpoly_srng A A _lhs /\ wpoly_srng B B _rhs /\ A + B < 2^31
         ==>
-        lifts_wpoly res = lifts_wpoly _lhs &+ ((&-) (lifts_wpoly _rhs))
+        lifts_wpoly res = lifts_wpoly _lhs &+ ((&-) (lifts_wpoly _rhs)) /\
+        wpoly_srng (A + B) (A + B) res
     ].
 proof.
 admitted.
 
 lemma polynomial__subtract_ph
-      (_diff : W32.t Array256.t) (_lhs : W32.t Array256.t) (_rhs : W32.t Array256.t) :
+      (_diff : W32.t Array256.t) (_lhs : W32.t Array256.t) (_rhs : W32.t Array256.t)
+      (A B : int) :
     phoare [ M.polynomial__subtract :
-        difference_pointer = _diff /\ lhs_pointer = _lhs /\ rhs_pointer = _rhs
+        difference_pointer = _diff /\ lhs_pointer = _lhs /\ rhs_pointer = _rhs /\
+        wpoly_srng A A _lhs /\ wpoly_srng B B _rhs /\ A + B < 2^31
         ==>
-        lifts_wpoly res = lifts_wpoly _lhs &+ ((&-) (lifts_wpoly _rhs))
+        lifts_wpoly res = lifts_wpoly _lhs &+ ((&-) (lifts_wpoly _rhs)) /\
+        wpoly_srng (A + B) (A + B) res
     ] = 1%r
-  by conseq polynomial__subtract_ll (polynomial__subtract_correct _diff _lhs _rhs).
+  by conseq polynomial__subtract_ll (polynomial__subtract_correct _diff _lhs _rhs A B).

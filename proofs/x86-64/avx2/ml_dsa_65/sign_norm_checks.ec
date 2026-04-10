@@ -3,7 +3,7 @@ require import AllCore List IntDiv RealExp.
 from Jasmin require import JModel_x86.
 
 from JazzEC require import Ml_dsa_65_avx2 Mldsa_65_prelude Signature
-                           Modular Invert_ntt Rounding.
+                           Common_modular Common_invert_ntt Rounding.
 
 from Spec require import GFq Rq Parameters VecMat MLDSA_W32_Rep.
 import PolyLVec PolyKVec.
@@ -151,7 +151,34 @@ seq 6 : (#pre /\
     (* coefficients are centered representatives: to_sint = crepr *)
     wpoly_srng ((q-1) %/ 2) ((q-1) %/ 2)
                (Array256.init (fun i => w0_minus_cs2.[base + i]))).
-+ admit. (* Claude: look here to see what stubs to generate *)
++ (* Loop body: basemul → invNTT → subtract → writeback → reduce32 → writeback.
+     Process backwards (ecall/wp work right-to-left). *)
+  wp. (* instruction 6: writeback w0_minus_cs2 <- Array1536.init ... *)
+  ecall (polynomial__reduce32_correct
+           (Array256.init (fun i => w0_minus_cs2.[base + i]))).
+  wp. (* instruction 4: writeback w0_minus_cs2 <- Array1536.init ... *)
+  ecall (polynomial__subtract_correct
+           (Array256.init (fun i => w0_minus_cs2.[base + i]))
+           (Array256.init (fun i => w0.[base + i]))
+           cs2 gamma2 (2^31 - gamma1)).
+  ecall (polynomial__invert_ntt_montgomery_correct cs2).
+  ecall (polynomial__pointwise_montgomery_multiply_and_reduce_correct
+           cs2
+           (Array256.init (fun i => s2.[base + i]))
+           verifier_challenge).
+  auto => |> &hr *.
+  (* Hurdle: closing this goal requires
+     (1) polykvec_sub_iE  — to index (v1 - v2).[k] componentwise (axiom in VecMat.ec);
+     (2) invnttv_ntt_smul_k — already proven, connects (invnttv (ntt_smul c sv)).[k];
+     (3) a flat-array/kvec connection lemma:
+           (lifts_wpolykvec (kvec_unflatten256 v)).[k]
+             = lifts_wpoly (Array256.init (fun i => v.[k*256+i]))
+         provable from mapiE + initiE + get_of_list + nth_sub, but not yet in prelude;
+     (4) arithmetic: gamma2 + (2^31 - gamma1) < 2^31 since gamma2 < gamma1;
+     (5) bridge axioms: wpolykvec_ntt_orng => wpolykvec_bmul_irng,
+                        wpoly_bmul_orng => wpoly_intt_irng,
+                        wpoly_intt_orng => wpoly_srng (2^31-gamma1) (2^31-gamma1). *)
+  admit.
 
 wp.
 ecall (polynomial____check_infinity_norm_correct

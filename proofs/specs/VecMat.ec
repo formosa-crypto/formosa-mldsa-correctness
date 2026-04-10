@@ -55,6 +55,11 @@ op zerov : polylvec = LArray.init (fun i =>  poly_zero).
 op (+) (v1 v2 : polylvec) : polylvec = alg2polylvec ((polylvec2alg v1) + (polylvec2alg v2)).
 op ntt_smul(p : poly, v : polylvec) : polylvec = map (fun p' => basemul p' p) v.
 
+lemma invnttv_ntt_smul_k (c : poly) (sv : polylvec) (k : int) :
+  0 <= k < lvec =>
+  (invnttv (ntt_smul c sv)).[k] = invntt (basemul sv.[k] c).
+proof. by move => hk; rewrite /invnttv /ntt_smul !mapiE 1:/# /=. qed.
+
 op infnorm_lt(v : polylvec, bound : int) : bool =
   all (fun ii => all (fun jj => `|v.[ii].[jj]| < bound) (iota_ 0 256)) (iota_ 0 lvec).
 
@@ -91,7 +96,20 @@ op (+) (v1 v2 : polykvec) : polykvec = alg2polykvec ((polykvec2alg v1) + (polykv
 op (-) (v1 v2 : polykvec) : polykvec = alg2polykvec ((polykvec2alg v1) - (polykvec2alg v2)).
 op ntt_smul(p : poly, v : polykvec) : polykvec = map (fun p' => basemul p' p) v.
 
-op smul(v : polykvec, c : coeff) : polykvec = 
+lemma invnttv_ntt_smul_k (c : poly) (sv : polykvec) (k : int) :
+  0 <= k < kvec =>
+  (invnttv (ntt_smul c sv)).[k] = invntt (basemul sv.[k] c).
+proof. by move => hk; rewrite /invnttv /ntt_smul !mapiE 1:/# /=. qed.
+
+(* Componentwise indexing of polykvec subtraction.
+   Hurdle: (-) routes through the abstract algebra (polykvec2alg / alg2polykvec),
+   whose concrete definitions and alg2polykvecK are admitted (FIXME: PY).
+   Once those are filled in this axiom becomes provable by unfolding. *)
+lemma polykvec_sub_iE (v1 v2 : polykvec) k :
+  0 <= k < kvec => (v1 - v2).[k] = v1.[k] &+ (&-) v2.[k].
+  admitted.
+
+op smul(v : polykvec, c : coeff) : polykvec =
    KArray.map (fun (vi : poly) => map (fun ci => c*ci) vi) v.
 
 op Power2Round(t : polykvec) : polykvec * polykvec =

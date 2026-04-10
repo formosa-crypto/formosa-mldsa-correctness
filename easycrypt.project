@@ -17,6 +17,7 @@ idirs = submodules/dilithium/proofs/security
 idirs = JazzEC:proofs/arrays
 idirs = JazzEC:proofs/xarrays
 idirs = JazzEC:proofs/xwords
+idirs = JazzEC:proofs/x86-64/avx2/ml_dsa_65/common/arithmetic
 rdirs = JazzEC:proofs/x86-64/avx2/ml_dsa_65
 
 idirs = Keccak:submodules/formosa-mldsa/formosa-keccak/proof/amd64/common

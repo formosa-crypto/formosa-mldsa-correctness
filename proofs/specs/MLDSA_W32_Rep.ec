@@ -48,6 +48,19 @@ op wpoly_intt_orng : wpoly -> bool.  (* valid output from INTT  *)
 op wpoly_bmul_irng : wpoly -> bool.  (* valid input  to   basemul *)
 op wpoly_bmul_orng : wpoly -> bool.  (* valid output from basemul *)
 
+(* ------------------------------------------------------------------ *)
+(* Bridge axioms: relations between abstract range predicates.         *)
+(* Concrete instantiation deferred until NTT bridge lemmas are proven. *)
+(* ------------------------------------------------------------------ *)
+axiom wpoly_ntt_orng_bmul_irng (p : wpoly) : wpoly_ntt_orng p => wpoly_bmul_irng p.
+axiom wpoly_bmul_orng_intt_irng (p : wpoly) : wpoly_bmul_orng p => wpoly_intt_irng p.
+(* invNTT output bound: |coeff| <= 2^31 - gamma1.
+   Compatible with subtract (lhs in gamma2 range) and add (lhs in gamma1-1 range):
+     (2^31 - gamma1) + gamma2     < 2^31  (since gamma2 < gamma1)
+     (2^31 - gamma1) + (gamma1-1) = 2^31 - 1 < 2^31                        *)
+axiom wpoly_intt_orng_bound (p : wpoly) :
+  wpoly_intt_orng p => wpoly_srng (2^31 - gamma1) (2^31 - gamma1) p.
+
 lemma wpoly_infnorm_liftE (b : int) (pw : wpoly) :
     0 < b <= q %/ 2 =>
     wpoly_infnorm_lt b pw => infnorm_lt (lifts_wpoly pw) b.
@@ -81,6 +94,20 @@ op wpolylvec_intt_irng(pw : wpolylvec) = all wpoly_intt_irng pw.
 op wpolylvec_intt_orng(pw : wpolylvec) = all wpoly_intt_orng pw.
 op wpolylvec_bmul_irng(pw : wpolylvec) = all wpoly_bmul_irng pw.
 op wpolylvec_bmul_orng(pw : wpolylvec) = all wpoly_bmul_orng pw.
+
+lemma wpolylvec_ntt_orng_bmul_irng (pv : wpolylvec) :
+  wpolylvec_ntt_orng pv => wpolylvec_bmul_irng pv.
+proof.
+rewrite /wpolylvec_ntt_orng /wpolylvec_bmul_irng !allP.
+by move => H p Hp; exact (wpoly_ntt_orng_bmul_irng pv.[p] (H p Hp)).
+qed.
+
+lemma wpolylvec_bmul_orng_intt_irng (pv : wpolylvec) :
+  wpolylvec_bmul_orng pv => wpolylvec_intt_irng pv.
+proof.
+rewrite /wpolylvec_bmul_orng /wpolylvec_intt_irng !allP.
+by move => H p Hp; exact (wpoly_bmul_orng_intt_irng pv.[p] (H p Hp)).
+qed.
 
 lemma wpolylvec_infnorm_liftE (b : int) (pw : wpolylvec) :
     0 < b <= q %/ 2 =>
@@ -143,6 +170,20 @@ op wpolykvec_intt_irng(pw : wpolykvec) = all wpoly_intt_irng pw.
 op wpolykvec_intt_orng(pw : wpolykvec) = all wpoly_intt_orng pw.
 op wpolykvec_bmul_irng(pw : wpolykvec) = all wpoly_bmul_irng pw.
 op wpolykvec_bmul_orng(pw : wpolykvec) = all wpoly_bmul_orng pw.
+
+lemma wpolykvec_ntt_orng_bmul_irng (pv : wpolykvec) :
+  wpolykvec_ntt_orng pv => wpolykvec_bmul_irng pv.
+proof.
+rewrite /wpolykvec_ntt_orng /wpolykvec_bmul_irng !allP.
+by move => H p Hp; exact (wpoly_ntt_orng_bmul_irng pv.[p] (H p Hp)).
+qed.
+
+lemma wpolykvec_bmul_orng_intt_irng (pv : wpolykvec) :
+  wpolykvec_bmul_orng pv => wpolykvec_intt_irng pv.
+proof.
+rewrite /wpolykvec_bmul_orng /wpolykvec_intt_irng !allP.
+by move => H p Hp; exact (wpoly_bmul_orng_intt_irng pv.[p] (H p Hp)).
+qed.
 
 lemma wpolykvec_infnorm_liftE (b : int) (pw : wpolykvec) :
     0 < b <= q %/ 2 =>

@@ -35,11 +35,13 @@ qed.
 lemma polynomial____make_hint_correct
       (_h : W32.t Array256.t) (_low : W32.t Array256.t) (_high : W32.t Array256.t) :
     hoare [ M.polynomial____make_hint :
-        hints = _h /\ low_coefficients = _low /\ high_coefficients = _high
+        hints = _h /\ low_coefficients = _low /\ high_coefficients = _high /\
+        (* low: LowBits output range [-(gamma2-1), gamma2] *)
+        wpoly_srng (gamma2 - 1) gamma2 _low /\
+        (* high: HighBits (w1) output range [0, (q-1) / (2*gamma2)] *)
+        wpoly_urng ((q - 1) %/ (2 * gamma2) + 1) _high
         ==>
-        (* hint bits: 0 or 1 per coefficient *)
         liftu_wpoly res.`1 = poly_MakeHint (lifts_wpoly _low) (lifts_wpoly _high) /\
-        (* total weight = number of 1-bits *)
         res.`2 = count (fun i => (liftu_wpoly res.`1).[i] <> Zq.zero) (iota_ 0 256)
     ].
 proof.
@@ -48,7 +50,9 @@ admitted.
 lemma polynomial____make_hint_ph
       (_h : W32.t Array256.t) (_low : W32.t Array256.t) (_high : W32.t Array256.t) :
     phoare [ M.polynomial____make_hint :
-        hints = _h /\ low_coefficients = _low /\ high_coefficients = _high
+        hints = _h /\ low_coefficients = _low /\ high_coefficients = _high /\
+        wpoly_srng (gamma2 - 1) gamma2 _low /\
+        wpoly_urng ((q - 1) %/ (2 * gamma2) + 1) _high
         ==>
         liftu_wpoly res.`1 = poly_MakeHint (lifts_wpoly _low) (lifts_wpoly _high) /\
         res.`2 = count (fun i => (liftu_wpoly res.`1).[i] <> Zq.zero) (iota_ 0 256)

@@ -19,9 +19,10 @@ op check_inf_norm_circuit (_a : W32.t Array256.t) (_threshold : int) : bool =
 
 lemma polynomial____check_infinity_norm_correct (_a : W32.t Array256.t) (_threshold : int) :
    hoare [ M.polynomial____check_infinity_norm :
-       (* gamma1-Beta = 524092  or  gamma2-Beta = 261692 *)
+       (* gamma1-Beta = 524092  or  gamma2-Beta = 261692  or  gamma2 = 261888 *)
        (_threshold = (1 `<<` gamma1m1_bits) - 49 * w1_bits \/
-        _threshold = (q - 1) %/ 32 - 49 * w1_bits) /\
+        _threshold = (q - 1) %/ 32 - 49 * w1_bits \/
+        _threshold = (q - 1) %/ 32) /\
        polynomial = _a /\ threshold = _threshold /\
        (* coefficients must be centered representatives so to_sint = crepr *)
        wpoly_srng ((q-1) %/ 2) ((q-1) %/ 2) _a
@@ -33,7 +34,7 @@ proof.
 rewrite /(`<<`) /=.
 proc => /=.
 seq 2 : (#pre /\ threshold_vector = W256.of_int (_threshold - 1)).
-+ auto => />  Hdisj; elim Hdisj => [-> | ->] /= Hrng.
++ auto => />  Hdisj; elim Hdisj => [-> | [-> | ->]] /= Hrng.
   + rewrite /VMOV_64 /= to_uint_eq to_uint_zeroextu256 of_uintK /=.
     rewrite -(W128.of_uintK 524091); congr; rewrite wordP => i ib.
     rewrite /pack2_t initiE 1:/# /= get_of_list 1:/# /= of_intE /= bits2wE initiE 1:/# /=.
@@ -45,6 +46,16 @@ seq 2 : (#pre /\ threshold_vector = W256.of_int (_threshold - 1)).
     smt(StdOrder.IntOrder.ler_lt_trans StdOrder.IntOrder.ler_weexpn2l pow2_64).
   + rewrite /VMOV_64 /= to_uint_eq to_uint_zeroextu256 of_uintK /=.
     rewrite -(W128.of_uintK 261691); congr; rewrite wordP => i ib.
+    rewrite /pack2_t initiE 1:/# /= get_of_list 1:/# /= of_intE /= bits2wE initiE 1:/# /=.
+    case (i %/ 64 = 0) => ? /=.
+    + rewrite of_intE /= bits2wE initiE 1:/# /=.
+      by rewrite /BitEncoding.BS2Int.int2bs nth_mkseq 1:/# /= nth_mkseq 1:/# /= /#.
+    rewrite /BitEncoding.BS2Int.int2bs nth_mkseq 1:/# /=.
+    rewrite pdiv_small; last by smt().
+    smt(StdOrder.IntOrder.ler_lt_trans StdOrder.IntOrder.ler_weexpn2l pow2_64).
+  + (* gamma2 = 261888, threshold_vector = W256.of_int 261887 *)
+    rewrite /VMOV_64 /= to_uint_eq to_uint_zeroextu256 of_uintK /=.
+    rewrite -(W128.of_uintK 261887); congr; rewrite wordP => i ib.
     rewrite /pack2_t initiE 1:/# /= get_of_list 1:/# /= of_intE /= bits2wE initiE 1:/# /=.
     case (i %/ 64 = 0) => ? /=.
     + rewrite of_intE /= bits2wE initiE 1:/# /=.
@@ -70,8 +81,8 @@ wp -1.
 conseq (: polynomial = _a /\ threshold_vector = W256.of_int (_threshold - 1) /\
         List.all (fun i => W32.of_int (-4190208) \sle _a.[i]
                /\ _a.[i] \sle  W32.of_int 4190208) (iotared 0 256) /\
-          (_threshold = 524092 \/ _threshold = 261692)  ==>
-    zf = (check_inf_norm_circuit _a _threshold)). 
+          (_threshold = 524092 \/ _threshold = 261692 \/ _threshold = 261888)  ==>
+    zf = (check_inf_norm_circuit _a _threshold)).
 
 (*  Connect circuit form to poly_infnorm spec *)
 + move => &1 [#] ? <- ? + ?; rewrite /wpoly_srng iotaredE /(\sle) !of_sintK /smod !allP /=;smt(mem_iota).
@@ -96,13 +107,21 @@ case (_threshold = 524092).
                /\ _a.[i] \sle  W32.of_int 4190208) (iotared 0 256)
           ==>
     zf = (check_inf_norm_circuit _a 524092));
-    [ by smt() | by smt() | by simplify;circuit]. 
+    [ by smt() | by smt() | by simplify;circuit].
+case (_threshold = 261692).
 + conseq (: polynomial = _a /\ threshold_vector = W256.of_int 261691 /\
        List.all (fun i => W32.of_int (-4190208) \sle _a.[i]
                /\ _a.[i] \sle  W32.of_int 4190208) (iotared 0 256)
           ==>
     zf = (check_inf_norm_circuit _a 261692));
-    [ by smt() | by smt() | by simplify;circuit]. 
+    [ by smt() | by smt() | by simplify;circuit].
+(* gamma2 = 261888: threshold_vector = W256.of_int 261887 *)
++ conseq (: polynomial = _a /\ threshold_vector = W256.of_int 261887 /\
+       List.all (fun i => W32.of_int (-4190208) \sle _a.[i]
+               /\ _a.[i] \sle  W32.of_int 4190208) (iotared 0 256)
+          ==>
+    zf = (check_inf_norm_circuit _a 261888));
+    [ by smt() | by smt() | by simplify;circuit].
 qed.
 
 lemma polynomial____check_infinity_norm_ll : islossless M.polynomial____check_infinity_norm.
@@ -113,9 +132,10 @@ qed.
 
 lemma polynomial____check_infinity_norm_ph (_a : W32.t Array256.t) (_threshold : int) :
    phoare [ M.polynomial____check_infinity_norm :
-       (* gamma1-Beta = 524092  or  gamma2-Beta = 261692 *)
+       (* gamma1-Beta = 524092  or  gamma2-Beta = 261692  or  gamma2 = 261888 *)
        (_threshold = (1 `<<` gamma1m1_bits) - 49 * w1_bits \/
-        _threshold = (q - 1) %/ 32 - 49 * w1_bits) /\
+        _threshold = (q - 1) %/ 32 - 49 * w1_bits \/
+        _threshold = (q - 1) %/ 32) /\
        polynomial = _a /\ threshold = _threshold /\
        (* coefficients must be centered representatives so to_sint = crepr *)
        wpoly_srng ((q-1) %/ 2) ((q-1) %/ 2) _a

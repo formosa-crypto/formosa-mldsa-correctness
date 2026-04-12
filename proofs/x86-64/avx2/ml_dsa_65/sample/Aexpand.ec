@@ -149,8 +149,9 @@ type sha3x4 = W256.t Array25.t.
 
 op (\sha3for) : sha3x4 -> sha3x4_state -> bool.
 
-axiom is_sha3x4_is_valid (rstate : sha3x4) (state : sha3x4_state) :
+lemma is_sha3x4_is_valid (rstate : sha3x4) (state : sha3x4_state) :
   rstate \sha3for state => is_valid_sha3x4_state state.
+admitted.
 
 (* -------------------------------------------------------------------- *)
 lemma sha3for_eqR rstate s1 s2 :

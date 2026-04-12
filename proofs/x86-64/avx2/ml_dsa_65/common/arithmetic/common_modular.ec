@@ -81,7 +81,7 @@ lemma polynomial__reduce32_ph (_a : W32.t Array256.t) :
 (* Input:  wpoly_bmul_irng on both operands                            *)
 (*         (NTT outputs satisfy this: wpoly_ntt_orng => wpoly_bmul_irng)*)
 (* Output: lifts_wpoly res = basemul (lifts_wpoly lhs) (lifts_wpoly rhs)*)
-(*         wpoly_bmul_orng res  (valid input for subsequent INTT)       *)
+(*         wpoly_srng (q-1) (q-1) res  (from final Montgomery reduction) *)
 (* ================================================================== *)
 
 lemma polynomial__pointwise_montgomery_multiply_and_reduce_ll :
@@ -103,8 +103,8 @@ lemma polynomial__pointwise_montgomery_multiply_and_reduce_correct
         product = _prod /\ lhs = _lhs /\ rhs = _rhs /\
         wpoly_bmul_irng _lhs /\ wpoly_bmul_irng _rhs
         ==>
-        lifts_wpoly res = basemul (lifts_wpoly _lhs) (lifts_wpoly _rhs) /\
-        wpoly_bmul_orng res
+        lifts_wpoly res = basemul (lifts_wpoly _lhs) (lifts_wpoly _rhs) /\ (* TODO: may need Montgomery factor correction *)
+        wpoly_srng (q-1) (q-1) res
     ].
 proof.
 admitted.
@@ -115,8 +115,8 @@ lemma polynomial__pointwise_montgomery_multiply_and_reduce_ph
         product = _prod /\ lhs = _lhs /\ rhs = _rhs /\
         wpoly_bmul_irng _lhs /\ wpoly_bmul_irng _rhs
         ==>
-        lifts_wpoly res = basemul (lifts_wpoly _lhs) (lifts_wpoly _rhs) /\
-        wpoly_bmul_orng res
+        lifts_wpoly res = basemul (lifts_wpoly _lhs) (lifts_wpoly _rhs) /\ (* TODO: may need Montgomery factor correction *)
+        wpoly_srng (q-1) (q-1) res
     ] = 1%r
   by conseq polynomial__pointwise_montgomery_multiply_and_reduce_ll
             (polynomial__pointwise_montgomery_multiply_and_reduce_correct _prod _lhs _rhs).

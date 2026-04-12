@@ -186,7 +186,7 @@ conseq (:
   /\ _a = polynomial  ==>
   (List.all (fun i => (W4.init (fun j => encoded.[(4*i+j) %/ 8].[(4*i+j) %% 8])) \ule W4.of_int 8) (iotared 0 256)) /\
   encoded = let mapped = BSWA_256u4.init (fun i => error_polynomial_encode_lane _a.[i]) in
-  BSWA_128u8.init (fun i => W8.init (fun j => mapped.[(i*8+j) %/ 4].[(i*8+j) %% 4])));last by  admit. (* simplify;circuit. *)
+  BSWA_128u8.init (fun i => W8.init (fun j => mapped.[(i*8+j) %/ 4].[(i*8+j) %% 4])));last by circuit. 
 
 + move => &hr [<- +]; rewrite iotaredE /wpoly_srng allP /= => Hrng.
   rewrite /(\sle) allP => x; rewrite mem_iota /= => Hx.
@@ -313,7 +313,7 @@ conseq (_: encoded = _a /\
     List.all (fun i =>
     W32.of_int (-4) \sle decoded.[i] /\ decoded.[i] \sle W32.of_int 4) (iotared 0 256) /\
     decoded = BSWA_256u32.init (fun i => error_polynomial_decode_lane (W4.init (fun j =>
-               _a.[(4*i+j) %/ 8].[(4*i+j) %% 8])))); last by admit.
+               _a.[(4*i+j) %/ 8].[(4*i+j) %% 8])))); last by simplify;circuit.
 
 + move => &hr; rewrite iotaredE /valid_eta_bytes mldsa65_Eta /= => [#-> H] /=.
   by rewrite allP => k; rewrite mem_iota /= /(\ule) /=  => ?; rewrite H /#. 

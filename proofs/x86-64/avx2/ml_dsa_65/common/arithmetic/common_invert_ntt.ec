@@ -13,9 +13,9 @@ require import Array256.
 (* ================================================================== *)
 (* polynomial__invert_ntt_montgomery                                    *)
 (* Computes the inverse NTT of a polynomial.                           *)
-(* Input:  wpoly_intt_irng _a  (satisfied by wpoly_bmul_orng outputs)  *)
-(* Output: lifts_wpoly res = invntt (lifts_wpoly _a)                   *)
-(*         wpoly_intt_orng res                                         *)
+(* Input:  wpoly_intt_irng _a  (satisfied when basemul output in range [-q+1,q-1])  *)
+(* Output: lifts_wpoly res = invntt (lifts_wpoly _a)  (TODO: Montgomery factor analysis) *)
+(*         wpoly_srng (q-1) (q-1) res  (from final Montgomery scaling step)              *)
 (* ================================================================== *)
 
 lemma polynomial__invert_ntt_montgomery_ll : islossless M.polynomial__invert_ntt_montgomery.
@@ -34,8 +34,8 @@ lemma polynomial__invert_ntt_montgomery_correct (_a : W32.t Array256.t) :
     hoare [ M.polynomial__invert_ntt_montgomery :
         polynomial = _a /\ wpoly_intt_irng _a
         ==>
-        lifts_wpoly res = invntt (lifts_wpoly _a) /\
-        wpoly_intt_orng res
+        lifts_wpoly res = invntt (lifts_wpoly _a) /\ (* TODO: algebraic claim requires Montgomery factor analysis *)
+        wpoly_srng (q-1) (q-1) res
     ].
 proof.
 admitted.
@@ -44,8 +44,8 @@ lemma polynomial__invert_ntt_montgomery_ph (_a : W32.t Array256.t) :
     phoare [ M.polynomial__invert_ntt_montgomery :
         polynomial = _a /\ wpoly_intt_irng _a
         ==>
-        lifts_wpoly res = invntt (lifts_wpoly _a) /\
-        wpoly_intt_orng res
+        lifts_wpoly res = invntt (lifts_wpoly _a) /\ (* TODO: algebraic claim requires Montgomery factor analysis *)
+        wpoly_srng (q-1) (q-1) res
     ] = 1%r
   by conseq polynomial__invert_ntt_montgomery_ll
             (polynomial__invert_ntt_montgomery_correct _a).

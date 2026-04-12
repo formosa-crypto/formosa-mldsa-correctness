@@ -109,4 +109,56 @@ qed.
 
 op mat_unflatten256(a : 'a Array7680.t) =
      KLMatrix.init (fun i => Array256.of_list witness (sub a (256*i) 256)).
-     
+
+(* -------------------------------------------------------------------- *)
+(* Slice / writeback helper lemmas                                        *)
+(* -------------------------------------------------------------------- *)
+
+(** [kvec_slice_eq]: the k-th component of kvec_unflatten256 equals the
+    256-element window starting at base = 256*k of the flat array. *)
+lemma kvec_slice_eq (v : 'a Array1536.t) (base : int) :
+  base %% 256 = 0 => 0 <= base %/ 256 < kvec =>
+  (kvec_unflatten256 v).[base %/ 256] =
+  Array256.init (fun i => v.[base + i]).
+proof.
+move => Hmod Hk.
+apply Array256.tP => j jb.
+rewrite Array256.initiE 1:/# /=.
+rewrite /kvec_unflatten256 KArray.initiE 1:/# /=.
+by rewrite get_of_list 1:/# nth_sub 1:/# /#.
+qed.
+
+(** [init_writeback_slice_eq]: reading back the [base, base+256) window
+    from a writeback Array1536.init gives the written Array256. *)
+lemma init_writeback_slice_eq (arr : 'a Array1536.t) (f : 'a Array256.t) (base : int) :
+  0 <= base => base + 256 <= 1536 =>
+  Array256.init (fun i => (Array1536.init (fun i0 =>
+    if base <= i0 < base + 256 then f.[i0 - base] else arr.[i0])).[base + i]) = f.
+proof.
+move => Hbase Hend.
+apply Array256.tP => j jb.
+rewrite Array256.initiE 1:/# /= Array1536.initiE 1:/# /=.
+by smt().
+qed.
+
+(** [kvec_unflatten256_writeback_iE]: unflattening a writeback init gives
+    the written array at component k = base/256, and the original elsewhere. *)
+lemma kvec_unflatten256_writeback_iE (arr : 'a Array1536.t) (f : 'a Array256.t) (base k : int) :
+  base %% 256 = 0 => 0 <= k < kvec =>
+  (kvec_unflatten256 (Array1536.init (fun i =>
+    if base <= i < base + 256 then f.[i - base] else arr.[i]))).[k] =
+  if k = base %/ 256 then f else (kvec_unflatten256 arr).[k].
+proof.
+move => Hmod Hk.
+have kvec_val := mldsa65_kvec.
+apply Array256.tP => j jb.
+rewrite /kvec_unflatten256 KArray.initiE 1:/# /=.
+rewrite get_of_list 1:/# nth_sub 1:/# /=.
+rewrite Array1536.initiE 1:/# /=.
+case (k = base %/ 256) => Heq /=.
++ have -> : (base <= 256 * k + j && 256 * k + j < base + 256) = true by smt().
+  by smt().
++ have -> : (base <= 256 * k + j && 256 * k + j < base + 256) = false by smt().
+  by rewrite kvec_unflatten256iE 1:/# /#.
+qed.
+

@@ -13,6 +13,15 @@ require import Array256 Array1280 Array1536.
 
 require import Polynomial Row_vector.
 
+lemma lifts_wpolykvec_slice (v : W32.t Array1536.t) (base : int) :
+  base %% 256 = 0 => 0 <= base %/ 256 < kvec =>
+  lifts_wpoly (Array256.init (fun i => v.[base + i])) =
+  (lifts_wpolykvec (kvec_unflatten256 v)).[base %/ 256].
+proof.
+move => Hmod Hk.
+rewrite /lifts_wpolykvec mapiE 1:/# /=.
+by rewrite -kvec_slice_eq.
+qed.
 
 lemma __apply_cs2_and_check_norm_ll : islossless M.__apply_cs2_and_check_norm.
 proof.
@@ -190,58 +199,35 @@ seq 6 : (#pre /\
      Key lemmas: polykvec_sub_iE, invnttv_ntt_smul_k (both in VecMat.ec).
      The flat-array/kvec connection is proved inline via mapiE+tP+initiE+get_of_list+nth_sub. *)
   do split => /=.
-  (* ── bmul pre: wpoly_bmul_irng for s2 slice ── *)
+  (* ── bmul pre: s2 slice — kvec_slice_eq replaces 8-line inline proof ── *)
   - have Hs2_bmul := wpolykvec_ntt_orng_bmul_irng _ Hs2_ntt.
-    have Hk : wpoly_bmul_irng ((kvec_unflatten256 _s2).[base{hr} %/ n]).
-    + move: Hs2_bmul; rewrite /wpolykvec_bmul_irng allP => H; apply H; smt(mldsa65_kvec).
-    suff Heq : (kvec_unflatten256 _s2).[base{hr} %/ n] = Array256.init (fun i => _s2.[base{hr} + i]).
-    + by rewrite -Heq.
-    apply Array256.tP => j jb.
-    rewrite initiE 1:/# /= /kvec_unflatten256 KArray.initiE 1:/# /=.
-    by rewrite get_of_list 1:/# nth_sub 1:/# /#.
-  (* ── bmul pre: wpoly_bmul_irng for verifier challenge ── *)
+    have Heq_s2 : (kvec_unflatten256 _s2).[base{hr} %/ n] = Array256.init (fun i => _s2.[base{hr} + i]).
+    + by apply kvec_slice_eq; smt(mldsa65_kvec).
+    rewrite -Heq_s2.
+    move: Hs2_bmul; rewrite /wpolykvec_bmul_irng allP => H; apply H; smt(mldsa65_kvec).
+  (* ── bmul pre: verifier challenge ── *)
   - by smt(wpoly_ntt_orng_bmul_irng).
   move => Hbmul_s2 Hbmul_c result [# Hbmul_eq Hbmul_rng].
   split; 1: by exact (wpoly_bmul_orng_intt_irng result Hbmul_rng).
   move => ?result0 [# Hintt_eq Hintt_rng].
-  (* ── derive subtract pre range facts from loop invariant ── *)
+  (* ── subtract pre: w0 slice range — kvec_slice_eq replaces Heq_w0 + allP chain ── *)
   have Heq_w0 : (kvec_unflatten256 _w0).[base{hr} %/ n] = Array256.init (fun i => _w0.[base{hr} + i]).
-  + apply Array256.tP => j jb.
-    rewrite initiE 1:/# /= /kvec_unflatten256 KArray.initiE 1:/# /=.
-    by rewrite get_of_list 1:/# nth_sub 1:/# /#.
+  + by apply kvec_slice_eq; smt(mldsa65_kvec).
   have Hw0_slice : wpoly_srng gamma2 gamma2 (Array256.init (fun i => _w0.[base{hr} + i])).
   + rewrite -Heq_w0; move: Hw0_srng; rewrite /wpolykvec_srng allP => H.
-    move: (H (base{hr} %/ n) _); 1: smt(mldsa65_kvec). 
+    move: (H (base{hr} %/ n) _); 1: smt(mldsa65_kvec).
     rewrite /wpoly_srng !allP => H2 j Hj; have := H2 j Hj; smt(mldsa65_gamma2).
   have /= Hresult0_rng' : wpoly_srng (2^31 - gamma1) (2^31 - gamma1) result0.
   + move: Hintt_rng; rewrite/= /wpoly_srng !allP => H j Hj; have := H j Hj; smt(mldsa65_gamma1).
   do split;1..3:by smt(mldsa65_gamma1 mldsa65_gamma2).
   move => ??? result1 Hr1s Hr1v result2 Hr2s Hr2v.
-  (* ── Common sub-lemma: outer.[base+i] = result2.[i] for 0<=i<n ── *)
-  have Hres2_eq : Array256.init (fun i => (Array1536.init (fun (i0 : int) =>
-      if base{hr} <= i0 < base{hr} + n then result2.[i0 - base{hr}]
-      else (Array1536.init (fun (i1 : int) =>
-        if base{hr} <= i1 < base{hr} + n then result1.[i1 - base{hr}]
-        else w0_minus_cs2{hr}.[i1])).[i0])).[base{hr} + i]) = result2.
-  + apply Array256.tP => j jb.
-    rewrite Array256.initiE 1:/# /= Array1536.initiE 1:/# /=.
-    by smt().
-  (* ── Common sub-lemma: inner.[base+i] = result1.[i] for 0<=i<n ── *)
-  have Hres1_eq : Array256.init (fun i => (Array1536.init (fun (i0 : int) =>
-      if base{hr} <= i0 < base{hr} + n then result1.[i0 - base{hr}]
-      else w0_minus_cs2{hr}.[i0])).[base{hr} + i]) = result1.
-  + apply Array256.tP => j jb.
-    rewrite Array256.initiE 1:/# /= Array1536.initiE 1:/# /=.
-    by smt().
-  (* ── s2 slice equality (parallel to Heq_w0 for _w0) ── *)
-  have Heq_s2 : (kvec_unflatten256 _s2).[base{hr} %/ n] =
-      Array256.init (fun i => _s2.[base{hr} + i]).
-  + apply Array256.tP => j jb.
-    rewrite initiE 1:/# /= /kvec_unflatten256 KArray.initiE 1:/# /=.
-    by rewrite get_of_list 1:/# nth_sub 1:/# /#.
+  (* outer = Array1536.init (fun i => if base <= i < base+n then result2.[i-base] else inner.[i])
+     inner = Array1536.init (fun i => if base <= i < base+n then result1.[i-base] else w0_minus_cs2{hr}.[i]) *)
   do split.
-  - (* loop invariant for k < base/n: new array unchanged at those positions *)
+  - (* Preserve loop invariant for k < base/n:
+       kvec_unflatten256_writeback_iE applied twice eliminates the low-level ifF chain *)
     move => Hinfz.
+    have [HH1 HH2] := HH _;1:smt().
     have Hslice_eq : forall k, 0 <= k < base{hr} %/ n =>
         (kvec_unflatten256 (Array1536.init (fun (i : int) =>
           if base{hr} <= i < base{hr} + n then result2.[i - base{hr}]
@@ -250,38 +236,62 @@ seq 6 : (#pre /\
             else w0_minus_cs2{hr}.[i0])).[i]))).[k] =
         (kvec_unflatten256 w0_minus_cs2{hr}).[k].
     + move => k [hk0 hk1].
-      apply Array256.tP => j jb.
-      rewrite /kvec_unflatten256 KArray.initiE 1:/# /=.
-      rewrite get_of_list 1:/# nth_sub 1:/# /=.
-      rewrite Array1536.initiE 1:/# /=.
-      rewrite /kvec_unflatten256 KArray.initiE 1:/# /=.
-      have Hlt : n * k + j < base{hr} by smt().
-      have -> : (base{hr} <= n * k + j && n * k + j < base{hr} + n) = false by smt().
-      rewrite Array1536.initiE 1:/# /=.
-      have -> : (base{hr} <= n * k + j && n * k + j < base{hr} + n) = false by smt().
-      rewrite /= get_of_list 1:/# nth_sub 1:/# /#.
-    have [HH1 HH2] := HH _;1:smt().
-    split; move => k *.
-    + have := HH1 k _;1:smt().
-      rewrite /wpoly_srng  !allP => /= HH3 j jb.
-      rewrite initiE 1:/# /= get_of_list 1:/# nth_sub 1:/# initiE 1:/# /= ifF 1:/# initiE 1:/# /= ifF 1:/#.
-      by have := HH3 j jb; rewrite initiE 1:/# /= get_of_list 1:/# nth_sub 1:/#. 
-    + rewrite mapiE 1:/# initiE 1:/# /= tP => j jb.
-      rewrite mapiE 1:/# /= get_of_list 1:/# nth_sub 1:/# initiE 1:/# /= ifF 1:/# initiE 1:/# /= ifF 1:/#.
-      have <- := HH2 k _;1:smt().
-      by rewrite mapiE 1:/# /= initiE 1:/# /= mapiE 1:/# /= get_of_list 1:/# /= nth_sub 1:/#.
-  - (* lifts_wpoly (init (fun i => outer.[base+i])) = spec.[base/n] *)
-    rewrite Hres2_eq.
-    have Hr2r1 : lifts_wpoly result2 = lifts_wpoly result1.
-    + by rewrite Hr2s Hres1_eq.
-    rewrite Hr2r1 Hr1s Hintt_eq Hbmul_eq.
+      have Hwb2 : (kvec_unflatten256 (Array1536.init (fun i =>
+            if base{hr} <= i < base{hr} + n then result2.[i - base{hr}]
+            else (Array1536.init (fun i0 =>
+              if base{hr} <= i0 < base{hr} + n then result1.[i0 - base{hr}]
+              else w0_minus_cs2{hr}.[i0])).[i]))).[k] =
+          if k = base{hr} %/ 256 then result2
+          else (kvec_unflatten256 (Array1536.init (fun i0 =>
+            if base{hr} <= i0 < base{hr} + n then result1.[i0 - base{hr}]
+            else w0_minus_cs2{hr}.[i0]))).[k].
+      + by apply kvec_unflatten256_writeback_iE; smt(mldsa65_kvec).
+      rewrite Hwb2 ifF; 1: smt().
+      have Hwb1 : (kvec_unflatten256 (Array1536.init (fun i0 =>
+            if base{hr} <= i0 < base{hr} + n then result1.[i0 - base{hr}]
+            else w0_minus_cs2{hr}.[i0]))).[k] =
+          if k = base{hr} %/ 256 then result1 else (kvec_unflatten256 w0_minus_cs2{hr}).[k].
+      + by apply kvec_unflatten256_writeback_iE; smt(mldsa65_kvec).
+      by rewrite Hwb1 ifF; smt().
+    split; move => k hk1 hk2.
+    + have Hk_eq := Hslice_eq k _;1:smt().
+      have HH1k := HH1 k _;1:smt().
+      by rewrite Hk_eq; exact HH1k.
+    + have Hk_eq := Hslice_eq k _;1:smt().
+      have HH2k := HH2 k _;1:smt().
+      rewrite /lifts_wpolykvec !mapiE 1:/# /= Hk_eq.
+      by rewrite -(HH2k) /lifts_wpolykvec !mapiE 1:/# /=; smt(mldsa65_kvec).
+  - (* lifts_wpoly of result2 slice = spec[base/n]:
+       init_writeback_slice_eq + lifts_wpolykvec_slice replace Hres*_eq and slice_kvec *)
+    have Hout2 : Array256.init (fun i => (Array1536.init (fun (i0 : int) =>
+        if base{hr} <= i0 < base{hr} + n then result2.[i0 - base{hr}]
+        else (Array1536.init (fun (i1 : int) =>
+          if base{hr} <= i1 < base{hr} + n then result1.[i1 - base{hr}]
+          else w0_minus_cs2{hr}.[i1])).[i0])).[base{hr} + i]) = result2.
+    + by apply init_writeback_slice_eq; smt().
+    have Hout1 : Array256.init (fun i => (Array1536.init (fun (i0 : int) =>
+        if base{hr} <= i0 < base{hr} + n then result1.[i0 - base{hr}]
+        else w0_minus_cs2{hr}.[i0])).[base{hr} + i]) = result1.
+    + by apply init_writeback_slice_eq; smt().
+    rewrite Hout2 Hr2s Hout1 Hr1s Hintt_eq Hbmul_eq.
     rewrite polykvec_sub_iE 1:/#.
     rewrite invnttv_ntt_smul_k 1:/#.
-    rewrite /lifts_wpolykvec !mapiE 1:/# /=.
-    + smt(mldsa65_kvec).
-    by smt().
-  - (* wpoly_srng: follows directly from Hr2v after showing init = result2 *)
-    by rewrite Hres2_eq; exact Hr2v.
+    have Hw0_kvec : lifts_wpoly (Array256.init (fun i => _w0.[base{hr} + i])) =
+        (lifts_wpolykvec (kvec_unflatten256 _w0)).[base{hr} %/ 256].
+    + by apply lifts_wpolykvec_slice; smt(mldsa65_kvec).
+    have Hs2_kvec : lifts_wpoly (Array256.init (fun i => _s2.[base{hr} + i])) =
+        (lifts_wpolykvec (kvec_unflatten256 _s2)).[base{hr} %/ 256].
+    + by apply lifts_wpolykvec_slice; smt(mldsa65_kvec).
+    rewrite -Hw0_kvec -Hs2_kvec.
+    by done.
+  - (* wpoly_srng: init_writeback_slice_eq gives result2 directly *)
+    have Hout2' : Array256.init (fun i => (Array1536.init (fun (i0 : int) =>
+        if base{hr} <= i0 < base{hr} + n then result2.[i0 - base{hr}]
+        else (Array1536.init (fun (i1 : int) =>
+          if base{hr} <= i1 < base{hr} + n then result1.[i1 - base{hr}]
+          else w0_minus_cs2{hr}.[i1])).[i0])).[base{hr} + i]) = result2.
+    + by apply init_writeback_slice_eq; smt().
+    by rewrite Hout2'; exact Hr2v.
 wp.
 ecall (polynomial____check_infinity_norm_correct
         (Array256.init (fun i => w0_minus_cs2.[base + i]))

@@ -162,3 +162,39 @@ case (k = base %/ 256) => Heq /=.
   by rewrite kvec_unflatten256iE 1:/# /#.
 qed.
 
+(* -------------------------------------------------------------------- *)
+(* lvec (L=5) slice / writeback helpers — mirrors kvec versions above    *)
+(* -------------------------------------------------------------------- *)
+
+lemma lvec_slice_eq (v : 'a Array1280.t) (base : int) :
+  base %% 256 = 0 => 0 <= base %/ 256 < lvec =>
+  (lvec_unflatten256 v).[base %/ 256] =
+  Array256.init (fun i => v.[base + i]).
+proof.
+move => Hmod Hk.
+have lvec_val := mldsa65_lvec.
+apply Array256.tP => j jb.
+rewrite Array256.initiE 1:/# /=.
+rewrite /lvec_unflatten256 LArray.initiE 1:/# /=.
+by rewrite get_of_list 1:/# nth_sub 1:/# /#.
+qed.
+
+lemma lvec_unflatten256_writeback_iE (arr : 'a Array1280.t) (f : 'a Array256.t) (base k : int) :
+  base %% 256 = 0 => 0 <= k < lvec =>
+  (lvec_unflatten256 (Array1280.init (fun i =>
+    if base <= i < base + 256 then f.[i - base] else arr.[i]))).[k] =
+  if k = base %/ 256 then f else (lvec_unflatten256 arr).[k].
+proof.
+move => Hmod Hk.
+have lvec_val := mldsa65_lvec.
+apply Array256.tP => j jb.
+rewrite /lvec_unflatten256 LArray.initiE 1:/# /=.
+rewrite get_of_list 1:/# nth_sub 1:/# /=.
+rewrite Array1280.initiE 1:/# /=.
+case (k = base %/ 256) => Heq /=.
++ have -> : (base <= 256 * k + j && 256 * k + j < base + 256) = true by smt().
+  by smt().
++ have -> : (base <= 256 * k + j && 256 * k + j < base + 256) = false by smt().
+  by rewrite lvec_unflatten256iE 1:/# /#.
+qed.
+

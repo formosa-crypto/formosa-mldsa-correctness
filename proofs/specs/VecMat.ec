@@ -53,6 +53,13 @@ op invnttv v = LArray.map invntt v.
 op zerov : polylvec = LArray.init (fun i =>  poly_zero).
 
 op (+) (v1 v2 : polylvec) : polylvec = alg2polylvec ((polylvec2alg v1) + (polylvec2alg v2)).
+
+(* Componentwise indexing of polylvec addition.
+   Same hurdle as polykvec: (+) routes through abstract algebra (FIXME: PY). *)
+lemma polylvec_add_iE (v1 v2 : polylvec) k :
+  0 <= k < lvec => (v1 + v2).[k] = v1.[k] &+ v2.[k].
+  admitted.
+
 op ntt_smul(p : poly, v : polylvec) : polylvec = map (fun p' => basemul p' p) v.
 
 lemma invnttv_ntt_smul_k (c : poly) (sv : polylvec) (k : int) :
@@ -107,6 +114,12 @@ proof. by move => hk; rewrite /invnttv /ntt_smul !mapiE 1:/# /=. qed.
    Once those are filled in this axiom becomes provable by unfolding. *)
 lemma polykvec_sub_iE (v1 v2 : polykvec) k :
   0 <= k < kvec => (v1 - v2).[k] = v1.[k] &+ (&-) v2.[k].
+  admitted.
+
+(* Componentwise indexing of polykvec addition.
+   Same hurdle as subtraction: (+) routes through abstract algebra (FIXME: PY). *)
+lemma polykvec_add_iE (v1 v2 : polykvec) k :
+  0 <= k < kvec => (v1 + v2).[k] = v1.[k] &+ v2.[k].
   admitted.
 
 op smul(v : polykvec, c : coeff) : polykvec =

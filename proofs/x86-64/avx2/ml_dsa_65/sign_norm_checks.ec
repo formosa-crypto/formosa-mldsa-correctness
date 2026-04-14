@@ -127,6 +127,7 @@ lemma __apply_cs2_and_check_norm_correct
         (* w0 = LowBits(Ay), coefficients in (-gamma2, gamma2] = (-261888, 261888] *)
         wpolykvec_srng (kvec_unflatten256 _w0) (gamma2 - 1) gamma2
         ==>
+        (res.`2 = W64.zero \/ res.`2 = W64.one) /\
         (_incr = W64.one => res.`2 = W64.one) /\
         (_incr = W64.zero =>
            res.`2 = W64.zero =>
@@ -149,12 +150,13 @@ case (infinity_norm_check_result <> zero).
   rcondf ^while;1: by auto.
   by auto => /#.
 conseq (: _ ==>
-  infinity_norm_check_result = zero =>
+  (infinity_norm_check_result = zero \/ infinity_norm_check_result = one) /\
+  (infinity_norm_check_result = zero =>
    (wpolykvec_infnorm_lt (gamma2 - Beta) (kvec_unflatten256 w0_minus_cs2) /\
    lifts_wpolykvec (kvec_unflatten256 w0_minus_cs2) =
    lifts_wpolykvec (kvec_unflatten256 _w0) -
-   invnttv (ntt_smul (lifts_wpoly _c) (lifts_wpolykvec (kvec_unflatten256 _s2)))));
- 1: by move => |> &hr ?? infncr rr => ?; rewrite to_uint_eq /= /#.
+   invnttv (ntt_smul (lifts_wpoly _c) (lifts_wpolykvec (kvec_unflatten256 _s2))))));
+ 1: by move => |> &hr ?? infncr rr *; smt(W64.to_uint_eq pow2_64 W64.to_uintK W64.of_uintK).
  
 rcondf ^if; 1: by auto.
 while (#{/~_incr}{~infinity_norm_check_result}{~w0_minus_cs2}pre /\
@@ -339,6 +341,7 @@ lemma __apply_cs2_and_check_norm_ph
         (* w0 = LowBits(Ay), coefficients in (-gamma2, gamma2] = (-261888, 261888] *)
         wpolykvec_srng (kvec_unflatten256 _w0) (gamma2 - 1) gamma2
         ==>
+        (res.`2 = W64.zero \/ res.`2 = W64.one) /\
         (_incr = W64.one => res.`2 = W64.one) /\
         (_incr = W64.zero =>
            res.`2 = W64.zero =>
@@ -399,6 +402,7 @@ lemma __apply_ct0_and_check_norm_correct
         (_incr = W64.zero =>
           wpolykvec_infnorm_lt (gamma2 - Beta) (kvec_unflatten256 _w0mc))
         ==>
+        (res.`2 = W64.zero \/ res.`2 = W64.one) /\
         (_incr = W64.one => res.`2 = W64.one) /\
         (_incr = W64.zero =>
            res.`2 = W64.zero =>
@@ -422,13 +426,14 @@ case (infinity_norm_check_result <> zero).
   by auto => /#.
   
 conseq (: _ ==>
-  infinity_norm_check_result = zero =>
+  (infinity_norm_check_result = zero \/ infinity_norm_check_result = one) /\
+  (infinity_norm_check_result = zero =>
   (let ct0 = PolyKVec.invnttv (PolyKVec.ntt_smul
                (lifts_wpoly _c) (lifts_wpolykvec (kvec_unflatten256 _t0))) in
    PolyKVec.infnorm_lt ct0 gamma2 /\
    lifts_wpolykvec (kvec_unflatten256 w0_minus_cs2_plus_ct0) =
-     lifts_wpolykvec (kvec_unflatten256 _w0mc) + ct0));
- 1: by move => |> &hr ?? infncr rr => ?; rewrite to_uint_eq /= /#.
+     lifts_wpolykvec (kvec_unflatten256 _w0mc) + ct0)));
+ 1: by move => |> &hr ?? infncr rr *; smt(W64.to_uint_eq pow2_64 W64.to_uintK W64.of_uintK).
 rcondf ^if; 1: by auto.
 while (#{/~_incr}{~infinity_norm_check_result}{~w0_minus_cs2_plus_ct0}pre /\
        (infinity_norm_check_result = zero \/ infinity_norm_check_result = one) /\
@@ -646,6 +651,7 @@ lemma __apply_ct0_and_check_norm_ph
         (_incr = W64.zero =>
           wpolykvec_infnorm_lt (gamma2 - Beta) (kvec_unflatten256 _w0mc))
         ==>
+        (res.`2 = W64.zero \/ res.`2 = W64.one) /\
         (_incr = W64.one => res.`2 = W64.one) /\
         (_incr = W64.zero =>
            res.`2 = W64.zero =>
@@ -686,6 +692,7 @@ lemma __compute_z_and_check_norm_correct
         (_incr = W64.zero =>
           wpolylvec_srng (lvec_unflatten256 _mask) (gamma1 - 1) gamma1)
         ==>
+        (res.`2 = W64.zero \/ res.`2 = W64.one) /\
         (_incr = W64.one => res.`2 = W64.one) /\
         (_incr = W64.zero =>
            res.`2 = W64.zero =>
@@ -710,14 +717,15 @@ case (infinity_norm_check_result <> zero).
   by auto => /#.
 
 conseq (: _ ==>
-  infinity_norm_check_result = zero =>
+  (infinity_norm_check_result = zero \/ infinity_norm_check_result = one) /\
+  (infinity_norm_check_result = zero =>
   (wpolylvec_infnorm_lt (gamma1 - Beta) (lvec_unflatten256 signer_response) /\
    lifts_wpolylvec (lvec_unflatten256 signer_response) =
      lifts_wpolylvec (lvec_unflatten256 _mask) +
      PolyLVec.invnttv (PolyLVec.ntt_smul
        (lifts_wpoly _c) (lifts_wpolylvec (lvec_unflatten256 _s1))) /\
-   wpolylvec_srng (lvec_unflatten256 signer_response) (gamma1 - 1) gamma1));
- 1: by move => |> &hr ?? infncr rr => ?; rewrite to_uint_eq /= /#.
+   wpolylvec_srng (lvec_unflatten256 signer_response) (gamma1 - 1) gamma1)));
+ 1: by move => |> &hr ?? infncr rr *; smt(W64.to_uint_eq pow2_64 W64.to_uintK W64.of_uintK).
 rcondf ^if; 1: by auto.
 while (#{/~_incr}{~infinity_norm_check_result}{~signer_response}pre /\
        (infinity_norm_check_result = zero \/ infinity_norm_check_result = one) /\
@@ -865,6 +873,7 @@ lemma __compute_z_and_check_norm_ph
         (_incr = W64.zero =>
           wpolylvec_srng (lvec_unflatten256 _mask) (gamma1 - 1) gamma1)
         ==>
+        (res.`2 = W64.zero \/ res.`2 = W64.one) /\
         (_incr = W64.one => res.`2 = W64.one) /\
         (_incr = W64.zero =>
            res.`2 = W64.zero =>
@@ -903,19 +912,22 @@ qed.
 lemma __make_hint_vector_correct
       (_r : W32.t Array1536.t) (_w1 : W32.t Array1536.t)
       (_h : W32.t Array1536.t) (_incr : W64.t)
-      (_ct0 : polykvec)
       :
     hoare [ M.__make_hint_vector :
         w0_minus_cs2_plus_ct0 = _r /\ w1 = _w1 /\ hint_0 = _h /\
         infinity_norm_check_result = _incr /\
-        (_incr = W64.zero \/ _incr = W64.one)
+        (_incr = W64.zero \/ _incr = W64.one) /\
+        wpolykvec_srng (kvec_unflatten256 _r) (gamma2 - 1) gamma2 /\
+        wpolykvec_urng (kvec_unflatten256 _w1) ((q - 1) %/ (2 * gamma2) + 1)
         ==>
+        (res.`2 = W64.zero \/ res.`2 = W64.one) /\
         (_incr = W64.one => res.`2 = W64.one) /\
         (_incr = W64.zero =>
            res.`2 = W64.zero =>
-           liftu_wpolykvec (kvec_unflatten256 res.`1) =
-             PolyKVec.MakeHint (PolyKVec.zerov - _ct0)
-                               (lifts_wpolykvec (kvec_unflatten256 _r)) /\
+           (forall k, 0 <= k < kvec =>
+             liftu_wpoly (kvec_unflatten256 res.`1).[k] =
+               poly_MakeHint (lifts_wpoly (kvec_unflatten256 _r).[k])
+                             (lifts_wpoly (kvec_unflatten256 _w1).[k])) /\
            PolyKVec.hammw (liftu_wpolykvec (kvec_unflatten256 res.`1)) w_hint)
     ].
 proof.
@@ -957,20 +969,23 @@ qed. *)
 lemma __make_hint_vector_ph
       (_r : W32.t Array1536.t) (_w1 : W32.t Array1536.t)
       (_h : W32.t Array1536.t) (_incr : W64.t)
-      (_ct0 : polykvec)
       :
     phoare [ M.__make_hint_vector :
         w0_minus_cs2_plus_ct0 = _r /\ w1 = _w1 /\ hint_0 = _h /\
         infinity_norm_check_result = _incr /\
-        (_incr = W64.zero \/ _incr = W64.one)
+        (_incr = W64.zero \/ _incr = W64.one) /\
+        wpolykvec_srng (kvec_unflatten256 _r) (gamma2 - 1) gamma2 /\
+        wpolykvec_urng (kvec_unflatten256 _w1) ((q - 1) %/ (2 * gamma2) + 1)
         ==>
+        (res.`2 = W64.zero \/ res.`2 = W64.one) /\
         (_incr = W64.one => res.`2 = W64.one) /\
         (_incr = W64.zero =>
            res.`2 = W64.zero =>
-           liftu_wpolykvec (kvec_unflatten256 res.`1) =
-             PolyKVec.MakeHint (PolyKVec.zerov - _ct0)
-                               (lifts_wpolykvec (kvec_unflatten256 _r)) /\
+           (forall k, 0 <= k < kvec =>
+             liftu_wpoly (kvec_unflatten256 res.`1).[k] =
+               poly_MakeHint (lifts_wpoly (kvec_unflatten256 _r).[k])
+                             (lifts_wpoly (kvec_unflatten256 _w1).[k])) /\
            PolyKVec.hammw (liftu_wpolykvec (kvec_unflatten256 res.`1)) w_hint)
     ] = 1%r
   by conseq (__make_hint_vector_ll)
-            (__make_hint_vector_correct _r _w1 _h _incr _ct0).
+            (__make_hint_vector_correct _r _w1 _h _incr).

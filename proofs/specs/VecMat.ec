@@ -139,8 +139,8 @@ op infnorm_lt(v : polykvec, bound : int) : bool =
   all (fun ii => all (fun jj => `|v.[ii].[jj]| < bound) (iota_ 0 256)) (iota_ 0 kvec).
 
 import Bigint BIA. 
-op hammw(v : polykvec, bound : int) : bool = 
- big predT (fun ii => count (fun jj => v.[ii].[jj] <> Zq.zero) (iota_ 0 256)) (iota_ 0 lvec) <= bound.
+op hammw(v : polykvec, bound : int) : bool =
+ big predT (fun ii => count (fun jj => v.[ii].[jj] <> Zq.zero) (iota_ 0 256)) (iota_ 0 kvec) <= bound.
 
 op polykvec_HighBits(v : polykvec) : polykvec = 
   map poly_HighBits v.

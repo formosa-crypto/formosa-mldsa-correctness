@@ -1062,18 +1062,26 @@ split.
     (liftu_wpolykvec (kvec_unflatten256 hint_0{hr})).[ii].
   + by rewrite /liftu_wpolykvec mapiE 1:/# mapiE 1:/# /= Hwb ifF; smt(mem_iota).
   by done.
-admit. (* CLAUDE *)
+by rewrite Hres_cnt Hres_eq.
 
 auto => /> &hr ????????H??; do split.
 + smt().
 + move => ?;do split;1..4:smt(count_ge0).
   move => Hn; split.
-  + move => k kbl kbh. admit. (* CLAUDE *)
+  + move => k kbl kbh.
+    case (k < base{hr} %/ n) => Hklt.
+    - (* old column: from invariant *)
+      by have [A _] := H Hn; apply A; smt().
+    - (* new column k = base/n: from seq3 postcondition + kvec_slice_eq *)
+      have -> : k = base{hr} %/ n by smt().
+      have /= Hslice := kvec_slice_eq hint_0{hr} base{hr} _ _; 1,2: smt(mldsa65_kvec).
+      by rewrite Hslice; smt().
   have[A B] := H Hn. 
   rewrite B.
   have -> : (base{hr} + n) %/ n = (base{hr} %/ n + 1) by smt().
   rewrite iotaSr 1:/# big_rcons /= ifT 1:/# /=; congr.
-  + admit. (* CLAUDE *)
+  + have /= Hslice := kvec_slice_eq hint_0{hr} base{hr} _ _; 1,2: smt(mldsa65_kvec).
+    by rewrite /liftu_wpolykvec /liftu_wpoly mapiE 1:/# /= Hslice.
 qed.
 
 lemma __make_hint_vector_ph

@@ -8,6 +8,7 @@ from JazzEC require import Ml_dsa_65_avx2 Mldsa_65_prelude Signature
 from Spec require import GFq Rq Parameters VecMat MLDSA_W32_Rep.
 import PolyLVec PolyKVec.
 import CDR Round Zq PolyReduceZq BigZMod.
+import StdBigop.Bigint BIA.
 
 require import Array256 Array1280 Array1536.
 
@@ -931,40 +932,149 @@ lemma __make_hint_vector_correct
            PolyKVec.hammw (liftu_wpolykvec (kvec_unflatten256 res.`1)) w_hint)
     ].
 proof.
-admitted.
-(* 
 have kvec_val  := mldsa65_kvec.
 have w_hint_val := mldsa65_w_hint.
 proc => /=.
 case (infinity_norm_check_result <> zero).
 + rcondt ^if; 1: by auto.
   rcondf ^while; 1: by auto.
-  by auto => /#.
-conseq (: _ ==>
-  infinity_norm_check_result = zero =>
-  (liftu_wpolykvec (kvec_unflatten256 hint_0) =
-     PolyKVec.MakeHint (PolyKVec.zerov - _ct0)
-                       (lifts_wpolykvec (kvec_unflatten256 _r)) /\
-   PolyKVec.hammw (liftu_wpolykvec (kvec_unflatten256 hint_0)) w_hint));
- 1: by move => |> &hr ?? infncr rr => ?; rewrite to_uint_eq /= /#.
+  by wp; skip => />; rewrite /SETcc to_uint_zeroextu64 /=; smt(W64.to_uint_eq pow2_64 W64.to_uintK W64.of_uintK).
+
 rcondf ^if; 1: by auto.
-while (#{/~_incr}{~infinity_norm_check_result}pre /\
+wp.  (* absorb post-loop: SETcc + zeroextu64 + OR *)
+while (#{/~_incr}{~infinity_norm_check_result}{~hint_0}{~total_ones_in_hint}pre /\
        (infinity_norm_check_result = zero \/ infinity_norm_check_result = one) /\
        0 <= base <= 6*n /\ base %% n = 0 /\
        (infinity_norm_check_result <> zero => base = 6*n) /\
+       wpolykvec_srng (kvec_unflatten256 _r) (gamma2 - 1) gamma2 /\
+       wpolykvec_urng (kvec_unflatten256 _w1) ((q - 1) %/ (2 * gamma2) + 1) /\
+       0 <= total_ones_in_hint /\
        (infinity_norm_check_result = zero =>
          (forall k, 0 <= k < base %/ n =>
-           (liftu_wpolykvec (kvec_unflatten256 hint_0)).[k] =
-           (PolyKVec.MakeHint (PolyKVec.zerov - _ct0)
-                              (lifts_wpolykvec (kvec_unflatten256 _r))).[k])
-       )
+           liftu_wpoly (kvec_unflatten256 hint_0).[k] =
+             poly_MakeHint (lifts_wpoly (kvec_unflatten256 _r).[k])
+                           (lifts_wpoly (kvec_unflatten256 _w1).[k])) /\
+         total_ones_in_hint =
+           big predT (fun ii =>
+             count (fun jj => (liftu_wpolykvec (kvec_unflatten256 hint_0)).[ii].[jj] <> Zq.zero)
+                   (iota_ 0 256)) (iota_ 0 (base %/ n)))
       ); last first.
-+ auto => /> ???; split; 1: smt().
-  move => bs h *; do split.
-  + by apply KArray.tP => *; smt().
-  + admit. (* hammw <= w_hint: follows from loop count but needs accounting *)
-admit. (* loop body: MakeHint spec connection *)
-qed. *)
+(* ── Loop exit (combined with initialization) ─────────────────── *)
++ auto => /> *.
+  do split; 1:smt(). 
+  + by rewrite (iota0 0 0) //.
+  (* exit condition: INV /\ !guard => post *)
+  move => bs h0 inf0 toi0 ? Hbin ? ? ? Hexit ? Hcond.
+  rewrite /SETcc /=; do split. 
+  + case (inf0 = W64.zero) => Hi0;  case (55 < toi0) => Hcnt /=;
+    1,2: by rewrite Hi0 /= !to_uint_eq to_uint_zeroextu64 /=.
+  + have -> : inf0 = W64.one by smt().
+    right;rewrite wordP => k kb /=.
+    rewrite zeroextu64E pack8E initiE 1:/# /= initiE 1:/# /=.
+    by case (k %/8 = 0) => Hk;rewrite  !W64.nth_one /= ?W8.nth_one /= /#.
+  + have -> : inf0 = W64.one by smt().
+    right;rewrite wordP => k kb /=.
+    rewrite zeroextu64E pack8E initiE 1:/# /= initiE 1:/# /=.
+    by case (k %/8 = 0) => Hk;rewrite  ?W64.nth_one /= ?W8.nth_one /= /#.
+  + by smt(W64.to_uint_eq W64.to_uint_cmp pow2_64 W64.of_uintK W64.to_uintK).
+  + move => Hi.
+    have H : inf0 = zero by smt(or64_ne0).
+    have [?HH] := Hcond H;do split; 1: smt().
+    rewrite /hammw.
+    have -> : kvec = bs %/ n by smt().
+    have <- //: toi0 = big predT (fun (ii : int) => count (fun (jj : int) => (liftu_wpolykvec (kvec_unflatten256 h0)).[ii].[jj] <> Zq.zero) (iota_ 0 n)) (iota_ 0 (bs %/ n)) by smt().
+    case (55 < toi0); last by smt().
+    move => H55.
+    move : Hi; rewrite H H55 /= wordP => Hfalse.
+    have  := Hfalse 0 _; 1: smt().
+    rewrite zeroextu64E pack8E initiE 1:/# /= W8.nth_one /#.
+(* ── Loop body ────────────────────────────────────────────────── *)
+(* Statements: 6.1 read slice, 6.2 ecall make_hint, 6.3 writeback,
+               6.4 accumulate count, 6.5 base+=n,
+               6.6 declassify (no-op), 6.7 if(fail){base=6n} *)
+
+seq 3 : (#pre /\
+    liftu_wpoly (Array256.init (fun i => hint_0.[base + i])) =
+      poly_MakeHint (lifts_wpoly (kvec_unflatten256 _r).[base %/ n])
+                    (lifts_wpoly (kvec_unflatten256 _w1).[base %/ n]) /\
+    ones_in_hint =
+      count (fun i => (liftu_wpoly (Array256.init (fun j => hint_0.[base + j]))).[i] <> Zq.zero)
+            (iota_ 0 256)).
++ wp.
+  ecall (polynomial____make_hint_correct
+           (Array256.init (fun i => hint_0.[base + i]))
+           (Array256.init (fun i => w0_minus_cs2_plus_ct0.[base + i]))
+           (Array256.init (fun i => w1.[base + i]))).
+  auto => |> &hr *.
+  do split => /=.
+  - (* r slice range: wpoly_srng (gamma2-1) gamma2 from wpolykvec_srng *)
+    have Hr : wpolykvec_srng (kvec_unflatten256 _r) (gamma2 - 1) gamma2 by smt().
+    have /= Heq : (kvec_unflatten256 _r).[base{hr} %/ n] = Array256.init (fun i => _r.[base{hr} + i])
+      by apply kvec_slice_eq; smt(mldsa65_kvec).
+    rewrite -Heq.
+    by move: Hr; rewrite /wpolykvec_srng KArray.allP => H; apply H; smt(mldsa65_kvec).
+  - (* w1 slice range: wpoly_urng from wpolykvec_urng *)
+    have Hw : wpolykvec_urng (kvec_unflatten256 _w1) ((q - 1) %/ (2 * gamma2) + 1) by smt().
+    have /= Heq : (kvec_unflatten256 _w1).[base{hr} %/ n] = Array256.init (fun i => _w1.[base{hr} + i])
+      by apply kvec_slice_eq; smt(mldsa65_kvec).
+    rewrite -Heq.
+    by move: Hw; rewrite /wpolykvec_urng KArray.allP => H; apply H; smt(mldsa65_kvec).
+  move => ? ? result Hres_eq Hres_cnt.
+  (* writeback slice reads back as result.`1 *)
+  have Hwb_slice : (Array256.init (fun i =>
+      (Array1536.init (fun i0 =>
+        if base{hr} <= i0 < base{hr} + n then result.`1.[i0 - base{hr}]
+        else hint_0{hr}.[i0])).[base{hr} + i])) = result.`1.
+  + apply Array256.tP => j jb.
+    rewrite Array256.initiE 1:/# /= Array1536.initiE; first by smt().
+    by rewrite /= ifT 1:/# /= /#.
+  have /= Hr_eq := kvec_slice_eq _r base{hr} _ _; 1,2: smt(mldsa65_kvec).
+  have /= Hw1_eq := kvec_slice_eq _w1 base{hr} _ _; 1,2: smt(mldsa65_kvec).
+  rewrite Hwb_slice Hres_eq Hr_eq Hw1_eq /=.
+
+(* ── Phase 2: accumulate + base++ + declassify + conditional exit ── *)
+do split.
+move => Hinf.
+have [Hfork Hcount] : (forall k, 0 <= k < base{hr} %/ n =>
+      liftu_wpoly (kvec_unflatten256 hint_0{hr}).[k] =
+      poly_MakeHint (lifts_wpoly (kvec_unflatten256 _r).[k]) (lifts_wpoly (kvec_unflatten256 _w1).[k])) /\
+    total_ones_in_hint{hr} =
+    big predT (fun ii =>
+      count (fun jj => (liftu_wpolykvec (kvec_unflatten256 hint_0{hr})).[ii].[jj] <> Zq.zero) (iota_ 0 n))
+      (iota_ 0 (base{hr} %/ n))
+  by smt().
+split.
++ (* forall k < base/n: writeback preserves old columns *)
+  move => k kb Hlt.
+  have /= Hmod : base{hr} %% 256 = 0 by smt().
+  have Hkvec : 0 <= k < kvec by smt(mldsa65_kvec).
+  have /= Hwb := kvec_unflatten256_writeback_iE hint_0{hr} result.`1 base{hr} k Hmod Hkvec.
+  by rewrite Hwb ifF; smt().
++ (* count: big sum over old columns unchanged by writeback *)
+  rewrite Hcount.
+  apply eq_big_seq => ii Hii.
+  have Hii_bound : 0 <= ii < kvec by smt(mem_iota).
+  have /= Hmod : base{hr} %% 256 = 0 by smt().
+  have /= Hwb := kvec_unflatten256_writeback_iE hint_0{hr} result.`1 base{hr} ii Hmod Hii_bound.
+  have /= -> : (liftu_wpolykvec
+      (kvec_unflatten256
+         (init (fun i => if base{hr} <= i < base{hr} + n then result.`1.[i - base{hr}] else hint_0{hr}.[i])))).[ii] =
+    (liftu_wpolykvec (kvec_unflatten256 hint_0{hr})).[ii].
+  + by rewrite /liftu_wpolykvec mapiE 1:/# mapiE 1:/# /= Hwb ifF; smt(mem_iota).
+  by done.
+admit. (* CLAUDE *)
+
+auto => /> &hr ????????H??; do split.
++ smt().
++ move => ?;do split;1..4:smt(count_ge0).
+  move => Hn; split.
+  + move => k kbl kbh. admit. (* CLAUDE *)
+  have[A B] := H Hn. 
+  rewrite B.
+  have -> : (base{hr} + n) %/ n = (base{hr} %/ n + 1) by smt().
+  rewrite iotaSr 1:/# big_rcons /= ifT 1:/# /=; congr.
+  + admit. (* CLAUDE *)
+qed.
 
 lemma __make_hint_vector_ph
       (_r : W32.t Array1536.t) (_w1 : W32.t Array1536.t)

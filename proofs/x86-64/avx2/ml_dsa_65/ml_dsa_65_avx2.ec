@@ -1324,11 +1324,11 @@ module M = {
     var alpha:W256.t;
     var offs:W256.t;
     var shift:W256.t;
-    var offset:W64.t;
     var coefficients:W256.t;
     var upper:W256.t;
     var lower:W256.t;
     var comparisons:W256.t;
+    var offset:int;
     modulus <- mODULUS_VECTOR;
     modulus_halved <- (VPSRL_8u32 modulus (W128.of_int 1));
     mask <- polynomial__CONSTANTS_TABLE.[0];
@@ -1336,11 +1336,10 @@ module M = {
     alpha <- polynomial__CONSTANTS_TABLE.[2];
     offs <- polynomial__CONSTANTS_TABLE.[3];
     shift <- polynomial__CONSTANTS_TABLE.[4];
-    offset <- (W64.of_int 0);
-    while ((offset \ult (W64.of_int ((256 * 32) %/ 8)))) {
+    offset <- 0;
+    while ((offset < ((256 * 32) %/ 8))) {
       coefficients <-
-      (get256_direct (WArray1024.init32 (fun i => polynomial.[i]))
-      (W64.to_uint offset));
+      (get256_direct (WArray1024.init32 (fun i => polynomial.[i])) offset);
       upper <- (VPADD_8u32 coefficients offs);
       upper <- (VPSRL_8u32 upper (W128.of_int 7));
       upper <- (VPMULHU_16u16 upper v);
@@ -1355,13 +1354,13 @@ module M = {
       (Array256.init
       (WArray1024.get32
       (WArray1024.set256_direct (WArray1024.init32 (fun i => lows.[i]))
-      (W64.to_uint offset) lower)));
+      offset lower)));
       highs <-
       (Array256.init
       (WArray1024.get32
       (WArray1024.set256_direct (WArray1024.init32 (fun i => highs.[i]))
-      (W64.to_uint offset) upper)));
-      offset <- (offset + (W64.of_int 32));
+      offset upper)));
+      offset <- (offset + 32);
     }
     return (lows, highs);
   }
@@ -1370,35 +1369,32 @@ module M = {
     var mask:W256.t;
     var lows:W32.t Array256.t;
     var highs:W32.t Array256.t;
-    var offset:W64.t;
     var low:W256.t;
     var hints:W256.t;
     var high:W256.t;
     var coefficients:W256.t;
+    var offset:int;
     highs <- witness;
     lows <- witness;
     mask <- polynomial__CONSTANTS_TABLE.[0];
     (lows, highs) <@ polynomial__decompose (lows, highs, commitment);
-    offset <- (W64.of_int 0);
-    while ((offset \ult (W64.of_int ((256 * 32) %/ 8)))) {
-      low <-
-      (get256_direct (WArray1024.init32 (fun i => lows.[i]))
-      (W64.to_uint offset));
+    offset <- 0;
+    while ((offset < ((256 * 32) %/ 8))) {
+      low <- (get256_direct (WArray1024.init32 (fun i => lows.[i])) offset);
       hints <-
       (get256_direct (WArray1024.init32 (fun i => hint_polynomial.[i]))
-      (W64.to_uint offset));
+      offset);
       hints <- (VPSIGN_8u32 hints low);
       high <-
-      (get256_direct (WArray1024.init32 (fun i => highs.[i]))
-      (W64.to_uint offset));
+      (get256_direct (WArray1024.init32 (fun i => highs.[i])) offset);
       coefficients <- (VPADD_8u32 high hints);
       coefficients <- (VPAND_256 coefficients mask);
       commitment <-
       (Array256.init
       (WArray1024.get32
       (WArray1024.set256_direct (WArray1024.init32 (fun i => commitment.[i]))
-      (W64.to_uint offset) coefficients)));
-      offset <- (offset + (W64.of_int 32));
+      offset coefficients)));
+      offset <- (offset + 32);
     }
     return commitment;
   }

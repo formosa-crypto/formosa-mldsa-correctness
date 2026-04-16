@@ -120,3 +120,42 @@ lemma polynomial__pointwise_montgomery_multiply_and_reduce_ph
     ] = 1%r
   by conseq polynomial__pointwise_montgomery_multiply_and_reduce_ll
             (polynomial__pointwise_montgomery_multiply_and_reduce_correct _prod _lhs _rhs).
+
+(* ================================================================== *)
+(* polynomial__conditionally_add_modulus                                 *)
+(* Converts centered representative to standard [0, q-1]:              *)
+(*   if coeff < 0 then coeff + q else coeff                           *)
+(* Spec: lifts_wpoly res = lifts_wpoly _a  (Zq value preserved)       *)
+(*       wpoly_urng q res                  (all in [0, q-1])          *)
+(* ================================================================== *)
+
+lemma polynomial__conditionally_add_modulus_ll :
+    islossless M.polynomial__conditionally_add_modulus.
+proof.
+proc.
+wp; while (0 <= offset <= (256 * 32) %/ 8 /\ offset %% 32 = 0)
+         ((256 * 32) %/ 8 - offset); last by auto => /#.
+by move => *; auto => /#.
+qed.
+
+lemma polynomial__conditionally_add_modulus_correct (_a : W32.t Array256.t) :
+    hoare [ M.polynomial__conditionally_add_modulus :
+        polynomial = _a /\
+        wpoly_srng ((q-1) %/ 2) ((q-1) %/ 2) _a
+        ==>
+        lifts_wpoly res = lifts_wpoly _a /\
+        wpoly_urng q res
+    ].
+proof.
+admitted.
+
+lemma polynomial__conditionally_add_modulus_ph (_a : W32.t Array256.t) :
+    phoare [ M.polynomial__conditionally_add_modulus :
+        polynomial = _a /\
+        wpoly_srng ((q-1) %/ 2) ((q-1) %/ 2) _a
+        ==>
+        lifts_wpoly res = lifts_wpoly _a /\
+        wpoly_urng q res
+    ] = 1%r
+  by conseq polynomial__conditionally_add_modulus_ll
+            (polynomial__conditionally_add_modulus_correct _a).

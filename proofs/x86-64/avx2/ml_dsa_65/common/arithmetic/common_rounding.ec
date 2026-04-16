@@ -58,3 +58,54 @@ lemma polynomial____make_hint_ph
         res.`2 = count (fun i => (liftu_wpoly res.`1).[i] <> Zq.zero) (iota_ 0 256)
     ] = 1%r
   by conseq polynomial____make_hint_ll (polynomial____make_hint_correct _h _low _high).
+
+(* ================================================================== *)
+(* polynomial____power2round                                             *)
+(* Splits each coefficient into high and low parts using 2^d:          *)
+(*   highbits = (a + 2^(d-1)) >> d                                    *)
+(*   lowbits  = a - highbits * 2^d                                    *)
+(* Spec connection: poly_Power2Round from Rq.ec                        *)
+(*   (liftu_wpoly res.`1, lifts_wpoly res.`2) ~ poly_Power2Round      *)
+(* ================================================================== *)
+
+lemma polynomial____power2round_ll : islossless M.polynomial____power2round.
+proof.
+proc.
+wp; while (0 <= offset <= (256 * 32) %/ 8 /\ offset %% 32 = 0)
+         ((256 * 32) %/ 8 - offset); last by auto => /#.
+by move => *; auto => /#.
+qed.
+
+lemma polynomial____power2round_correct
+      (_high : W32.t Array256.t) (_low : W32.t Array256.t) (_a : W32.t Array256.t) :
+    hoare [ M.polynomial____power2round :
+        highbits = _high /\ lowbits = _low /\ polynomial = _a /\
+        wpoly_urng q _a  (* input in [0, q-1], after conditionally_add_modulus *)
+        ==>
+        (* t1 (high): unsigned, [0, 2^(23-d)] *)
+        (forall i, 0 <= i < 256 =>
+            W32.to_uint res.`1.[i] = asint (Power2Round (liftu_wpoly _a).[i]).`1 ) /\
+        wpoly_urng (2^(23-d) + 1) res.`1 /\
+        (* t0 (low): signed, [-(2^(d-1)), 2^(d-1)] *)
+        (forall i, 0 <= i < 256 =>
+            W32.to_sint res.`2.[i] = asint (Power2Round (liftu_wpoly _a).[i]).`2 ) /\
+        wpoly_srng (2^(d-1)) (2^(d-1)) res.`2
+    ].
+proof.
+admitted.
+
+lemma polynomial____power2round_ph
+      (_high : W32.t Array256.t) (_low : W32.t Array256.t) (_a : W32.t Array256.t) :
+    phoare [ M.polynomial____power2round :
+        highbits = _high /\ lowbits = _low /\ polynomial = _a /\
+        wpoly_urng q _a
+        ==>
+        (forall i, 0 <= i < 256 =>
+            W32.to_uint res.`1.[i] = asint (Power2Round (liftu_wpoly _a).[i]).`1 ) /\
+        wpoly_urng (2^(23-d) + 1) res.`1 /\
+        (forall i, 0 <= i < 256 =>
+            W32.to_sint res.`2.[i] = asint (Power2Round (liftu_wpoly _a).[i]).`2 ) /\
+        wpoly_srng (2^(d-1)) (2^(d-1)) res.`2
+    ] = 1%r
+  by conseq polynomial____power2round_ll
+            (polynomial____power2round_correct _high _low _a).

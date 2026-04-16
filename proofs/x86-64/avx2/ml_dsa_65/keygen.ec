@@ -80,6 +80,53 @@ qed.
 
 require import Array2.
 
+(* ================================================================== *)
+(* __compute_t0_t1                                                      *)
+(* Computes t = A*s1 + s2 (in coefficient domain), then Power2Round.   *)
+(* Sequential: multiply_with_matrix_A → reduce32 → invNTT →           *)
+(*             add(s2) → conditionally_add_modulus → power2round       *)
+(* Spec: (t1, t0) = Power2Round(invNTT(A*NTT(s1)) + s2)               *)
+(* ================================================================== *)
+
+lemma __compute_t0_t1_ll : islossless M.__compute_t0_t1.
+proof.
+admitted.
+
+lemma __compute_t0_t1_correct
+      (_mat : W32.t Array7680.t) (_s1 : W32.t Array1280.t) (_s2 : W32.t Array1536.t)
+      (_A : polymat) :
+    hoare [ M.__compute_t0_t1 :
+        matrix_A = _mat /\ s1 = _s1 /\ s2 = _s2 /\
+        liftu_wpolymat (mat_unflatten256 _mat) = _A /\
+        wpolylvec_ntt_orng (lvec_unflatten256 _s1) /\
+        wpolykvec_srng (kvec_unflatten256 _s2) (Eta) (Eta)
+        ==>
+        (liftu_wpolykvec (kvec_unflatten256 res.`1),
+         lifts_wpolykvec (kvec_unflatten256 res.`2)) =
+          Power2Round (invnttv (ntt_mulmxv _A
+                        (lifts_wpolylvec (lvec_unflatten256 _s1)))
+                       + lifts_wpolykvec (kvec_unflatten256 _s2))
+    ].
+proof.
+admitted.
+
+lemma __compute_t0_t1_ph
+      (_mat : W32.t Array7680.t) (_s1 : W32.t Array1280.t) (_s2 : W32.t Array1536.t)
+      (_A : polymat) :
+    phoare [ M.__compute_t0_t1 :
+        matrix_A = _mat /\ s1 = _s1 /\ s2 = _s2 /\
+        liftu_wpolymat (mat_unflatten256 _mat) = _A /\
+        wpolylvec_ntt_orng (lvec_unflatten256 _s1) /\
+        wpolykvec_srng (kvec_unflatten256 _s2) (Eta) (Eta)
+        ==>
+        (liftu_wpolykvec (kvec_unflatten256 res.`1),
+         lifts_wpolykvec (kvec_unflatten256 res.`2)) =
+          Power2Round (invnttv (ntt_mulmxv _A
+                        (lifts_wpolylvec (lvec_unflatten256 _s1)))
+                       + lifts_wpolykvec (kvec_unflatten256 _s2))
+    ] = 1%r
+  by conseq __compute_t0_t1_ll (__compute_t0_t1_correct _mat _s1 _s2 _A).
+
 lemma ml_dsa_65_keygen_correct :
     equiv [ MLDSA(MLDSA_XOFA, MLDSA_XOFS, MLDSA_XOF_SIB, SIB_RO).keygen_derand ~ M.ml_dsa_65_keygen :
        arg{1} = Bytes32.of_list (to_list arg{2}.`3)

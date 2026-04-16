@@ -224,3 +224,113 @@ lemma polynomial__subtract_ph
         wpoly_srng (A + B) (A + B) res
     ] = 1%r
   by conseq polynomial__subtract_ll (polynomial__subtract_correct _diff _lhs _rhs A B).
+
+(* ================================================================== *)
+(* polynomial____zero                                                    *)
+(* Sets all 256 coefficients to zero.                                  *)
+(* ================================================================== *)
+
+lemma polynomial____zero_ll : islossless M.polynomial____zero.
+proof.
+proc.
+wp; while (0 <= offset <= (256 * 32) %/ 8 /\ offset %% 32 = 0)
+         ((256 * 32) %/ 8 - offset); last by auto => /#.
+by move => *; auto => /#.
+qed.
+
+lemma polynomial____zero_correct (_a : W32.t Array256.t) :
+    hoare [ M.polynomial____zero :
+        polynomial = _a
+        ==>
+        (forall i, 0 <= i < 256 => res.[i] = W32.zero) /\
+        wpoly_srng 0 0 res
+    ].
+proof.
+admitted.
+
+lemma polynomial____zero_ph (_a : W32.t Array256.t) :
+    phoare [ M.polynomial____zero :
+        polynomial = _a
+        ==>
+        (forall i, 0 <= i < 256 => res.[i] = W32.zero) /\
+        wpoly_srng 0 0 res
+    ] = 1%r
+  by conseq polynomial____zero_ll (polynomial____zero_correct _a).
+
+(* ================================================================== *)
+(* polynomial____pointwise_add_to_total                                  *)
+(* Pointwise addition into accumulator: total += polynomial.           *)
+(* Identical semantics to polynomial__add.                             *)
+(* ================================================================== *)
+
+lemma polynomial____pointwise_add_to_total_ll :
+    islossless M.polynomial____pointwise_add_to_total.
+proof.
+proc.
+wp; while (0 <= offset <= (256 * 32) %/ 8 /\ offset %% 32 = 0)
+         ((256 * 32) %/ 8 - offset); last by auto => /#.
+by move => *; auto => /#.
+qed.
+
+lemma polynomial____pointwise_add_to_total_correct
+      (_total : W32.t Array256.t) (_poly : W32.t Array256.t) (A B : int) :
+    hoare [ M.polynomial____pointwise_add_to_total :
+        total = _total /\ polynomial = _poly /\
+        wpoly_srng A A _total /\ wpoly_srng B B _poly /\ A + B < 2^31
+        ==>
+        lifts_wpoly res = lifts_wpoly _total &+ lifts_wpoly _poly /\
+        wpoly_srng (A + B) (A + B) res
+    ].
+proof.
+admitted.
+
+lemma polynomial____pointwise_add_to_total_ph
+      (_total : W32.t Array256.t) (_poly : W32.t Array256.t) (A B : int) :
+    phoare [ M.polynomial____pointwise_add_to_total :
+        total = _total /\ polynomial = _poly /\
+        wpoly_srng A A _total /\ wpoly_srng B B _poly /\ A + B < 2^31
+        ==>
+        lifts_wpoly res = lifts_wpoly _total &+ lifts_wpoly _poly /\
+        wpoly_srng (A + B) (A + B) res
+    ] = 1%r
+  by conseq polynomial____pointwise_add_to_total_ll
+            (polynomial____pointwise_add_to_total_correct _total _poly A B).
+
+(* ================================================================== *)
+(* polynomial____shift_coefficients_left                                 *)
+(* Left-shifts all coefficients by d = 13 bits.                        *)
+(* Used in verify to reconstruct t1 * 2^d.                            *)
+(* ================================================================== *)
+
+lemma polynomial____shift_coefficients_left_ll :
+    islossless M.polynomial____shift_coefficients_left.
+proof.
+proc.
+wp; while (0 <= offset <= (256 * 32) %/ 8 /\ offset %% 32 = 0)
+         ((256 * 32) %/ 8 - offset); last by auto => /#.
+by move => *; auto => /#.
+qed.
+
+lemma polynomial____shift_coefficients_left_correct (_a : W32.t Array256.t) :
+    hoare [ M.polynomial____shift_coefficients_left :
+        polynomial = _a /\
+        wpoly_urng (2^10 + 1) _a   (* t1 range: [0, 2^10] *)
+        ==>
+        (forall i, 0 <= i < 256 =>
+            W32.to_sint res.[i] = W32.to_uint _a.[i] * 2^d) /\
+        wpoly_srng (2^10 * 2^d) (2^10 * 2^d) res
+    ].
+proof.
+admitted.
+
+lemma polynomial____shift_coefficients_left_ph (_a : W32.t Array256.t) :
+    phoare [ M.polynomial____shift_coefficients_left :
+        polynomial = _a /\
+        wpoly_urng (2^10 + 1) _a
+        ==>
+        (forall i, 0 <= i < 256 =>
+            W32.to_sint res.[i] = W32.to_uint _a.[i] * 2^d) /\
+        wpoly_srng (2^10 * 2^d) (2^10 * 2^d) res
+    ] = 1%r
+  by conseq polynomial____shift_coefficients_left_ll
+            (polynomial____shift_coefficients_left_correct _a).

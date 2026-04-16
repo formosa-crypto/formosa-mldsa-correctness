@@ -80,6 +80,56 @@ conseq compare_commitment_hashes_ll hh;smt().
 qed.
 
 
+(* ================================================================== *)
+(* reconstruct_signer_commitment                                       *)
+(* Reconstructs w1' = UseHint(h, A*z - c*t1*2^d) for each of 6 rows. *)
+(* Per-component loop body:                                            *)
+(*   t1_decode → shift_left → NTT → pmmar(c,t1) →                    *)
+(*   subtract(az, ct1) → reduce32 → invNTT → cond_add_mod →          *)
+(*   use_hints → write back                                            *)
+(* Then commitment_encode on the result.                               *)
+(* Spec: w1Encode(UseHint(h, Az - c*NTT^{-1}(NTT(t1*2^d)*chat)))    *)
+(* ================================================================== *)
+
+lemma reconstruct_signer_commitment_ll :
+    islossless M.reconstruct_signer_commitment.
+proof.
+admitted.
+
+lemma reconstruct_signer_commitment_correct
+      (_t1enc : W8.t Array1920.t) (_ch : W32.t Array256.t)
+      (_az : W32.t Array1536.t) (_hints : W32.t Array1536.t) :
+    hoare [ M.reconstruct_signer_commitment :
+        t1_encoded = _t1enc /\ challenge_as_ntt = _ch /\
+        a_times_signer_response = _az /\ hints = _hints /\
+        wpoly_ntt_orng _ch /\
+        wpolykvec_urng (kvec_unflatten256 _hints) 2
+        ==>
+        BytesW1.of_list (to_list res) =
+          w1Encode (UseHint (liftu_wpolykvec (kvec_unflatten256 _hints))
+                            (* the reconstructed commitment before hints *)
+                            (* = invNTT(Az - c_hat * NTT(t1*2^d)) mod+ q *)
+                            (liftu_wpolykvec (kvec_unflatten256 _az)))
+    ].
+proof.
+admitted.
+
+lemma reconstruct_signer_commitment_ph
+      (_t1enc : W8.t Array1920.t) (_ch : W32.t Array256.t)
+      (_az : W32.t Array1536.t) (_hints : W32.t Array1536.t) :
+    phoare [ M.reconstruct_signer_commitment :
+        t1_encoded = _t1enc /\ challenge_as_ntt = _ch /\
+        a_times_signer_response = _az /\ hints = _hints /\
+        wpoly_ntt_orng _ch /\
+        wpolykvec_urng (kvec_unflatten256 _hints) 2
+        ==>
+        BytesW1.of_list (to_list res) =
+          w1Encode (UseHint (liftu_wpolykvec (kvec_unflatten256 _hints))
+                            (liftu_wpolykvec (kvec_unflatten256 _az)))
+    ] = 1%r
+  by conseq reconstruct_signer_commitment_ll
+            (reconstruct_signer_commitment_correct _t1enc _ch _az _hints).
+
 lemma ml_dsa_65_verify_correct _m :
     equiv [ MLDSA(MLDSA_XOFA, MLDSA_XOFS, MLDSA_XOF_SIB, SIB_RO).verify ~ M.ml_dsa_65_verify :
        Glob.mem{2} = _m /\

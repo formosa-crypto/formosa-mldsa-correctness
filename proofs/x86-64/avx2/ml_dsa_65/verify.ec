@@ -219,7 +219,7 @@ sp;if {2}; last first.
 (* expand A *)
 seq 1 1 : (#pre /\
       liftu_wpolymat (mat_unflatten256 matrix_A{2}) = _A{1} /\
-      wpolymat_urng (mat_unflatten256 matrix_A{2}) 1).
+      wpolymat_urng (mat_unflatten256 matrix_A{2}) q).
   + ecall{1} (ExpandA_correct rho{1}).
     ecall{2} (matrix_A_correct (Array32.init (fun i => verification_key{2}.[i]))).
     auto => |> &1 &2 ??????????? rr0 -> ?;congr.

@@ -18,5 +18,5 @@ require import Array32 Array128 Array256 Array1952 Array4032 Array7680.
 phoare matrix_A_correct _rho :
     [ M.sample____matrix_A : arg = _rho ==>
         liftu_wpolymat (mat_unflatten256 res) = expandA (Bytes32.of_list (to_list _rho))
-     /\ wpolymat_urng (mat_unflatten256 res) 1] = 1%r.
+     /\ wpolymat_urng (mat_unflatten256 res) q] = 1%r.
 admitted. (* FIXME: PY *)

@@ -84,6 +84,9 @@ admitted.
 (* Fully reduced coefficients (in [0,q)) are valid basemul inputs *)
 lemma wpoly_urng_bmul_irng (p : wpoly) : wpoly_urng q p => wpoly_bmul_irng p.
 admitted.
+(* Coefficients with |x| < q (signed, centered or not) are valid NTT inputs *)
+lemma wpoly_srng_ntt_irng (p : wpoly) : wpoly_srng (q-1) (q-1) p => wpoly_ntt_irng p.
+admitted.
 
 lemma wpoly_urng_lifts_eq_liftu (p : wpoly) :
   wpoly_urng q p => lifts_wpoly p = liftu_wpoly p.
@@ -134,6 +137,21 @@ lemma wpolylvec_ntt_orng_bmul_irng (pv : wpolylvec) :
 proof.
 rewrite /wpolylvec_ntt_orng /wpolylvec_bmul_irng !allP.
 by move => H p Hp; exact (wpoly_ntt_orng_bmul_irng pv.[p] (H p Hp)).
+qed.
+
+lemma wpolylvec_srng_ntt_irng (pv : wpolylvec) :
+  wpolylvec_srng pv (q-1) (q-1) => wpolylvec_ntt_irng pv.
+proof.
+rewrite /wpolylvec_srng /wpolylvec_ntt_irng !allP.
+by move => H p Hp; exact (wpoly_srng_ntt_irng pv.[p] (H p Hp)).
+qed.
+
+(* Monotonicity of wpolylvec_srng *)
+lemma wpolylvec_srng_widen (pv : wpolylvec) (a1 b1 a2 b2 : int) :
+  a1 <= a2 => b1 <= b2 => wpolylvec_srng pv a1 b1 => wpolylvec_srng pv a2 b2.
+proof.
+rewrite /wpolylvec_srng !allP => Ha Hb H p Hp.
+by apply (wpoly_srng_widen pv.[p] a1 b1 a2 b2 Ha Hb); apply H.
 qed.
 
 lemma wpolylvec_bmul_orng_intt_irng (pv : wpolylvec) :

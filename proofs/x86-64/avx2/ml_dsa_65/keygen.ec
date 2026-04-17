@@ -172,6 +172,24 @@ lemma __compute_t0_t1_ph
     ] = 1%r
   by conseq __compute_t0_t1_ll (__compute_t0_t1_correct _mat _s1 _s2 _A).
 
+(* 3-arg variant with _A substituted by its defining expression; avoids the
+   ghost/call-arg mismatch that trips ecall's existential inference. *)
+lemma __compute_t0_t1_ph_
+      (_mat : W32.t Array7680.t) (_s1 : W32.t Array1280.t) (_s2 : W32.t Array1536.t) :
+    phoare [ M.__compute_t0_t1 :
+        matrix_A = _mat /\ s1 = _s1 /\ s2 = _s2 /\
+        wpolymat_urng (mat_unflatten256 _mat) q /\
+        wpolylvec_ntt_orng (lvec_unflatten256 _s1) /\
+        wpolykvec_srng (kvec_unflatten256 _s2) (Eta) (Eta)
+        ==>
+        (liftu_wpolykvec (kvec_unflatten256 res.`1),
+         lifts_wpolykvec (kvec_unflatten256 res.`2)) =
+          Power2Round (invnttv (ntt_mulmxv (liftu_wpolymat (mat_unflatten256 _mat))
+                        (lifts_wpolylvec (lvec_unflatten256 _s1)))
+                       + lifts_wpolykvec (kvec_unflatten256 _s2))
+    ] = 1%r
+  by conseq (__compute_t0_t1_ph _mat _s1 _s2 (liftu_wpolymat (mat_unflatten256 _mat))).
+
 lemma ml_dsa_65_keygen_correct :
     equiv [ MLDSA(MLDSA_XOFA, MLDSA_XOFS, MLDSA_XOF_SIB, SIB_RO).keygen_derand ~ M.ml_dsa_65_keygen :
        arg{1} = Bytes32.of_list (to_list arg{2}.`3)
@@ -207,7 +225,7 @@ seq 0 1 : (#pre /\
   by rewrite mldsa65_kvec mldsa65_lvec /=.
 (* expanding A *)
 sp;seq 1 1: (#pre /\ liftu_wpolymat (mat_unflatten256 matrix_A{2}) = _A{1} /\
-            wpolymat_urng (mat_unflatten256 matrix_A{2}) 1).
+            wpolymat_urng (mat_unflatten256 matrix_A{2}) q).
 + ecall{1} (ExpandA_correct rho{1}).
   ecall{2} (matrix_A_correct seed_for_matrix_A{2}).
   auto => /> &1  rr ->?.
@@ -322,6 +340,38 @@ seq 2 2 : (#pre
       rewrite nth_cat ifT;1:by rewrite  Bytes32.size_to_list  /#.
       by rewrite Bytes32.get_to_list /#.
     by rewrite ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/# get256_init_32_8 1:/# initiE 1:/# /=.
-    
+
+(* --- First subgoal of the outer `seq 2 2` at line 242: the forward direction
+   establishing (t0, t1)'s spec values after
+     s1p <@ row_vector__ntt(s1);
+     (t1, t0) <@ __compute_t0_t1(matrix_A, s1p, s2);
+
+   BLOCKED by an EasyCrypt bug: `proc change {2} [10..11] : [s1p : …]` at line
+   235 introduces `s1p` into the right-side program text but does NOT add
+   `s1p` as a memory field of ml_dsa_65_keygen. Every tactic that must name
+   s1p in a formula (`ecall{2} (... s1p{2} ...)`, `seq 0 1 : (... s1p{2} ...)`,
+   `exlim s1p{2}`) fails with "unknown variable: s1p"; omitting it triggers
+   an internal EC anomaly in ecPhlExists.ml line 504. A `seq 0 1 : (#pre)`
+   split can close the row_vector__ntt half trivially (the call doesn't touch
+   anything in #pre), but leaves Goal 2 with no information about s1p —
+   hence unprovable without fixing the underlying bug.
+
+   Attempted partial proof (row_vector__ntt half only), kept for reference:
+
+     wp.
+     seq 0 1 : (#pre).
+     + ecall{2} (row_vector__ntt_ph s1{2}).
+       skip => /> &2 _ Hs1_srng _.
+       apply wpolylvec_srng_ntt_irng.
+       by apply (wpolylvec_srng_widen _ Eta Eta (q-1) (q-1) _ _ Hs1_srng);
+          smt(mldsa65_Eta).
+     admit. (* compute_t0_t1 step — blocked *)
+
+   Proper fix: rework the seq 2 2 setup at line 242 to NOT use `proc change`.
+   Use `exlim s1{2}` before the ecall chain to save the pre-NTT value of s1
+   as a logical ghost, then keep the original Jasmin statements which
+   overwrite s1 in place. Then `ecall{2} row_vector__ntt_ph` followed by
+   `ecall{2} __compute_t0_t1_ph` can run since all ghost parameters bind to
+   memory-resident variables. *)
 admit. (* ToDo: Algebra *)
 qed.

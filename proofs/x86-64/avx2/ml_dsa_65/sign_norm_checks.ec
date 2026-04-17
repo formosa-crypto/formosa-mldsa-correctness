@@ -923,7 +923,7 @@ lemma __make_hint_vector_correct
         infinity_norm_check_result = _incr /\
         (_incr = W64.zero \/ _incr = W64.one) /\
         wpolykvec_srng (kvec_unflatten256 _r) (gamma2 - 1) gamma2 /\
-        wpolykvec_urng (kvec_unflatten256 _w1) ((q - 1) %/ (2 * gamma2) + 1)
+        wpolykvec_urng (kvec_unflatten256 _w1) ((q - 1) %/ (2 * gamma2))
         ==>
         (res.`2 = W64.zero \/ res.`2 = W64.one) /\
         (_incr = W64.one => res.`2 = W64.one) /\
@@ -951,7 +951,7 @@ while (#{/~_incr}{~infinity_norm_check_result}{~hint_0}{~total_ones_in_hint}pre 
        0 <= base <= 6*n /\ base %% n = 0 /\
        (infinity_norm_check_result <> zero => base = 6*n) /\
        wpolykvec_srng (kvec_unflatten256 _r) (gamma2 - 1) gamma2 /\
-       wpolykvec_urng (kvec_unflatten256 _w1) ((q - 1) %/ (2 * gamma2) + 1) /\
+       wpolykvec_urng (kvec_unflatten256 _w1) ((q - 1) %/ (2 * gamma2)) /\
        0 <= total_ones_in_hint /\
        (infinity_norm_check_result = zero =>
          (forall k, 0 <= k < base %/ n =>
@@ -1018,7 +1018,7 @@ seq 3 : (#pre /\
     rewrite -Heq.
     by move: Hr; rewrite /wpolykvec_srng KArray.allP => H; apply H; smt(mldsa65_kvec).
   - (* w1 slice range: wpoly_urng from wpolykvec_urng *)
-    have Hw : wpolykvec_urng (kvec_unflatten256 _w1) ((q - 1) %/ (2 * gamma2) + 1) by smt().
+    have Hw : wpolykvec_urng (kvec_unflatten256 _w1) ((q - 1) %/ (2 * gamma2)) by smt().
     have /= Heq : (kvec_unflatten256 _w1).[base{hr} %/ n] = Array256.init (fun i => _w1.[base{hr} + i])
       by apply kvec_slice_eq; smt(mldsa65_kvec).
     rewrite -Heq.
@@ -1097,7 +1097,7 @@ lemma __make_hint_vector_ph
         infinity_norm_check_result = _incr /\
         (_incr = W64.zero \/ _incr = W64.one) /\
         wpolykvec_srng (kvec_unflatten256 _r) (gamma2 - 1) gamma2 /\
-        wpolykvec_urng (kvec_unflatten256 _w1) ((q - 1) %/ (2 * gamma2) + 1)
+        wpolykvec_urng (kvec_unflatten256 _w1) ((q - 1) %/ (2 * gamma2))
         ==>
         (res.`2 = W64.zero \/ res.`2 = W64.one) /\
         (_incr = W64.one => res.`2 = W64.one) /\

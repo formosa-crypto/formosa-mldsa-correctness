@@ -39,7 +39,7 @@ lemma polynomial____make_hint_correct
         (* low: LowBits output range [-(gamma2-1), gamma2] *)
         wpoly_srng (gamma2 - 1) gamma2 _low /\
         (* high: HighBits (w1) output range [0, (q-1) / (2*gamma2)] *)
-        wpoly_urng ((q - 1) %/ (2 * gamma2) + 1) _high
+        wpoly_urng ((q - 1) %/ (2 * gamma2)) _high
         ==>
         liftu_wpoly res.`1 = poly_MakeHint (lifts_wpoly _low) (lifts_wpoly _high) /\
         res.`2 = count (fun i => (liftu_wpoly res.`1).[i] <> Zq.zero) (iota_ 0 256)
@@ -52,7 +52,7 @@ lemma polynomial____make_hint_ph
     phoare [ M.polynomial____make_hint :
         hints = _h /\ low_coefficients = _low /\ high_coefficients = _high /\
         wpoly_srng (gamma2 - 1) gamma2 _low /\
-        wpoly_urng ((q - 1) %/ (2 * gamma2) + 1) _high
+        wpoly_urng ((q - 1) %/ (2 * gamma2)) _high
         ==>
         liftu_wpoly res.`1 = poly_MakeHint (lifts_wpoly _low) (lifts_wpoly _high) /\
         res.`2 = count (fun i => (liftu_wpoly res.`1).[i] <> Zq.zero) (iota_ 0 256)

@@ -31,8 +31,11 @@ op commitment_encode_polynomial_lane(c : W32.t) : W4.t =
     BS_W32_W4_U.truncateu4  c.
 
 
+(* Pre relaxed from `wpoly_urng b_w1 p` (< 15) to `wpoly_urng (b_w1+1) p` (< 16) to *)
+(* match the tight output of polynomial__use_hints. SimpleBitPack with b=15 uses   *)
+(* 4-bit int2bs, which correctly encodes all of [0..15].                           *)
 lemma SimpleBitPack_liftE (p : wpoly) :
-  wpoly_urng b_w1 p =>
+  wpoly_urng (b_w1 + 1) p =>
     SimpleBitPack (liftu_wpoly p) b_w1
   = to_list
   (BSWA_128u8.init
@@ -75,9 +78,14 @@ qed.
 
 require import WArray1024 WArray128.
 
+(* Pre relaxed from `wpoly_urng b_w1 _a` (values < 15) to                          *)
+(* `wpoly_urng (b_w1+1) _a` (values < 16). The encoding uses 4-bit truncation      *)
+(* (VPMADDUBSW after truncateu4) which handles the full [0..15] range, so the      *)
+(* looser pre still suffices; this matches polynomial__use_hints's tight output    *)
+(* bound (4-bit-masked impl, [0..15]).                                             *)
 lemma commitment_encode_polynomial _a :
    hoare [ M.commitment____encode_polynomial :
-       commitment = _a /\ wpoly_urng b_w1 _a
+       commitment = _a /\ wpoly_urng (b_w1 + 1) _a
      ==>
        to_list res = SimpleBitPack (liftu_wpoly _a) b_w1
    ].
@@ -173,16 +181,18 @@ import VecMat PolyKVec.
 
 require import Array768 Array1536.
 
+(* Pre relaxed from `wpolykvec_urng _ b_w1` (< 15) to `_ (b_w1+1)` (< 16) to match  *)
+(* the tight output bound of polynomial__use_hints (4-bit-masked impl, [0..15]).   *)
 lemma commitment_encode _a :
     hoare [ M.commitment____encode :
-       commitment = _a /\ wpolykvec_urng (kvec_unflatten256 _a) b_w1
+       commitment = _a /\ wpolykvec_urng (kvec_unflatten256 _a) (b_w1 + 1)
      ==>
        kvec_unflatten128 res =
            KArray.map (fun (p : poly) => Array128.of_list witness (SimpleBitPack  p b_w1)) (liftu_wpolykvec (kvec_unflatten256 _a))
    ].
 have Hkvec := mldsa65_kvec.
 proc => /=.
-while (0 <= i <= 6 /\ commitment = _a /\ wpolykvec_urng (kvec_unflatten256 _a) b_w1  /\
+while (0 <= i <= 6 /\ commitment = _a /\ wpolykvec_urng (kvec_unflatten256 _a) (b_w1 + 1)  /\
        forall k, 0 <= k < i =>
        (kvec_unflatten128 encoded_commitment).[k] =
        (map (fun (p : poly) => Array128.of_list witness (SimpleBitPack  p b_w1)) (liftu_wpolykvec (kvec_unflatten256 _a))).[k]);

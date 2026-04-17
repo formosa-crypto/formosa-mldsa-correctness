@@ -111,6 +111,21 @@ call t1__decode_polynomial_ll.
 by auto => /#.
 qed.
 
+(* Size helpers for SimpleBitPack output. Duplicated locally from keygen.ec to keep  *)
+(* verify.ec standalone; should migrate to a shared prelude eventually.              *)
+lemma size_BitsToBytes' (l : bool list) : size (BitsToBytes l) = size l %/ 8
+  by rewrite /BitsToBytes size_map size_chunk //.
+
+lemma size_SimpleBitPack' (_p : poly) (b : int) :
+  1 <= b => size (SimpleBitPack _p b) = (ilog 2 b + 1) * n %/ 8.
+proof.
+move => Hb.
+rewrite /SimpleBitPack /= size_BitsToBytes' (size_flatten_ctt (ilog 2 b + 1)).
++ move => l; rewrite mapP => He; elim He => c /= [# ?->].
+  by rewrite /IntegerToBits BS2Int.size_int2bs; smt(ilog_ge0).
+by rewrite size_map size_to_list.
+qed.
+
 (* Spec-level t1 polykvec obtained from the t1_encoded bytes (6 chunks of 320 bytes, *)
 (* each decoded via SimpleBitUnpack with range 2^(q_bits-d)-1 = 1023 = b_t1).        *)
 op t1_from_t1enc (_t1enc : W8.t Array1920.t) : polykvec =
@@ -136,14 +151,190 @@ lemma reconstruct_signer_commitment_correct
         t1_encoded = _t1enc /\ challenge_as_ntt = _ch /\
         a_times_signer_response = _az /\ hints = _hints /\
         wpoly_ntt_orng _ch /\
-        wpolykvec_urng (kvec_unflatten256 _hints) 2
+        wpolykvec_urng (kvec_unflatten256 _hints) 2 /\
+        (* _az is the output of row_vector____multiply_with_matrix_A: sum of lvec *)
+        (* basemul results, each wpoly_srng (q-1) (q-1). Bound: lvec*(q-1).        *)
+        wpolykvec_srng (kvec_unflatten256 _az) (lvec * (q-1)) (lvec * (q-1))
         ==>
         BytesW1.of_list (to_list res) =
           w1Encode (UseHint (liftu_wpolykvec (kvec_unflatten256 _hints))
                             (signer_commitment_spec _t1enc _ch _az))
     ].
 proof.
-admitted.
+have kvec_val := mldsa65_kvec.
+have gamma2_val := mldsa65_gamma2.
+proc => /=.
+(* Post-loop: commitment____encode produces res from commitment.                       *)
+(* commitment_encode's pre requires wpolykvec_urng _ b_w1 (values in [0..b_w1-1]).     *)
+wp; ecall (commitment_encode commitment).
+(* Outer 6-iteration loop. Invariant tracks, for each processed component k < i:       *)
+(*  (a) liftu (commitment.[k]) = poly_UseHint (liftu (_hints.[k])) (spec_commit.[k]);  *)
+(*  (b) wpoly_urng ((q-1)/(2*gamma2)) commitment.[k]  (tight use_hints post = [0..15]) *)
+while (0 <= i <= 6 /\ t1_encoded = _t1enc /\ challenge_as_ntt = _ch /\
+       a_times_signer_response = _az /\ hints = _hints /\
+       wpoly_ntt_orng _ch /\
+       wpolykvec_urng (kvec_unflatten256 _hints) 2 /\
+       wpolykvec_srng (kvec_unflatten256 _az) (lvec * (q-1)) (lvec * (q-1)) /\
+       (forall k, 0 <= k < i =>
+          liftu_wpoly (kvec_unflatten256 commitment).[k] =
+            poly_UseHint
+              (liftu_wpoly (kvec_unflatten256 _hints).[k])
+              (signer_commitment_spec _t1enc _ch _az).[k] /\
+          wpoly_urng ((q - 1) %/ (2 * gamma2)) (kvec_unflatten256 commitment).[k])
+      ); last first.
++ (* Exit: aggregate per-component invariant to kvec level and bridge to w1Encode.    *)
+  auto => |> Hch_rng Hhints_rng Haz_rng; split; 1: smt().
+  move => cm_exit i_exit Hng Hi1 Hi2 Hdone.
+  (* Step 1: establish kvec-level equality for liftu cm_exit = UseHint _ spec.         *)
+  have Hlifts_cm :
+      liftu_wpolykvec (kvec_unflatten256 cm_exit) =
+      UseHint (liftu_wpolykvec (kvec_unflatten256 _hints))
+              (signer_commitment_spec _t1enc _ch _az).
+  + rewrite /UseHint; apply KArray.tP => k kb.
+    rewrite KArray.map2iE 1:/# /= /liftu_wpolykvec KArray.mapiE 1:/# /=.
+    rewrite KArray.mapiE 1:/# /=.
+    by have /= [-> _] := Hdone k _; smt(mldsa65_kvec).
+  (* Step 2: derive wpolykvec_urng (b_w1+1) bound needed by commitment_encode's pre.    *)
+  (* The invariant gives wpoly_urng ((q-1)/(2*gamma2)) = wpoly_urng 16 = wpoly_urng     *)
+  (* (b_w1+1) per component (tight; the 4-bit-masked impl always stays in [0..15]).    *)
+  have Hurng_b_w1 : wpolykvec_urng (kvec_unflatten256 cm_exit) (b_w1 + 1).
+  + rewrite /wpolykvec_urng KArray.allP => k kbl.
+    have /= [_ Hrng] := Hdone k _; 1: smt(mldsa65_kvec).
+    by move: Hrng; rewrite /b_w1 /=; smt(mldsa65_gamma2).
+  split; first exact Hurng_b_w1.
+  (* Step 3: relate commitment_encode post (kvec_unflatten128 res = map SimpleBitPack)  *)
+  (* to w1Encode definition (BytesW1.of_list (flatten (map SimpleBitPack (mkseq ...)))).*)
+  move => _ encres Hunflat.
+  rewrite Hlifts_cm in Hunflat.
+  rewrite /w1Encode.
+  have Hb_w1 : (q - 1) %/ (2 * gamma2) - 1 = b_w1
+    by rewrite /b_w1 /=; smt(mldsa65_gamma2).
+  rewrite Hb_w1; apply BytesW1.tP => k kb.
+  rewrite !BytesW1.get_of_list 1,2:/# get_to_list (kvec_unflatten128iE encres k) 1:/# Hunflat.
+  rewrite KArray.mapiE; 1: smt(mldsa65_kvec).
+  rewrite /= Array128.Array128.get_of_list 1:/# (BitChunking.nth_flatten witness 128).
+  + rewrite allP => s /mapP [wi [_ ->]] /=.
+    by rewrite size_SimpleBitPack' /b_w1 /= /#.
+  rewrite (nth_map witness); 1: by rewrite size_mkseq; smt(mldsa65_kvec).
+  by rewrite nth_mkseq; 1: smt(mldsa65_kvec).
+(* Loop body: 9-call chain (t1_decode → shift → ntt → pmmar → subtract → reduce32 →    *)
+(*   invert_ntt → caddq → use_hints) + writeback. The ecall chain is structurally      *)
+(* threaded below; the remaining `admit` handles the algebraic derivation of the       *)
+(* per-component invariant at i+1 (lifts chain matching signer_commitment_spec.[i]      *)
+(* and range-bound threading). ~150 more lines of algebra.                              *)
+wp.
+ecall (polynomial__use_hints_correct commitment_element hints_element).
+wp.
+ecall (polynomial__conditionally_add_modulus_correct commitment_element).
+ecall (polynomial__invert_ntt_montgomery_correct commitment_element).
+ecall (polynomial__reduce32_correct commitment_element).
+ecall (polynomial__subtract_correct commitment_element az_element c_times_t1
+         (lvec * (q-1)) (q-1)).
+wp.
+ecall (polynomial__pointwise_montgomery_multiply_and_reduce_correct
+         c_times_t1 challenge_as_ntt t1_element).
+ecall (polynomial__ntt_correct t1_element).
+ecall (polynomial____shift_coefficients_left_correct t1_element).
+ecall (t1_decode_polynomial
+         (Array320.Array320.init
+            (fun j => t1_encoded.[(q_bits - d) * n %/ 8 * i + j]))).
+auto => /> &hr Hi1 Hi2 Hch_rng Hhints_rng Haz_rng Hdone Hguard.
+move => result Hliftu_t1 Hurng_t1 Hurng_t1_1024 result0 Hto_sint_shift Hsrng_shift.
+(* ntt's pre: wpoly_ntt_irng result0 via bridge from wpoly_srng (q-1) (q-1) *)
+split; first by apply wpoly_srng_ntt_irng.
+move => _ result1 Hlifts_ntt Horng_ntt.
+(* pmmar's pre: wpoly_bmul_irng on _ch and result1 via wpoly_ntt_orng_bmul_irng *)
+split; first split; [exact (wpoly_ntt_orng_bmul_irng _ Hch_rng)
+                    | exact (wpoly_ntt_orng_bmul_irng _ Horng_ntt)].
+move => _ _ result2 Hlifts_pmmar Hsrng_pmmar.
+(* subtract's pre: wpoly_srng on az slice + arithmetic bound *)
+split.
++ split; last smt().
+  have /= Hslice := kvec_slice_eq _az (i{hr} * n) _ _; 1,2: smt().
+  have Hdiv : i{hr} * n %/ n = i{hr} by smt().
+  move: Hslice; rewrite Hdiv => Hslice.
+  rewrite -Hslice.
+  by move: Haz_rng; rewrite /wpolykvec_srng KArray.allP => H; apply H; smt(mldsa65_kvec).
+move => _ _ result3 Hlifts_sub Hsrng_sub result4 Hlifts_red Hsrng_red.
+(* invert_ntt's pre: wpoly_intt_irng via widening + bridge *)
+split; first by apply wpoly_bmul_orng_intt_irng;
+  apply (wpoly_srng_widen _ ((q-1) %/ 2) ((q-1) %/ 2) (q-1) (q-1)); smt().
+move => _ result5 Hlifts_invntt Hsrng_invntt.
+(* caddq's pre: wpoly_srng (q-1) (q-1) via widening *)
+split; first by apply (wpoly_srng_widen _ invntt_obound invntt_obound (q-1) (q-1));
+  first 2 smt(invntt_obound_fits_for_caddq mldsa65_Eta);
+  exact Hsrng_invntt.
+move => _ result6 Hlifts_caddq Hurng_caddq.
+(* use_hints' pre: wpoly_urng 2 hints slice *)
+split.
++ have /= Hslice_h := kvec_slice_eq _hints (i{hr} * n) _ _; 1,2: smt().
+  have Hdiv_h : i{hr} * n %/ n = i{hr} by smt().
+  move: Hslice_h; rewrite Hdiv_h => Hslice_h.
+  rewrite -Hslice_h.
+  by move: Hhints_rng; rewrite /wpolykvec_urng KArray.allP => H; apply H; smt(mldsa65_kvec).
+move => _ result7 Hliftu_useh Hurng_useh.
+(* Final goal: invariant at i+1 *)
+split; 1: smt().
+move => k Hk_lo Hk_hi.
+have /= Hwb :=
+  kvec_unflatten256_writeback_iE commitment{hr} result7 (i{hr} * n) k _ _;
+  1,2: smt(mldsa65_kvec).
+rewrite Hwb.
+case (k = i{hr}) => Hki.
++ (* New component k = i *)
+  subst k; have Hnnd : i{hr} * n %/ n = i{hr} by smt().
+  rewrite Hnnd ifT //; split; last exact Hurng_useh.
+  rewrite Hliftu_useh.
+  (* Match poly_UseHint's two args *)
+  have H_hints_slice : liftu_wpoly (init (fun (i_0 : int) => _hints.[i{hr} * n + i_0])) =
+                       (liftu_wpoly (kvec_unflatten256 _hints).[i{hr}]).
+  + have /= Hslice_h2 := kvec_slice_eq _hints (i{hr} * n) _ _; 1,2: smt().
+    move: Hslice_h2; rewrite Hnnd => Hslice_h2.
+    by rewrite Hslice_h2.
+  rewrite H_hints_slice; congr.
+  (* Algebraic chain: liftu result6 = (signer_commitment_spec ...).[i] *)
+  have Hliftu_eq : liftu_wpoly result6 = lifts_wpoly result6
+    by rewrite -wpoly_urng_lifts_eq_liftu.
+  rewrite Hliftu_eq Hlifts_caddq Hlifts_invntt Hlifts_red Hlifts_sub
+          Hlifts_pmmar Hlifts_ntt.
+  (* Unfold signer_commitment_spec + decompose the kvec ops *)
+  rewrite /signer_commitment_spec /invnttv KArray.mapiE; 1: smt(mldsa65_kvec).
+  rewrite polykvec_sub_iE; 1: smt(mldsa65_kvec).
+  congr; congr.
+  + (* lifts_wpoly az_slice = (lifts_wpolykvec ...).[i] *)
+    rewrite /lifts_wpolykvec mapiE; 1: smt(mldsa65_kvec).
+    congr; by rewrite -kvec_slice_eq; smt().
+  (* Remaining: basemul _ch (ntt (lifts result0))
+       = (&-) ((ntt_smul _ch (nttv (smul t1_spec (incoeff 2^d)))).[i])  *)
+  (* Wait — need to match against the FULL (&-) term *)
+  congr.
+  rewrite /ntt_smul KArray.mapiE; 1: smt(mldsa65_kvec).
+  rewrite /= /nttv KArray.mapiE; 1: smt(mldsa65_kvec).
+  rewrite /smul KArray.mapiE; 1: smt(mldsa65_kvec).
+  rewrite /=.
+  (* Bridge: lifts_wpoly (shift result) = smul t1_spec (incoeff 2^d) at index i.      *)
+  (* Proof: per-coeff, Hto_sint_shift gives to_sint = to_uint * 2^d; apply incoeffM +  *)
+  (* Zq.mulrC and fold the `to_list (init ...) = take 320 (drop ... (to_list enc))`    *)
+  (* slice equality. Left admitted here because the Array320/Array1920 slice-size      *)
+  (* reasoning balloons inside the inline congr/eq_from_nth chain; standalone lemma    *)
+  (* would be cleaner.                                                                 *)
+  have Hlifts_shift_eq :
+      lifts_wpoly result0 = map ((( * ) (incoeff (2^d))))
+                                (t1_from_t1enc _t1enc).[i{hr}].
+  + admit.
+  rewrite Hlifts_shift_eq.
+  (* basemul (lifts _ch) X = basemul X (lifts _ch) — use tP + init.                   *)
+  (* W13_eq normalizes XWord13.W13.modulus (= 8192 = 2^d) on LHS to match RHS's 8192. *)
+  apply Array256.tP => j jb.
+  have W13_eq : XWord13.W13.modulus = 8192 by smt(XWord13.W13.ge2_modulus).
+  rewrite W13_eq.
+  rewrite /basemul !initiE 1,2:/# /=; first smt(mldsa65_kvec).
+  by rewrite Zq.ComRing.mulrC.
++ (* Old component k < i: via Hdone *)
+  have -> : (k = i{hr} * n %/ n) = false by smt().
+  rewrite /=.
+  by have /= := Hdone k _; first smt().
+qed.
 
 lemma reconstruct_signer_commitment_ph
       (_t1enc : W8.t Array1920.t) (_ch : W32.t Array256.t)
@@ -152,7 +343,8 @@ lemma reconstruct_signer_commitment_ph
         t1_encoded = _t1enc /\ challenge_as_ntt = _ch /\
         a_times_signer_response = _az /\ hints = _hints /\
         wpoly_ntt_orng _ch /\
-        wpolykvec_urng (kvec_unflatten256 _hints) 2
+        wpolykvec_urng (kvec_unflatten256 _hints) 2 /\
+        wpolykvec_srng (kvec_unflatten256 _az) (lvec * (q-1)) (lvec * (q-1))
         ==>
         BytesW1.of_list (to_list res) =
           w1Encode (UseHint (liftu_wpolykvec (kvec_unflatten256 _hints))

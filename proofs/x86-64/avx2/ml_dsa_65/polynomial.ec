@@ -311,14 +311,18 @@ wp; while (0 <= offset <= (256 * 32) %/ 8 /\ offset %% 32 = 0)
 by move => *; auto => /#.
 qed.
 
+(* Pre/post tightened 2026-04-17: pre from wpoly_urng (2^10+1) = values ≤ 2^10    *)
+(* to wpoly_urng (2^10) = values ≤ 2^10 - 1 (matches t1_decode's output bound     *)
+(* b_t1 + 1 = 2^10). Post from wpoly_srng (2^10 * 2^d) ≥ q bound to                *)
+(* wpoly_srng (q-1) (q-1): tight since (2^10 - 1) * 2^d = q - 1 exactly.          *)
 lemma polynomial____shift_coefficients_left_correct (_a : W32.t Array256.t) :
     hoare [ M.polynomial____shift_coefficients_left :
         polynomial = _a /\
-        wpoly_urng (2^10 + 1) _a   (* t1 range: [0, 2^10] *)
+        wpoly_urng (2^10) _a       (* t1 range: [0, 2^10 - 1] = [0, b_t1] *)
         ==>
         (forall i, 0 <= i < 256 =>
             W32.to_sint res.[i] = W32.to_uint _a.[i] * 2^d) /\
-        wpoly_srng (2^10 * 2^d) (2^10 * 2^d) res
+        wpoly_srng (q-1) (q-1) res
     ].
 proof.
 admitted.
@@ -326,11 +330,11 @@ admitted.
 lemma polynomial____shift_coefficients_left_ph (_a : W32.t Array256.t) :
     phoare [ M.polynomial____shift_coefficients_left :
         polynomial = _a /\
-        wpoly_urng (2^10 + 1) _a
+        wpoly_urng (2^10) _a
         ==>
         (forall i, 0 <= i < 256 =>
             W32.to_sint res.[i] = W32.to_uint _a.[i] * 2^d) /\
-        wpoly_srng (2^10 * 2^d) (2^10 * 2^d) res
+        wpoly_srng (q-1) (q-1) res
     ] = 1%r
   by conseq polynomial____shift_coefficients_left_ll
             (polynomial____shift_coefficients_left_correct _a).

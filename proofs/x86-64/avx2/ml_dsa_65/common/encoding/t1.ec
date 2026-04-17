@@ -204,6 +204,13 @@ split.
   + by have /= /#:= W10.to_uint_cmp.
 qed.
 
+lemma t1__decode_polynomial_ll : islossless M.t1__decode_polynomial.
+proof.
+proc; wp.
+while (true) ((256 - 8) * 4 - output_offset); last by auto => /#.
+by move => *; auto => /#.
+qed.
+
 import VecMat PolyKVec.
 
 require import Array256 Array320 Array1536 Array1920.

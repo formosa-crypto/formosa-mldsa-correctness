@@ -162,6 +162,13 @@ conseq (:  commitment = BSWA_256u32.init (fun i => BS_W32_W4_U.zeroextu32 (BS_W3
 
 qed.
 
+lemma commitment____encode_polynomial_ll : islossless M.commitment____encode_polynomial.
+proof.
+proc; wp.
+while (true) ((4 * 256) %/ 8 - output_offset); last by auto => /#.
+by move => *; auto => /#.
+qed.
+
 import VecMat PolyKVec.
 
 require import Array768 Array1536.
@@ -211,4 +218,11 @@ have -> : k = i{hr} by smt().
 
 rewrite initiE 1:/# /= tP => ii iib.
 rewrite  initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.
+qed.
+
+lemma commitment____encode_ll : islossless M.commitment____encode.
+proof.
+proc.
+while (0 <= i <= 6) (6 - i); last by auto => /#.
+move => *; wp; call commitment____encode_polynomial_ll; auto => /#.
 qed.

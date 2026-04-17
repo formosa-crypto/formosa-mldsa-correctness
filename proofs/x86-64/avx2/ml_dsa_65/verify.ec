@@ -3,7 +3,8 @@ require import AllCore List IntDiv RealExp.
 from Jasmin require import JModel_x86.
 
 from JazzEC require import Ml_dsa_65_avx2 Mldsa_65_prelude Matrix_A Hashing
-                           Signature Challenge Row_vector.
+                           Signature Challenge Row_vector Polynomial Commitment T1
+                           Common_ntt Common_modular Common_invert_ntt Rounding.
 
 require import CircuitBindings Bindings XArray48.
 
@@ -94,7 +95,39 @@ qed.
 lemma reconstruct_signer_commitment_ll :
     islossless M.reconstruct_signer_commitment.
 proof.
-admitted.
+proc.
+wp; call commitment____encode_ll.
+while (0 <= i <= 6) (6 - i); last by auto => /#.
+move => *; wp.
+call polynomial__use_hints_ll; wp.
+call polynomial__conditionally_add_modulus_ll.
+call polynomial__invert_ntt_montgomery_ll.
+call polynomial__reduce32_ll.
+call polynomial__subtract_ll; wp.
+call polynomial__pointwise_montgomery_multiply_and_reduce_ll.
+call polynomial__ntt_ll.
+call polynomial____shift_coefficients_left_ll.
+call t1__decode_polynomial_ll.
+by auto => /#.
+qed.
+
+(* Spec-level t1 polykvec obtained from the t1_encoded bytes (6 chunks of 320 bytes, *)
+(* each decoded via SimpleBitUnpack with range 2^(q_bits-d)-1 = 1023 = b_t1).        *)
+op t1_from_t1enc (_t1enc : W8.t Array1920.t) : polykvec =
+   KArray.init (fun i =>
+      SimpleBitUnpack
+        (take ((n * (q_bits - d)) %/ 8)
+              (drop (((n * (q_bits - d)) %/ 8) * i) (to_list _t1enc)))
+        (2^(q_bits - d) - 1)).
+
+(* The reconstructed signer commitment at the spec level: the wapprox that the proc *)
+(* computes internally, reused by the verify proof after algebra bridging.           *)
+op signer_commitment_spec
+     (_t1enc : W8.t Array1920.t) (_ch : W32.t Array256.t) (_az : W32.t Array1536.t)
+   : polykvec =
+   invnttv (lifts_wpolykvec (kvec_unflatten256 _az)
+             - ntt_smul (lifts_wpoly _ch)
+                        (nttv (smul (t1_from_t1enc _t1enc) (incoeff (2^d))))).
 
 lemma reconstruct_signer_commitment_correct
       (_t1enc : W8.t Array1920.t) (_ch : W32.t Array256.t)
@@ -107,9 +140,7 @@ lemma reconstruct_signer_commitment_correct
         ==>
         BytesW1.of_list (to_list res) =
           w1Encode (UseHint (liftu_wpolykvec (kvec_unflatten256 _hints))
-                            (* the reconstructed commitment before hints *)
-                            (* = invNTT(Az - c_hat * NTT(t1*2^d)) mod+ q *)
-                            (liftu_wpolykvec (kvec_unflatten256 _az)))
+                            (signer_commitment_spec _t1enc _ch _az))
     ].
 proof.
 admitted.
@@ -125,7 +156,7 @@ lemma reconstruct_signer_commitment_ph
         ==>
         BytesW1.of_list (to_list res) =
           w1Encode (UseHint (liftu_wpolykvec (kvec_unflatten256 _hints))
-                            (liftu_wpolykvec (kvec_unflatten256 _az)))
+                            (signer_commitment_spec _t1enc _ch _az))
     ] = 1%r
   by conseq reconstruct_signer_commitment_ll
             (reconstruct_signer_commitment_correct _t1enc _ch _az _hints).

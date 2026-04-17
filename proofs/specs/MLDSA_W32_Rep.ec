@@ -56,6 +56,21 @@ admitted.
    which is sufficient input range for invNTT *)
 lemma wpoly_bmul_orng_intt_irng (p : wpoly) : wpoly_srng (q-1) (q-1) p => wpoly_intt_irng p.
 admitted.
+(* Fully reduced coefficients (in [0,q)) are valid basemul inputs *)
+lemma wpoly_urng_bmul_irng (p : wpoly) : wpoly_urng q p => wpoly_bmul_irng p.
+admitted.
+
+lemma wpoly_urng_lifts_eq_liftu (p : wpoly) :
+  wpoly_urng q p => lifts_wpoly p = liftu_wpoly p.
+proof.
+rewrite /wpoly_urng /lifts_wpoly /liftu_wpoly allP /= => H.
+apply Array256.tP => j jb.
+rewrite !mapiE 1,2:/# /=; congr.
+have := H j jb => /= Hr.
+rewrite W32.to_sintE /smod.
+have -> /= : ! (2 ^ (32 - 1) <= to_uint p.[j]) by smt().
+done.
+qed.
 
 lemma wpoly_infnorm_liftE (b : int) (pw : wpoly) :
     0 < b <= q %/ 2 =>

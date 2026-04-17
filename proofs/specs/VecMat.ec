@@ -161,7 +161,7 @@ op nttm m = KLMatrix.map ntt m.
 op invnttm m = KLMatrix.map invntt m.
 op zerom : polymat = create poly_zero.
 
-op row(m : polymat, r : int) : PolyLVec.polylvec = LArray.init (fun i => m.[r*kvec+i]).
+op row(m : polymat, r : int) : PolyLVec.polylvec = LArray.init (fun i => m.[r*lvec+i]).
 op col(m : polymat, c : int) : PolyKVec.polykvec = KArray.init (fun i => m.[c+lvec*i]).
 end PolyMat.
 

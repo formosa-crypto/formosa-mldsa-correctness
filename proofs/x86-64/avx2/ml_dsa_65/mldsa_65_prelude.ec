@@ -198,3 +198,22 @@ case (k = base %/ 256) => Heq /=.
   by rewrite lvec_unflatten256iE 1:/# /#.
 qed.
 
+(* -------------------------------------------------------------------- *)
+(* Matrix row slice: a 1280-wide row of a flat Array7680 matrix equals  *)
+(* the corresponding row of mat_unflatten256 (stride lvec).              *)
+(* -------------------------------------------------------------------- *)
+lemma mat_row_slice_unflatten (m : 'a Array7680.t) (r k : int) :
+  0 <= r < kvec => 0 <= k < lvec =>
+  (lvec_unflatten256 (Array1280.init (fun j => m.[1280*r + j]))).[k] =
+  (mat_unflatten256 m).[r*lvec + k].
+proof.
+have lvec_val := mldsa65_lvec.
+have kvec_val := mldsa65_kvec.
+move => Hr Hk.
+apply Array256.tP => j jb.
+rewrite /lvec_unflatten256 LArray.initiE 1:/# /=.
+rewrite get_of_list 1:/# nth_sub 1:/# /= Array1280.initiE 1:/#.
+rewrite /mat_unflatten256 KLMatrix.initiE 1:/# /=.
+by rewrite get_of_list 1:/# nth_sub 1:/# /#.
+qed.
+

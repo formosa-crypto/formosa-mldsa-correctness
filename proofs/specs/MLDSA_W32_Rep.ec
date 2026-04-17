@@ -28,6 +28,14 @@ op wpoly_urng(b : int, pw : wpoly) = all (fun i => 0 <= W32.to_uint i < b) pw.
 op wpoly_srng(bl bh : int, pw : wpoly) = all (fun i => -bl <= W32.to_sint i <= bh) pw.
 op wpoly_infnorm_lt(b : int, pw : wpoly) = wpoly_srng (b-1) (b-1) pw.
 
+(* Monotonicity: tighter wpoly_srng implies wider wpoly_srng *)
+lemma wpoly_srng_widen (p : wpoly) (a1 b1 a2 b2 : int) :
+  a1 <= a2 => b1 <= b2 => wpoly_srng a1 b1 p => wpoly_srng a2 b2 p.
+proof.
+rewrite /wpoly_srng !allP => Ha Hb H x Hx.
+by have := H x Hx; smt().
+qed.
+
 (* ------------------------------------------------------------------ *)
 (* Abstract range predicates for the three word-level polynomial ops.  *)
 (*                                                                      *)
@@ -45,6 +53,23 @@ op wpoly_ntt_irng  : wpoly -> bool.  (* valid input  to   NTT   *)
 op wpoly_ntt_orng  : wpoly -> bool.  (* valid output from NTT   *)
 op wpoly_intt_irng : wpoly -> bool.  (* valid input  to   INTT  *)
 op wpoly_bmul_irng : wpoly -> bool.  (* valid input  to   basemul *)
+
+(* ------------------------------------------------------------------ *)
+(* Abstract output bound of polynomial__invert_ntt_montgomery.          *)
+(*                                                                      *)
+(* The concrete value depends on the specific Montgomery-NTT impl;      *)
+(* the correctness of the keygen/sign chain depends only on the         *)
+(* compatibility axiom below, which expresses the design invariant      *)
+(* that invNTT's output is tight enough that add(_, s2) stays within    *)
+(* conditionally_add_modulus's physical tolerance [-q+1, q-1].          *)
+(*                                                                      *)
+(* Matches the comment in mldsa-native sign.c (mld_compute_t0_t1_tr...):*)
+(*   "the output of the invntt [must be] small enough such that the     *)
+(*    addition of s2 does not result in absolute values >= MLDSA_Q"     *)
+(* ------------------------------------------------------------------ *)
+op invntt_obound : int.
+axiom invntt_obound_fits_for_caddq :
+  0 <= invntt_obound /\ invntt_obound + Eta <= q - 1.
 
 (* ------------------------------------------------------------------ *)
 (* Bridge lemmas: relations between abstract range predicates.         *)
@@ -190,6 +215,25 @@ lemma wpolykvec_bmul_orng_intt_irng (pv : wpolykvec) :
 proof.
 rewrite /wpolykvec_srng /wpolykvec_intt_irng !allP.
 by move => H p Hp; exact (wpoly_bmul_orng_intt_irng pv.[p] (H p Hp)).
+qed.
+
+(* Fully reduced kvec coefficients give liftu = lifts *)
+lemma wpolykvec_urng_lifts_eq_liftu (pv : wpolykvec) :
+  wpolykvec_urng pv q => lifts_wpolykvec pv = liftu_wpolykvec pv.
+proof.
+rewrite /wpolykvec_urng KArray.allP => H.
+rewrite /lifts_wpolykvec /liftu_wpolykvec.
+apply KArray.tP => k kb.
+rewrite !mapiE 1,2:/# /=.
+by apply wpoly_urng_lifts_eq_liftu; apply (H k _); smt().
+qed.
+
+(* Monotonicity of wpolykvec_srng *)
+lemma wpolykvec_srng_widen (pv : wpolykvec) (a1 b1 a2 b2 : int) :
+  a1 <= a2 => b1 <= b2 => wpolykvec_srng pv a1 b1 => wpolykvec_srng pv a2 b2.
+proof.
+rewrite /wpolykvec_srng !allP => Ha Hb H p Hp.
+by apply (wpoly_srng_widen pv.[p] a1 b1 a2 b2 Ha Hb); apply H.
 qed.
 
 lemma wpolykvec_infnorm_liftE (b : int) (pw : wpolykvec) :

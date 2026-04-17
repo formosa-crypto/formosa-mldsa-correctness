@@ -35,7 +35,7 @@ lemma polynomial__invert_ntt_montgomery_correct (_a : W32.t Array256.t) :
         polynomial = _a /\ wpoly_intt_irng _a
         ==>
         lifts_wpoly res = invntt (lifts_wpoly _a) /\ (* TODO: algebraic claim requires Montgomery factor analysis *)
-        wpoly_srng (q-1) (q-1) res
+        wpoly_srng invntt_obound invntt_obound res
     ].
 proof.
 admitted.
@@ -45,7 +45,7 @@ lemma polynomial__invert_ntt_montgomery_ph (_a : W32.t Array256.t) :
         polynomial = _a /\ wpoly_intt_irng _a
         ==>
         lifts_wpoly res = invntt (lifts_wpoly _a) /\ (* TODO: algebraic claim requires Montgomery factor analysis *)
-        wpoly_srng (q-1) (q-1) res
+        wpoly_srng invntt_obound invntt_obound res
     ] = 1%r
   by conseq polynomial__invert_ntt_montgomery_ll
             (polynomial__invert_ntt_montgomery_correct _a).

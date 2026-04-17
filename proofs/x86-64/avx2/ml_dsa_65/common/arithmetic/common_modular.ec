@@ -141,7 +141,7 @@ qed.
 lemma polynomial__conditionally_add_modulus_correct (_a : W32.t Array256.t) :
     hoare [ M.polynomial__conditionally_add_modulus :
         polynomial = _a /\
-        wpoly_srng ((q-1) %/ 2) ((q-1) %/ 2) _a
+        wpoly_srng (q-1) (q-1) _a
         ==>
         lifts_wpoly res = lifts_wpoly _a /\
         wpoly_urng q res
@@ -152,7 +152,7 @@ admitted.
 lemma polynomial__conditionally_add_modulus_ph (_a : W32.t Array256.t) :
     phoare [ M.polynomial__conditionally_add_modulus :
         polynomial = _a /\
-        wpoly_srng ((q-1) %/ 2) ((q-1) %/ 2) _a
+        wpoly_srng (q-1) (q-1) _a
         ==>
         lifts_wpoly res = lifts_wpoly _a /\
         wpoly_urng q res

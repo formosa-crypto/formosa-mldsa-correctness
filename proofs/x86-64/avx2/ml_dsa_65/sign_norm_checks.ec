@@ -92,9 +92,12 @@ do split => /=.
 move => Hbmul_s1 Hbmul_c result [# Hbmul_eq Hbmul_rng].
 split; 1: by  exact (wpoly_bmul_orng_intt_irng result Hbmul_rng).
 move => ?result0 [# Hintt_eq Hintt_rng].
+have Hintt_rng_wide : wpoly_srng (q-1) (q-1) result0.
++ by apply (wpoly_srng_widen result0 invntt_obound invntt_obound (q-1) (q-1) _ _ Hintt_rng);
+    smt(invntt_obound_fits_for_caddq mldsa65_Eta).
 split; 1: by smt(mldsa65_gamma1).
-move => ? result1 [# Hadd_eq ?] result2 [# Hred_eq Hred_rng].
-- rewrite Hred_eq Hadd_eq Hintt_eq Hbmul_eq.
+move => _ _ result1 Hadd_eq _ result2 Hred_eq _.
+rewrite Hred_eq Hadd_eq Hintt_eq Hbmul_eq.
 admit. (* FIXME: PY algebra *)
 qed.
 
@@ -231,7 +234,8 @@ seq 6 : (#pre /\
     move: (H (base{hr} %/ n) _); 1: smt(mldsa65_kvec).
     rewrite /wpoly_srng !allP => H2 j Hj; have := H2 j Hj; smt(mldsa65_gamma2).
   have /= Hresult0_rng' : wpoly_srng (2^31 - gamma1) (2^31 - gamma1) result0.
-  + move: Hintt_rng; rewrite/= /wpoly_srng !allP => H j Hj; have := H j Hj; smt(mldsa65_gamma1).
+  + move: Hintt_rng; rewrite/= /wpoly_srng !allP => H j Hj; have := H j Hj;
+      smt(mldsa65_gamma1 invntt_obound_fits_for_caddq mldsa65_Eta).
   do split;1..3:by smt(mldsa65_gamma1 mldsa65_gamma2).
   move => ??? result1 Hr1s Hr1v result2 Hr2s Hr2v.
   (* outer = Array1536.init (fun i => if base <= i < base+n then result2.[i-base] else inner.[i])

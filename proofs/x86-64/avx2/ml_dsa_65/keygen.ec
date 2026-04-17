@@ -20,6 +20,8 @@ require import Bindings.
 require import BitEncoding.
 import BitChunking.
 
+require import Row_vector Column_vector.
+
 lemma size_BitsToBytes l :  size (BitsToBytes l) = (size l) %/ 8.
 rewrite /BitsToBytes size_map size_chunk //. 
 qed.
@@ -90,7 +92,15 @@ require import Array2.
 
 lemma __compute_t0_t1_ll : islossless M.__compute_t0_t1.
 proof.
-admitted.
+proc.
+wp; call column_vector____power2round_ll.
+call column_vector____conditionally_add_modulus_ll.
+call column_vector____add_ll.
+call column_vector__invert_ntt_montgomery_ll.
+call column_vector__reduce32_ll.
+call row_vector____multiply_with_matrix_A_ll.
+by auto.
+qed.
 
 lemma __compute_t0_t1_correct
       (_mat : W32.t Array7680.t) (_s1 : W32.t Array1280.t) (_s2 : W32.t Array1536.t)
@@ -98,6 +108,7 @@ lemma __compute_t0_t1_correct
     hoare [ M.__compute_t0_t1 :
         matrix_A = _mat /\ s1 = _s1 /\ s2 = _s2 /\
         liftu_wpolymat (mat_unflatten256 _mat) = _A /\
+        wpolymat_urng (mat_unflatten256 _mat) q /\
         wpolylvec_ntt_orng (lvec_unflatten256 _s1) /\
         wpolykvec_srng (kvec_unflatten256 _s2) (Eta) (Eta)
         ==>
@@ -108,7 +119,40 @@ lemma __compute_t0_t1_correct
                        + lifts_wpolykvec (kvec_unflatten256 _s2))
     ].
 proof.
-admitted.
+have kvec_val := mldsa65_kvec.
+have lvec_val := mldsa65_lvec.
+have Eta_val := mldsa65_Eta.
+have Hbound := invntt_obound_fits_for_caddq.
+proc.
+ecall (column_vector____power2round_correct t).
+ecall (column_vector____conditionally_add_modulus_correct t).
+ecall (column_vector____add_correct t _s2 invntt_obound Eta).
+ecall (column_vector__invert_ntt_montgomery_correct t).
+ecall (column_vector__reduce32_correct t).
+ecall (row_vector____multiply_with_matrix_A_correct _mat _s1).
+auto => /> Hurng_mat Horng_s1 Hsrng_s2.
+split; first exact (wpolylvec_ntt_orng_bmul_irng (lvec_unflatten256 _s1) Horng_s1).
+move => _ result Hlifts_mul result0 Hlifts_red Hsrng_red.
+split; first by apply wpolykvec_bmul_orng_intt_irng;
+  apply (wpolykvec_srng_widen _ ((q-1) %/ 2) ((q-1) %/ 2) (q-1) (q-1)); smt().
+move => _ result1 Hlifts_invntt Hsrng_invntt.
+split; 1: smt().
+move => _ result2 Hlifts_add Hsrng_add.
+split;
+  first by apply (wpolykvec_srng_widen _ (invntt_obound + Eta) (invntt_obound + Eta) (q-1) (q-1)); smt().
+move => _ result3 Hlifts_cond Hurng_cond.
+move => result4 Ht1_eq Hurng_t1 Ht0_eq Hsrng_t0.
+have Heq3 := wpolykvec_urng_lifts_eq_liftu _ Hurng_cond.
+have Hchain :
+  invnttv (ntt_mulmxv (liftu_wpolymat (mat_unflatten256 _mat))
+                      (lifts_wpolylvec (lvec_unflatten256 _s1)))
+  + lifts_wpolykvec (kvec_unflatten256 _s2)
+  = liftu_wpolykvec (kvec_unflatten256 result3).
++ by rewrite -Hlifts_mul -Hlifts_red -Hlifts_invntt -Hlifts_add -Hlifts_cond Heq3.
+rewrite Hchain.
+rewrite /Power2Round /=.
+by split; [exact Ht1_eq | exact Hurng_t1].
+qed.
 
 lemma __compute_t0_t1_ph
       (_mat : W32.t Array7680.t) (_s1 : W32.t Array1280.t) (_s2 : W32.t Array1536.t)
@@ -116,6 +160,7 @@ lemma __compute_t0_t1_ph
     phoare [ M.__compute_t0_t1 :
         matrix_A = _mat /\ s1 = _s1 /\ s2 = _s2 /\
         liftu_wpolymat (mat_unflatten256 _mat) = _A /\
+        wpolymat_urng (mat_unflatten256 _mat) q /\
         wpolylvec_ntt_orng (lvec_unflatten256 _s1) /\
         wpolykvec_srng (kvec_unflatten256 _s2) (Eta) (Eta)
         ==>

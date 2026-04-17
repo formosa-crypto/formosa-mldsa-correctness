@@ -3,7 +3,7 @@ require import AllCore List IntDiv RealExp.
 from Jasmin require import JModel_x86.
 
 from JazzEC require import Ml_dsa_65_avx2 Mldsa_65_prelude Matrix_A Hashing
-                           Signature Challenge Common_modular.
+                           Signature Challenge Common_modular Common_ntt.
 
 require import CircuitBindings Bindings XArray48.
 
@@ -31,6 +31,93 @@ have ? := W64.orwE w1 w2.
 split => H; 1: by smt(W64.orw0 W64.or0w W64.zerowE).
 by elim H; rewrite !wordP /= negb_forall /= /#.
 qed.
+
+(* ================================================================== *)
+(* row_vector__ntt                                                      *)
+(* Applies forward NTT to each of 5 polynomials.                        *)
+(* Calls polynomial__ntt in a 5-iteration loop.                         *)
+(* Spec: nttv from VecMat.ec                                            *)
+(* ================================================================== *)
+
+lemma row_vector__ntt_ll : islossless M.row_vector__ntt.
+proof.
+proc.
+while (0 <= i <= 5) (5 - i); last by auto => /#.
+move => *.
+wp; call polynomial__ntt_ll.
+by auto => /#.
+qed.
+
+lemma row_vector__ntt_correct (_v : W32.t Array1280.t) :
+    hoare [ M.row_vector__ntt :
+        vector = _v /\
+        wpolylvec_ntt_irng (lvec_unflatten256 _v)
+        ==>
+        lifts_wpolylvec (lvec_unflatten256 res) =
+          nttv (lifts_wpolylvec (lvec_unflatten256 _v)) /\
+        wpolylvec_ntt_orng (lvec_unflatten256 res)
+    ].
+proof.
+have lvec_val := mldsa65_lvec.
+proc.
+while (0 <= i <= 5 /\
+       wpolylvec_ntt_irng (lvec_unflatten256 _v) /\
+       (forall k, 0 <= k < i =>
+         lifts_wpoly (lvec_unflatten256 vector).[k] =
+           ntt (lifts_wpoly (lvec_unflatten256 _v).[k]) /\
+         wpoly_ntt_orng (lvec_unflatten256 vector).[k]) /\
+       (forall k, i <= k < 5 =>
+         (lvec_unflatten256 vector).[k] = (lvec_unflatten256 _v).[k])
+      ); last first.
++ (* Exit: combine per-component facts into vector-level properties *)
+  auto => |> Hrng_pre; split; 1: smt().
+  move => i0 v0 Hng Hi1 Hi2 Hdone Huntouched; split.
+  + apply LArray.tP => k kb.
+    rewrite /lifts_wpolylvec mapiE; 1: smt(mldsa65_lvec).
+    rewrite /nttv mapiE; 1: smt(mldsa65_lvec).
+    rewrite mapiE; 1: smt(mldsa65_lvec).
+    by have /= [-> _] := Hdone k _; smt().
+  + by rewrite /wpolylvec_ntt_orng allP => k kb; have [_ ?] := Hdone k _; smt().
+wp; ecall (polynomial__ntt_correct
+             (Array256.init (fun j => vector.[i * 256 + j]))).
+auto => /> &hr Hi1 Hi2 Hrng_pre Hprocessed Huntouched Hguard; split.
++ (* Pre for polynomial__ntt: slice of vector at i is ntt_irng *)
+  rewrite -lvec_slice_eq; 1,2: smt().
+  have -> : i{hr} * n %/ n = i{hr} by smt().
+  rewrite (Huntouched i{hr} _); 1: smt().
+  by move: Hrng_pre; rewrite /wpolylvec_ntt_irng LArray.allP => H; apply H; smt().
++ (* Post: invariant at i+1 *)
+  move => _ result Hlifts Hrng; do split; 1,2: smt().
+  + (* Processed components k < i+1 *)
+    move => k ? Hk.
+    have /= Hwb := lvec_unflatten256_writeback_iE vector{hr} result (i{hr} * 256) k _ _;
+      1,2: smt().
+    case (k = i{hr}) => Hki.
+    + subst k; rewrite Hwb ifT; 1: smt().
+      split; last exact Hrng.
+      rewrite Hlifts; congr.
+      have /= <- := Huntouched i{hr} _; 1: smt().
+      by rewrite -lvec_slice_eq; smt().
+    + rewrite Hwb ifF; 1: smt().
+      by have := Hprocessed k _; smt().
+  + (* Untouched components k >= i+1 *)
+    move => k ? Hk.
+    have /= Hwb := lvec_unflatten256_writeback_iE vector{hr} result (i{hr} * 256) k _ _;
+      1,2: smt().
+    rewrite Hwb ifF; 1: smt().
+    by have := Huntouched k _; smt().
+qed.
+
+lemma row_vector__ntt_ph (_v : W32.t Array1280.t) :
+    phoare [ M.row_vector__ntt :
+        vector = _v /\
+        wpolylvec_ntt_irng (lvec_unflatten256 _v)
+        ==>
+        lifts_wpolylvec (lvec_unflatten256 res) =
+          nttv (lifts_wpolylvec (lvec_unflatten256 _v)) /\
+        wpolylvec_ntt_orng (lvec_unflatten256 res)
+    ] = 1%r
+  by conseq row_vector__ntt_ll (row_vector__ntt_correct _v).
 
 lemma row_vector____check_infinity_norm_correct (_a : W32.t Array1280.t) (_threshold : int) :
     phoare [ M.row_vector____check_infinity_norm :

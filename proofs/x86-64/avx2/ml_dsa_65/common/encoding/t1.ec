@@ -32,7 +32,7 @@ op t1_encode_polynomial_lane(c : W32.t) : W10.t =
 
 
 lemma SimpleBitPack_liftE (p : wpoly) :
-  wpoly_urng b_t1 p =>
+  wpoly_urng (b_t1 + 1) p =>
     SimpleBitPack (liftu_wpoly p) b_t1
   = to_list
   (BSWA_320u8.init
@@ -77,7 +77,7 @@ require import WArray1024 WArray320.
 
 lemma t1_encode_polynomial _a :
    hoare [ M.t1__encode_polynomial :
-       t1 = _a /\ wpoly_urng b_t1 _a
+       t1 = _a /\ wpoly_urng (b_t1 + 1) _a
      ==>
        to_list res = SimpleBitPack (liftu_wpoly _a) b_t1
    ].
@@ -217,14 +217,14 @@ require import Array256 Array320 Array1536 Array1920.
 
 lemma t1_encode _a :
     hoare [ M.t1____encode :
-       t1 = _a /\ wpolykvec_urng (kvec_unflatten256 _a) b_t1
+       t1 = _a /\ wpolykvec_urng (kvec_unflatten256 _a) (b_t1 + 1)
      ==>
        kvec_unflatten320 res =
            KArray.map (fun (p : poly) => Array320.of_list witness (SimpleBitPack  p b_t1)) (liftu_wpolykvec (kvec_unflatten256 _a))
    ].
 have Hkvec := mldsa65_kvec.
 proc => /=.
-while (0 <= j <= 6 /\ t1 = _a /\ wpolykvec_urng (kvec_unflatten256 _a) b_t1  /\
+while (0 <= j <= 6 /\ t1 = _a /\ wpolykvec_urng (kvec_unflatten256 _a) (b_t1 + 1)  /\
        forall k, 0 <= k < j =>
        (kvec_unflatten320 encoded).[k] =
        (map (fun (p : poly) => Array320.of_list witness (SimpleBitPack  p b_t1)) (liftu_wpolykvec (kvec_unflatten256 _a))).[k]);
@@ -274,7 +274,7 @@ qed.
 
 lemma t1_encode_ph _a  :
     phoare [ M.t1____encode :
-       t1 = _a /\ wpolykvec_urng (kvec_unflatten256 _a) b_t1
+       t1 = _a /\ wpolykvec_urng (kvec_unflatten256 _a) (b_t1 + 1)
      ==>
        kvec_unflatten320 res =
            KArray.map (fun (p : poly) => Array320.of_list witness (SimpleBitPack  p b_t1)) (liftu_wpolykvec (kvec_unflatten256 _a)) ] = 1%r by conseq t1_encode_ll (t1_encode _a).

@@ -82,14 +82,14 @@ lemma polynomial____power2round_correct
         highbits = _high /\ lowbits = _low /\ polynomial = _a /\
         wpoly_urng q _a  (* input in [0, q-1], after conditionally_add_modulus *)
         ==>
-        (* t1 (high): unsigned, [0, 2^(23-d)] *)
+        (* t1 (high): unsigned, [0, 2^(23-d) - 1] *)
         (forall i, 0 <= i < 256 =>
             W32.to_uint res.`1.[i] = asint (Power2Round (liftu_wpoly _a).[i]).`1 ) /\
-        wpoly_urng (2^(23-d) + 1) res.`1 /\
-        (* t0 (low): signed, [-(2^(d-1)), 2^(d-1)] *)
+        wpoly_urng (2^(23-d)) res.`1 /\
+        (* t0 (low): signed, (-(2^(d-1)), 2^(d-1)] *)
         (forall i, 0 <= i < 256 =>
             W32.to_sint res.`2.[i] = asint (Power2Round (liftu_wpoly _a).[i]).`2 ) /\
-        wpoly_srng (2^(d-1)) (2^(d-1)) res.`2
+        wpoly_srng (2^(d-1) - 1) (2^(d-1)) res.`2
     ].
 proof.
 admitted.
@@ -102,10 +102,10 @@ lemma polynomial____power2round_ph
         ==>
         (forall i, 0 <= i < 256 =>
             W32.to_uint res.`1.[i] = asint (Power2Round (liftu_wpoly _a).[i]).`1 ) /\
-        wpoly_urng (2^(23-d) + 1) res.`1 /\
+        wpoly_urng (2^(23-d)) res.`1 /\
         (forall i, 0 <= i < 256 =>
             W32.to_sint res.`2.[i] = asint (Power2Round (liftu_wpoly _a).[i]).`2 ) /\
-        wpoly_srng (2^(d-1)) (2^(d-1)) res.`2
+        wpoly_srng (2^(d-1) - 1) (2^(d-1)) res.`2
     ] = 1%r
   by conseq polynomial____power2round_ll
             (polynomial____power2round_correct _high _low _a).

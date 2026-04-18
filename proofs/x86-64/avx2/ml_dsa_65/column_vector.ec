@@ -519,8 +519,8 @@ lemma column_vector____power2round_correct (_v : W32.t Array1536.t) :
         (liftu_wpolykvec (kvec_unflatten256 res.`1),
          lifts_wpolykvec (kvec_unflatten256 res.`2)) =
           Power2Round (liftu_wpolykvec (kvec_unflatten256 _v)) /\
-        wpolykvec_urng (kvec_unflatten256 res.`1) (2^(23-d) + 1) /\
-        wpolykvec_srng (kvec_unflatten256 res.`2) (2^(d-1)) (2^(d-1))
+        wpolykvec_urng (kvec_unflatten256 res.`1) (2^(23-d)) /\
+        wpolykvec_srng (kvec_unflatten256 res.`2) (2^(d-1) - 1) (2^(d-1))
     ].
 proof.
 have kvec_val := mldsa65_kvec.
@@ -532,8 +532,8 @@ while (0 <= i <= 6 /\ vector = _v /\
             (poly_Power2Round (liftu_wpoly (kvec_unflatten256 _v).[k])).`1 /\
           lifts_wpoly (kvec_unflatten256 t0).[k] =
             (poly_Power2Round (liftu_wpoly (kvec_unflatten256 _v).[k])).`2 /\
-          wpoly_urng (2^(23-d)+1) (kvec_unflatten256 t1).[k] /\
-          wpoly_srng (2^(d-1)) (2^(d-1)) (kvec_unflatten256 t0).[k])
+          wpoly_urng (2^(23-d)) (kvec_unflatten256 t1).[k] /\
+          wpoly_srng (2^(d-1) - 1) (2^(d-1)) (kvec_unflatten256 t0).[k])
       ); last first.
 + (* Exit *)
   auto => |> Hurng; split; 1: smt().
@@ -596,8 +596,8 @@ lemma column_vector____power2round_ph (_v : W32.t Array1536.t) :
         (liftu_wpolykvec (kvec_unflatten256 res.`1),
          lifts_wpolykvec (kvec_unflatten256 res.`2)) =
           Power2Round (liftu_wpolykvec (kvec_unflatten256 _v)) /\
-        wpolykvec_urng (kvec_unflatten256 res.`1) (2^(23-d) + 1) /\
-        wpolykvec_srng (kvec_unflatten256 res.`2) (2^(d-1)) (2^(d-1))
+        wpolykvec_urng (kvec_unflatten256 res.`1) (2^(23-d)) /\
+        wpolykvec_srng (kvec_unflatten256 res.`2) (2^(d-1) - 1) (2^(d-1))
     ] = 1%r
   by conseq column_vector____power2round_ll
             (column_vector____power2round_correct _v).

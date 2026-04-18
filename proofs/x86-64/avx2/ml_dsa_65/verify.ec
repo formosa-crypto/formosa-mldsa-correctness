@@ -501,16 +501,29 @@ seq 0 1 : (#pre /\
    
 (* anticipate sib *)
 swap {2} [3..4] -2.
-  seq 1 1 : (#pre /\ lifts_wpoly challenge{2} = c{1}).
+  seq 1 1 : (#pre /\ lifts_wpoly challenge{2} = c{1} /\ wpoly_srng 1 1 challenge{2}).
   + call sample_challenge_correct.
     wp; skip => /> &1 &2 *.
     rewrite BytesCT.tP => i ib.
     rewrite BytesCT.initiE 1:/# BytesCT.get_of_list 1:/#.
     by rewrite get_to_list initiE /#.
 
+(* Ghost-bind pre-NTT signer_response and challenge — the seq 2 4 below NTTs   *)
+(* them in place, so the infnorm/range/lifts facts we established earlier      *)
+(* (which reference the memory vars signer_response{2} / challenge{2}) would   *)
+(* become false post-seq if left as literal memory references.                 *)
+exlim signer_response{2} => _sr_pre.
+exlim challenge{2} => _ch_pre.
+
 (* jump over algebra *)
 seq 2 4 :
-  (#pre /\
+  (#{/~signer_response{2}}{/~challenge{2}}pre /\
+    lifts_wpolylvec (lvec_unflatten256 _sr_pre) = z{1} /\
+    wpolylvec_srng (lvec_unflatten256 _sr_pre) (gamma1 - 1) gamma1 /\
+    (!wpolylvec_infnorm_lt (gamma1 - Beta) (lvec_unflatten256 _sr_pre) => result2{2} <> W64.of_int 0) /\
+    (wpolylvec_infnorm_lt (gamma1 - Beta) (lvec_unflatten256 _sr_pre) => result2{2} = W64.zero) /\
+    lifts_wpoly _ch_pre = c{1} /\
+    wpoly_srng 1 1 _ch_pre /\
     BytesW1.of_list (to_list reconstructed_signer_commitment{2}) = w1Encode w1{1}); last first.
 
 (* recompute hash *)
@@ -531,17 +544,59 @@ seq 0 1 : (#pre /\
    (H_mu (H_tr (BytesPK.of_list (to_list verification_key{2})))
       (W8.zero :: truncateu8 context{2}.[1] :: (memread _m (to_uint context{2}.[0]) (to_uint context{2}.[1]) ++  memread _m message_pointer{2} message_size{2}))) (
    w1Encode w1{1}).
-have ? : wpolylvec_infnorm_lt (gamma1 - Beta) (lvec_unflatten256 signer_response{2}) by smt(or64_ne0).
-have -> /=: infnorm_lt (lifts_wpolylvec (lvec_unflatten256 signer_response{2})) (gamma1 - Beta).
-+ have /# := wpolylvec_infnorm_liftE (gamma1-Beta) 
-              (lvec_unflatten256 signer_response{2}) _ _; by smt(). 
+have ? : wpolylvec_infnorm_lt (gamma1 - Beta) (lvec_unflatten256 _sr_pre) by smt(or64_ne0).
+have -> /=: infnorm_lt (lifts_wpolylvec (lvec_unflatten256 _sr_pre)) (gamma1 - Beta).
++ have /# := wpolylvec_infnorm_liftE (gamma1-Beta)
+              (lvec_unflatten256 _sr_pre) _ _; by smt().
 suff: ((BytesCT.init ("_.[_]" signature{2}) = xx) <=>  (Array48.of_list witness (BytesCT.to_list xx) = Array48.init ("_.[_]" signature{2}))); last first.
 + by rewrite tP BytesCT.tP /=;split => H i ib; have := H i _;[ by smt() | rewrite get_of_list 1:/# BytesCT.get_to_list BytesCT.initiE 1:/# /= initiE /#  | by smt() | rewrite get_of_list 1:/# BytesCT.get_to_list BytesCT.initiE 1:/# /= initiE /# ].
 
 move => -> ; pose bb := Array48.of_list witness (BytesCT.to_list xx) = Array48.init ("_.[_]" signature{2}).
 by case (bb) => //=; rewrite to_uint_eq to_uintN /=.
 
-(* algebra *)
-admit.
-
+(* algebra: the forward head of `seq 2 4` — chain the four Jasmin ecalls        *)
+(* (polynomial__ntt on challenge, row_vector__ntt on signer_response,           *)
+(*  row_vector____multiply_with_matrix_A, reconstruct_signer_commitment) then   *)
+(* substitute the spec's wapprox via the known lifted equalities (nttv, ntt,    *)
+(* matrix multiply) and the pkDecode ↔ t1_from_t1enc slice identity.             *)
+sp 2 0.
+wp; ecall{2} (reconstruct_signer_commitment_ph
+                (Array1920.init (fun i => verification_key0{2}.[32 + i]))
+                challenge{2} a_times_signer_response{2} hints{2}).
+wp; ecall{2} (row_vector____multiply_with_matrix_A_ph matrix_A{2} signer_response{2}).
+wp; ecall{2} (row_vector__ntt_ph signer_response{2}).
+wp; ecall{2} (polynomial__ntt_ph challenge{2}).
+auto => />.
+move => &1 &2 Hctx Hmsg Hov1 Hov2 Hz_srng Hh_none Hh_some_case Hr2_nz Hr2_z Hh_some Hor HA Hc_srng.
+split; first by apply wpoly_srng_ntt_irng; apply (wpoly_srng_widen _ 1 1 (q-1) (q-1)); smt().
+move => _ result0 Hlift_chal Horng_chal.
+split; first by apply wpolylvec_srng_ntt_irng;
+  apply (wpolylvec_srng_widen _ (gamma1-1) gamma1 (q-1) (q-1)); smt(mldsa65_gamma1).
+move => _ result3 Hlift_s_ntt Horng_s.
+split; first exact (wpolylvec_ntt_orng_bmul_irng _ Horng_s).
+move => _ result4 Hlift_amulz Hsrng_amulz.
+have [Hr1z [Hh_lift Hh_urng]] := Hh_some_case Hh_some.
+split; first exact Hh_urng.
+move => _ result5 Hreconstruct.
+rewrite Hreconstruct Hh_lift.
+congr; congr.
+rewrite /signer_commitment_spec Hlift_amulz Hlift_s_ntt Hlift_chal.
+congr; congr; congr; congr; congr.
++ (* t1_from_t1enc (init (fun i => verification_key0.[32+i])) = pkDecode t1 form *)
+  rewrite /t1_from_t1enc.
+  apply KArray.tP => k kb.
+  rewrite !KArray.initiE; 1,2: smt(mldsa65_kvec).
+  rewrite /= BytesPK.of_listK; 1: by rewrite size_to_list /#.
+  congr; congr.
+  have -> : to_list (Array1920.init (fun i => verification_key{2}.[32 + i])) =
+            drop 32 (to_list verification_key{2}).
+  + apply (eq_from_nth witness); 1: by rewrite size_to_list size_drop 1:/# size_to_list /#.
+    move => i Hi.
+    rewrite get_to_list Array1920.initiE /=;
+      1: by move: Hi; rewrite size_to_list.
+    by rewrite nth_drop 1:/# 1:/# get_to_list /#.
+  by rewrite drop_drop 1,2:/#.
++ (* incoeff XWord13.W13.modulus = incoeff 8192 *)
+  have W13_eq : XWord13.W13.modulus = 8192 by smt(XWord13.W13.ge2_modulus).
+  by rewrite W13_eq.
 qed.

@@ -249,7 +249,7 @@ split; first split; [exact (wpoly_ntt_orng_bmul_irng _ Hch_rng)
 move => _ _ result2 Hlifts_pmmar Hsrng_pmmar.
 (* subtract's pre: wpoly_srng on az slice + arithmetic bound *)
 split.
-+ split; last smt().
++ split; last by smt(mldsa65_lvec).
   have /= Hslice := kvec_slice_eq _az (i{hr} * n) _ _; 1,2: smt().
   have Hdiv : i{hr} * n %/ n = i{hr} by smt().
   move: Hslice; rewrite Hdiv => Hslice.
@@ -313,15 +313,32 @@ case (k = i{hr}) => Hki.
   rewrite /smul KArray.mapiE; 1: smt(mldsa65_kvec).
   rewrite /=.
   (* Bridge: lifts_wpoly (shift result) = smul t1_spec (incoeff 2^d) at index i.      *)
-  (* Proof: per-coeff, Hto_sint_shift gives to_sint = to_uint * 2^d; apply incoeffM +  *)
-  (* Zq.mulrC and fold the `to_list (init ...) = take 320 (drop ... (to_list enc))`    *)
-  (* slice equality. Left admitted here because the Array320/Array1920 slice-size      *)
-  (* reasoning balloons inside the inline congr/eq_from_nth chain; standalone lemma    *)
-  (* would be cleaner.                                                                 *)
+  (* Per-coeff: Hto_sint_shift gives to_sint = to_uint * 2^d. After incoeffM and      *)
+  (* Zq commutativity the remaining obligation reduces to the byte-list equality      *)
+  (*   Array320.to_list (init (fun k => _t1enc.[320*i + k])) =                         *)
+  (*   take 320 (drop (320*i) (to_list _t1enc))                                        *)
+  (* which we close via eq_from_nth + size_take/size_drop + get_to_list/initiE.        *)
   have Hlifts_shift_eq :
       lifts_wpoly result0 = map ((( * ) (incoeff (2^d))))
                                 (t1_from_t1enc _t1enc).[i{hr}].
-  + admit.
+  + apply Array256.tP => j jb.
+    rewrite /lifts_wpoly mapiE 1:/# /= (Hto_sint_shift j jb).
+    rewrite mapiE 1:/# /=.
+    rewrite /t1_from_t1enc KArray.initiE; 1: smt(mldsa65_kvec).
+    rewrite /=.
+    rewrite incoeffM Zq.ComRing.mulrC; congr.
+    have <- : liftu_wpoly result = SimpleBitUnpack
+                (take 320 (drop (320 * i{hr}) (to_list _t1enc))) 1023.
+    + rewrite Hliftu_t1 /b_t1 /=; congr.
+      apply (eq_from_nth witness).
+      + rewrite Array320.Array320.size_to_list size_take 1:/# size_drop 1:/#
+                size_to_list /= /#.
+      move => i0 Hi0.
+      move: Hi0; rewrite Array320.Array320.size_to_list => Hi0.
+      rewrite Array320.Array320.get_to_list Array320.Array320.initiE 1:/# /=.
+      rewrite nth_take 1:/# 1:/# nth_drop 1:/# 1:/#.
+      by rewrite get_to_list.
+    by rewrite /liftu_wpoly mapiE 1:/#.
   rewrite Hlifts_shift_eq.
   (* basemul (lifts _ch) X = basemul X (lifts _ch) — use tP + init.                   *)
   (* W13_eq normalizes XWord13.W13.modulus (= 8192 = 2^d) on LHS to match RHS's 8192. *)

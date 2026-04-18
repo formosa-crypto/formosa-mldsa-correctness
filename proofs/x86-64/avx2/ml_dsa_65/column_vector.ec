@@ -3,7 +3,7 @@ require import AllCore List IntDiv RealExp.
 from Jasmin require import JModel_x86.
 
 from JazzEC require import Ml_dsa_65_avx2 Mldsa_65_prelude Common_modular
-                           Common_invert_ntt Common_rounding Rounding.
+                           Common_invert_ntt Common_ntt Common_rounding Rounding.
 
 require import Polynomial.
 
@@ -105,6 +105,88 @@ lemma column_vector__reduce32_ph (_v : W32.t Array1536.t) :
         wpolykvec_srng (kvec_unflatten256 res) ((q-1) %/ 2) ((q-1) %/ 2)
     ] = 1%r
   by conseq column_vector__reduce32_ll (column_vector__reduce32_correct _v).
+
+(* ================================================================== *)
+(* column_vector__ntt                                                   *)
+(* Applies NTT to each of 6 polynomials.                               *)
+(* Calls polynomial__ntt in a 6-iteration loop.                        *)
+(* Spec: nttv from VecMat.ec                                           *)
+(* ================================================================== *)
+
+lemma column_vector__ntt_ll : islossless M.column_vector__ntt.
+proof.
+proc.
+while (0 <= i <= 6) (6 - i); last by auto => /#.
+move => *.
+wp; call polynomial__ntt_ll.
+by auto => /#.
+qed.
+
+lemma column_vector__ntt_correct (_v : W32.t Array1536.t) :
+    hoare [ M.column_vector__ntt :
+        vector = _v /\
+        wpolykvec_ntt_irng (kvec_unflatten256 _v)
+        ==>
+        lifts_wpolykvec (kvec_unflatten256 res) =
+          nttv (lifts_wpolykvec (kvec_unflatten256 _v)) /\
+        wpolykvec_ntt_orng (kvec_unflatten256 res)
+    ].
+proof.
+have kvec_val := mldsa65_kvec.
+proc.
+while (0 <= i <= 6 /\
+       wpolykvec_ntt_irng (kvec_unflatten256 _v) /\
+       (forall k, 0 <= k < i =>
+         lifts_wpoly (kvec_unflatten256 vector).[k] =
+           ntt (lifts_wpoly (kvec_unflatten256 _v).[k]) /\
+         wpoly_ntt_orng (kvec_unflatten256 vector).[k]) /\
+       (forall k, i <= k < 6 =>
+         (kvec_unflatten256 vector).[k] = (kvec_unflatten256 _v).[k])
+      ); last first.
++ auto => |> Hrng_pre; split; 1: smt().
+  move => i0 v0 Hng Hi1 Hi2 Hdone Huntouched; split.
+  + apply KArray.tP => k kb.
+    rewrite /lifts_wpolykvec mapiE; 1: smt(mldsa65_kvec).
+    rewrite /nttv mapiE; 1: smt(mldsa65_kvec).
+    rewrite mapiE; 1: smt(mldsa65_kvec).
+    by have /= [-> _] := Hdone k _; smt().
+  + by rewrite /wpolykvec_ntt_orng allP => k kb; have [_ ?] := Hdone k _; smt().
+wp; ecall (polynomial__ntt_correct
+             (Array256.init (fun j => vector.[i * 256 + j]))).
+auto => /> &hr Hi1 Hi2 Hrng_pre Hprocessed Huntouched Hguard; split.
++ rewrite -kvec_slice_eq; 1,2: smt().
+  have -> : i{hr} * n %/ n = i{hr} by smt().
+  rewrite (Huntouched i{hr} _); 1: smt().
+  by move: Hrng_pre; rewrite /wpolykvec_ntt_irng KArray.allP => H; apply H; smt().
++ move => _ result Hlifts Hrng; do split; 1,2: smt().
+  + move => k ? Hk.
+    have /= Hwb := kvec_unflatten256_writeback_iE vector{hr} result (i{hr} * 256) k _ _;
+      1,2: smt().
+    case (k = i{hr}) => Hki.
+    + subst k; rewrite Hwb ifT; 1: smt().
+      split; last exact Hrng.
+      rewrite Hlifts; congr.
+      have /= <- := Huntouched i{hr} _; 1: smt().
+      by rewrite -kvec_slice_eq; smt().
+    + rewrite Hwb ifF; 1: smt().
+      by have := Hprocessed k _; smt().
+  + move => k ? Hk.
+    have /= Hwb := kvec_unflatten256_writeback_iE vector{hr} result (i{hr} * 256) k _ _;
+      1,2: smt().
+    rewrite Hwb ifF; 1: smt().
+    by have := Huntouched k _; smt().
+qed.
+
+lemma column_vector__ntt_ph (_v : W32.t Array1536.t) :
+    phoare [ M.column_vector__ntt :
+        vector = _v /\
+        wpolykvec_ntt_irng (kvec_unflatten256 _v)
+        ==>
+        lifts_wpolykvec (kvec_unflatten256 res) =
+          nttv (lifts_wpolykvec (kvec_unflatten256 _v)) /\
+        wpolykvec_ntt_orng (kvec_unflatten256 res)
+    ] = 1%r
+  by conseq column_vector__ntt_ll (column_vector__ntt_correct _v).
 
 (* ================================================================== *)
 (* column_vector__invert_ntt_montgomery                                 *)

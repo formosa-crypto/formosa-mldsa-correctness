@@ -235,6 +235,21 @@ rewrite /wpolykvec_srng /wpolykvec_intt_irng !allP.
 by move => H p Hp; exact (wpoly_bmul_orng_intt_irng pv.[p] (H p Hp)).
 qed.
 
+lemma wpolykvec_srng_ntt_irng (pv : wpolykvec) :
+  wpolykvec_srng pv (q-1) (q-1) => wpolykvec_ntt_irng pv.
+proof.
+rewrite /wpolykvec_srng /wpolykvec_ntt_irng !allP.
+by move => H p Hp; exact (wpoly_srng_ntt_irng pv.[p] (H p Hp)).
+qed.
+
+(* Monotonicity of wpolykvec_urng *)
+lemma wpolykvec_urng_widen (pv : wpolykvec) (b1 b2 : int) :
+  b1 <= b2 => wpolykvec_urng pv b1 => wpolykvec_urng pv b2.
+proof.
+move => Hb; rewrite /wpolykvec_urng !allP => H p Hp.
+by have := H p Hp; rewrite /wpoly_urng !allP; smt().
+qed.
+
 (* Fully reduced kvec coefficients give liftu = lifts *)
 lemma wpolykvec_urng_lifts_eq_liftu (pv : wpolykvec) :
   wpolykvec_urng pv q => lifts_wpolykvec pv = liftu_wpolykvec pv.

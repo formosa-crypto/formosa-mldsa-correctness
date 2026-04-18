@@ -4,7 +4,9 @@ from Jasmin require import JModel_x86.
 
 from JazzEC require import Ml_dsa_65_avx2 Mldsa_65_prelude Matrix_A Hashing
                            Signature Challenge Row_vector S1 S2 T0 Mask
-                           Sign_norm_checks.
+                           Sign_norm_checks Common_ntt.
+
+require import Column_vector.
 
 from Spec require import GFq Rq Serialization Conversion Parameters VecMat
                          Symmetric Sampling MLDSA_W32_Rep MLDSA.
@@ -256,18 +258,33 @@ seq 0 1 : (#pre /\
            kappa_exceeded <- 0
    Spec: (kappa <- 0, zh <- None already done; s1h/s2h/t0h from Step 2 above)
    FIXME: NTT bridge lemmas are not yet proven. *)
-seq 0 3 : (#pre /\
+seq 0 3 : (#{/~s1{2}}{/~s2{2}}{/~t0{2}}pre /\
     lifts_wpolylvec (lvec_unflatten256 s1{2}) = s1h{1} /\
     lifts_wpolykvec (kvec_unflatten256 s2{2}) = s2h{1} /\
     lifts_wpolykvec (kvec_unflatten256 t0{2}) = t0h{1} /\
     wpolylvec_ntt_orng (lvec_unflatten256 s1{2}) /\
     wpolykvec_ntt_orng (kvec_unflatten256 s2{2}) /\
-    wpolykvec_ntt_orng (kvec_unflatten256 t0{2})); 1: by admit.
+    wpolykvec_ntt_orng (kvec_unflatten256 t0{2})).
++ wp; ecall{2} (column_vector__ntt_ph t0{2}).
+  wp; ecall{2} (column_vector__ntt_ph s2{2}).
+  wp; ecall{2} (row_vector__ntt_ph s1{2}).
+  auto => |> &1 &2 *.
+  split; first by apply wpolylvec_srng_ntt_irng;
+    apply (wpolylvec_srng_widen _ Eta Eta (q-1) (q-1)); smt(mldsa65_Eta).
+  move => _ result Hs1_lift Hs1_orng.
+  split; first by apply wpolykvec_srng_ntt_irng;
+    apply (wpolykvec_srng_widen _ Eta Eta (q-1) (q-1)); smt(mldsa65_Eta).
+  move => _ result0 Hs2_lift Hs2_orng.
+  split; first by apply wpolykvec_srng_ntt_irng;
+    apply (wpolykvec_srng_widen _ (dpow-1) dpow (q-1) (q-1)); smt().
+  move => _ result1 Ht0_lift Ht0_orng.
+  by rewrite Hs1_lift Hs2_lift Ht0_lift /#.
 
 (* ── Rejection sampling loop + post-loop ──────────────────────────────── *)
 
 seq 3 5 : (
 liftu_wpolymat (mat_unflatten256 matrix_A{2}) = _A{1} /\
+    wpolymat_urng (mat_unflatten256 matrix_A{2}) q /\
     seed_for_mask{2} = Array64.of_list witness (Bytes64.to_list rhopp{1}) /\
     message_representative{2} = Array64.of_list witness (Bytes64.to_list mu{1}) /\
     lifts_wpolylvec (lvec_unflatten256 s1{2}) = s1h{1} /\
@@ -302,7 +319,7 @@ liftu_wpolymat (mat_unflatten256 matrix_A{2}) = _A{1} /\
     by rewrite minus_one /= /(`<<`) /(`|>>`) /= ib /= sarE initiE 1:/# /= nth_one /#.
   (* success: zh <> None, so last_norm_check_result = W64.zero *)
   wp; ecall (signature_encode commitment_hash{2} signer_response{2} hint_0{2}).
-  auto => |> &1 &2 ????????????; do split; 1..6:smt().
+  auto => |> &1 &2 ?????????????; do split; 1..6:smt().
   + move => ?????? rr1 rr2 ?.
     have -> : last_norm_check_result{2} = W64.zero by smt().
     split; 1: by rewrite wordP /= minus_one /= /(`<<`) /(`|>>`) /= sarE negb_forall; exists 0 => /=.
@@ -314,6 +331,7 @@ liftu_wpolymat (mat_unflatten256 matrix_A{2}) = _A{1} /\
 
 while (
     liftu_wpolymat (mat_unflatten256 matrix_A{2}) = _A{1} /\
+    wpolymat_urng (mat_unflatten256 matrix_A{2}) q /\
     seed_for_mask{2} = Array64.of_list witness (Bytes64.to_list rhopp{1}) /\
     message_representative{2} = Array64.of_list witness (Bytes64.to_list mu{1}) /\
     lifts_wpolylvec (lvec_unflatten256 s1{2}) = s1h{1} /\
@@ -351,7 +369,44 @@ while (
      lifts_wpolykvec (kvec_unflatten256 w1{2}) = w1{1} /\
      wpolykvec_srng (kvec_unflatten256 w0{2}) (gamma2 - 1) gamma2 /\
      wpolykvec_urng (kvec_unflatten256 w1{2}) ((q-1) %/ (2*gamma2))).
- + admit. (* A*y + decompose bridge *)
+ + (* Jasmin stmt 1-2: j <- 0; while loop copies mask into mask_as_ntt.
+      Narrow admit: just the fact that after the copy loop, mask_as_ntt = mask. *)
+   seq 0 2 : (#pre /\ mask_as_ntt{2} = mask{2}).
+   + admit. (* circuit-level copy loop mask_as_ntt := mask *)
+   (* Jasmin stmts 3-8: row_vector__ntt; multiply_with_matrix_A; reduce32;
+      invert_ntt_montgomery; conditionally_add_modulus; decompose. *)
+   wp; ecall{2} (column_vector____decompose_ph w{2}).
+   wp; ecall{2} (column_vector____conditionally_add_modulus_ph w{2}).
+   wp; ecall{2} (column_vector__invert_ntt_montgomery_ph w{2}).
+   wp; ecall{2} (column_vector__reduce32_ph w{2}).
+   wp; ecall{2} (row_vector____multiply_with_matrix_A_ph matrix_A{2} mask_as_ntt{2}).
+   wp; ecall{2} (row_vector__ntt_ph mask_as_ntt{2}).
+   auto => |> &1 &2 *.
+   have Hbound := invntt_obound_fits_for_caddq.
+   have HA_lift : liftu_wpolymat (mat_unflatten256 matrix_A{2}) = _A{1} by smt().
+   have Hmask_lift : lifts_wpolylvec (lvec_unflatten256 mask{2}) = y{1} by smt().
+   split; first by apply wpolylvec_srng_ntt_irng;
+     apply (wpolylvec_srng_widen _ (gamma1-1) gamma1 (q-1) (q-1)); smt(mldsa65_gamma1).
+   move => _ result Hntt_eq Hntt_orng.
+   split; first exact (wpolylvec_ntt_orng_bmul_irng _ Hntt_orng).
+   move => _ result0 Hmul_eq Hmul_srng.
+   move => result1 Hred_eq Hred_srng.
+   split; first by apply wpolykvec_bmul_orng_intt_irng;
+     apply (wpolykvec_srng_widen _ ((q-1) %/ 2) ((q-1) %/ 2) (q-1) (q-1)); smt().
+   move => _ result2 Hinvntt_eq Hinvntt_srng.
+   split;
+     first by apply (wpolykvec_srng_widen _ invntt_obound invntt_obound (q-1) (q-1)); smt().
+   move => _ result3 Hcond_eq Hcond_urng.
+   move => result4 Hw0_eq Hw1_eq Hw0_srng Hw1_urng.
+   have Hreachable : lifts_wpolykvec (kvec_unflatten256 result3) =
+                     invnttv (ntt_mulmxv _A{1} (nttv y{1})).
+   + by rewrite Hcond_eq Hinvntt_eq Hred_eq Hmul_eq Hntt_eq Hmask_lift HA_lift.
+   have Heq_liftu_lifts := wpolykvec_urng_lifts_eq_liftu _ Hcond_urng.
+   have Hw1_lifts : lifts_wpolykvec (kvec_unflatten256 result4.`2) =
+                    liftu_wpolykvec (kvec_unflatten256 result4.`2).
+   + apply wpolykvec_urng_lifts_eq_liftu;
+     apply (wpolykvec_urng_widen _ ((q-1) %/ (2*gamma2)) q); smt(mldsa65_gamma2).
+   by rewrite Hw0_eq Hw1_lifts Hw1_eq -Heq_liftu_lifts Hreachable HA_lift Hmask_lift /#.
 
  seq 3 3 : (#pre /\
      ct{1} = BytesCT.init (fun i => commitment_hash{2}.[i]) /\
@@ -364,7 +419,8 @@ sp 6 0; seq 1 0 : #pre; 1: by auto.
  seq 0 1 : (#pre /\
      wpoly_ntt_orng verifier_challenge{2} /\
      lifts_wpoly verifier_challenge{2} = ch{1}).
- + admit. (* polynomial__ntt bridge: ntt_orng + ch connection *)
+ + ecall{2} (polynomial__ntt_ph verifier_challenge{2}).
+   by auto => |> /#.
 
  (* Jasmin pure: infinity_norm_check_result <- 0 *)
  sp 0 1.

@@ -236,3 +236,17 @@ proc.
 while (0 <= i <= 6) (6 - i); last by auto => /#.
 move => *; wp; call commitment____encode_polynomial_ll; auto => /#.
 qed.
+
+(* Phoare variant of commitment_encode, composing the hoare post with
+   losslessness. Used via ecall{2} in the seq 3 3 bridge of
+   ml_dsa_65_sign_correct (sign.ec). *)
+phoare commitment_encode_ph _a :
+ [ M.commitment____encode :
+    commitment = _a /\ wpolykvec_urng (kvec_unflatten256 _a) (b_w1 + 1)
+  ==>
+    kvec_unflatten128 res =
+      KArray.map
+        (fun (p : poly) => Array128.of_list witness (SimpleBitPack p b_w1))
+        (liftu_wpolykvec (kvec_unflatten256 _a))
+ ] = 1%r.
+proof. by conseq commitment____encode_ll (commitment_encode _a). qed.

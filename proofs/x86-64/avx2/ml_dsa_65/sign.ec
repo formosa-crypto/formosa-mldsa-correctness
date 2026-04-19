@@ -4,7 +4,7 @@ from Jasmin require import JModel_x86.
 
 from JazzEC require import Ml_dsa_65_avx2 Mldsa_65_prelude Matrix_A Hashing
                            Signature Challenge Row_vector S1 S2 T0 Mask
-                           Sign_norm_checks Common_ntt.
+                           Sign_norm_checks Common_ntt Commitment Polynomial.
 
 require import Column_vector.
 
@@ -16,11 +16,62 @@ import CDR Round Zq PolyReduceZq BigZMod.
 
 require import Array2 Array32 Array48 Array64 Array128 Array256
                Array416 Array640 Array768 Array1280 Array1536 Array2496
-               Array3309 Array4032 Array7680.
+               Array3309 Array4032 Array7680 WArray5120.
+require import XArray5120.
 
 require import BitEncoding.
 from CryptoSpecs require import JWordList.
 import BitChunking.
+
+(* -------------------------------------------------------------------- *)
+(* Loop-body machine-arithmetic helper.                                 *)
+(*                                                                      *)
+(* At the bottom of the rejection-sampling loop, the Jasmin code        *)
+(* increments `domain_separator_for_mask` (a W16 counter advancing by   *)
+(* lvec per iteration) and tests whether the loop has run kappa_max     *)
+(* times via the xor+TEST_32+SETcc chain:                               *)
+(*                                                                      *)
+(*   kappa_diff        := zeroextu32 dsep `^` of_int ((2^16-1 - lvec) %/ lvec * lvec) *)
+(*   kappa_bit         := SETcc (TEST_32 kappa_diff kappa_diff).`5      *)
+(*   kappa_exceeded_R  := kappa_exceeded `|` zeroextu64 kappa_bit       *)
+(*                                                                      *)
+(* This packages the key invariant the smt() at the end of the loop    *)
+(* body needs: that `kappa_exceeded_R` tracks `kappa_max <= kappa+1`    *)
+(* exactly, assuming the prior iteration's `kappa_exceeded` tracked    *)
+(* `kappa_max <= kappa`, and the counter has advanced by `lvec`.        *)
+(* -------------------------------------------------------------------- *)
+
+lemma kappa_bit_update (kappa : int) (kappa_e : W64.t) (dsep : W16.t) :
+  0 <= kappa =>
+  kappa_max = (65535 - lvec) %/ lvec =>
+  W16.to_uint dsep = (kappa + 1) * lvec =>
+  (kappa_e = W64.one) = (kappa_max <= kappa) =>
+  (kappa_e <> W64.one => kappa_e = W64.zero) =>
+  let kappa_diff    = zeroextu32 dsep `^` W32.of_int ((65535 - lvec) %/ lvec * lvec) in
+  let kappa_bit     = SETcc (TEST_32 kappa_diff kappa_diff).`5 in
+  let kappa_exc_R   = kappa_e `|` zeroextu64 kappa_bit in
+  (kappa_exc_R = W64.one) = (kappa_max <= kappa + 1) /\
+  (kappa_exc_R <> W64.one => kappa_exc_R = W64.zero).
+proof.
+admit. (* FIXME: machine-arithmetic — xor/TEST_32/SETcc/zeroextu64 chain *)
+qed.
+
+(* Companion: the exit-flag update. Given the 0/1 invariant on the norm-check
+   result (`ncr`) and on the kappa-exceeded flag (`kappa_exc_R`), the new
+   exit flag `ers_R = ncr `^` 1 `|` kappa_exc_R` is zero iff both the norm
+   checks passed (`ncr = 1` on Jasmin side is failure, `= 0` is success —
+   so a zero exit flag requires `ncr = 1`, i.e. *failure*, and kappa not
+   yet exceeded). The branching on `bz`/`bh` in the spec gives exactly
+   `zh_L = None <=> ncr = 1` at the call site. *)
+
+lemma exit_loop_update (ncr kappa_exc_R : W64.t) :
+  (ncr = W64.zero \/ ncr = W64.one) =>
+  (kappa_exc_R = W64.one \/ kappa_exc_R = W64.zero) =>
+  let ers_R = ncr `^` W64.one `|` kappa_exc_R in
+  (ers_R = W64.zero) = (ncr = W64.one /\ kappa_exc_R = W64.zero).
+proof.
+admit. (* FIXME: W64 xor-one + or bit-level dichotomy *)
+qed.
 
 (* Correctness of the AVX2 ML-DSA-65 signing function.
    We prove an equiv between:
@@ -330,6 +381,7 @@ liftu_wpolymat (mat_unflatten256 matrix_A{2}) = _A{1} /\
 (* ── Rejection sampling loop  ──────────────────────────────── *)
 
 while (
+    0 <= kappa{1} /\
     liftu_wpolymat (mat_unflatten256 matrix_A{2}) = _A{1} /\
     wpolymat_urng (mat_unflatten256 matrix_A{2}) q /\
     seed_for_mask{2} = Array64.of_list witness (Bytes64.to_list rhopp{1}) /\
@@ -357,11 +409,18 @@ while (
          by auto => |>  &1 &2 *; rewrite !W64.to_uint_eq /=; do split;smt().
 
  (* ── Loop body ──────────────────────────────────────────────────────── *)
- seq 1 1 : (#pre /\
+ seq 1 1 : (#{/~to_uint domain_separator_for_mask{2} = kappa{1} * lvec}pre /\
      lifts_wpolylvec (lvec_unflatten256 mask{2}) = y{1} /\
      wpolylvec_srng (lvec_unflatten256 mask{2}) (gamma1 - 1) gamma1 /\
      W16.to_uint domain_separator_for_mask{2} = (kappa{1} + 1) * lvec).
- + admit. (* ExpandMask bridge + circuit *)
+ + exlim seed_for_mask{2}, domain_separator_for_mask{2} => _seed _dom.
+   call (mask_correct _seed _dom).
+   auto => |> &1 &2 *; do split.
+   + apply Bytes64.tP => k kb.
+     + rewrite of_listK; 1: by rewrite Bytes64.size_to_list /=.
+       by rewrite Bytes64.to_listK. 
+   + by smt().
+   + by move => _ _ result_R _ Hdom; smt().
 
  sp 3 0.
  seq 0 8 : (#pre /\
@@ -369,12 +428,23 @@ while (
      lifts_wpolykvec (kvec_unflatten256 w1{2}) = w1{1} /\
      wpolykvec_srng (kvec_unflatten256 w0{2}) (gamma2 - 1) gamma2 /\
      wpolykvec_urng (kvec_unflatten256 w1{2}) ((q-1) %/ (2*gamma2))).
- + (* Jasmin stmt 1-2: j <- 0; while loop copies mask into mask_as_ntt.
-      Narrow admit: just the fact that after the copy loop, mask_as_ntt = mask. *)
    seq 0 2 : (#pre /\ mask_as_ntt{2} = mask{2}).
-   + admit. (* circuit-level copy loop mask_as_ntt := mask *)
-   (* Jasmin stmts 3-8: row_vector__ntt; multiply_with_matrix_A; reduce32;
-      invert_ntt_montgomery; conditionally_add_modulus; decompose. *)
+   + conseq (_: true ==> mask_as_ntt{2} = mask{2}); 1: smt().
+     sp 0 1.
+     while{2} (0 <= j{2} <= 5120 /\ j{2} %% 32 = 0 /\
+               (forall i, 0 <= i < j{2} %/ w1_bits => mask_as_ntt{2}.[i] = mask{2}.[i]))
+              (5120 - j{2}).
+     + move => _ z; auto => |> &hr Hj_lo Hj_hi Hj_mod Hcopied Hguard.
+       do split; 1,2,3,5: smt().
+       move => i Hi_lo Hi_hi; rewrite Array1280.initiE 1:/# /=.
+       rewrite get32_set256_direct_eq 1,2,3,4:/#.
+       case (j{hr} %/ w1_bits <= i < j{hr} %/ w1_bits + 8) => Hi_region.
+       + rewrite get256_direct_init32_bits32 1,2,3,4:/# /= /#.
+       rewrite get32_init32 1:/# /=; apply Hcopied; smt().
+     skip; move => &1 &2 Hj0; split; 1: smt().
+     move => j_R mask_as_ntt_R; split; 1: smt().
+     move => Hguard_neg [# Hj_lo Hj_hi Hj_mod Hcopied].
+     apply Array1280.tP => k Hk; apply Hcopied; smt().
    wp; ecall{2} (column_vector____decompose_ph w{2}).
    wp; ecall{2} (column_vector____conditionally_add_modulus_ph w{2}).
    wp; ecall{2} (column_vector__invert_ntt_montgomery_ph w{2}).
@@ -383,8 +453,6 @@ while (
    wp; ecall{2} (row_vector__ntt_ph mask_as_ntt{2}).
    auto => |> &1 &2 *.
    have Hbound := invntt_obound_fits_for_caddq.
-   have HA_lift : liftu_wpolymat (mat_unflatten256 matrix_A{2}) = _A{1} by smt().
-   have Hmask_lift : lifts_wpolylvec (lvec_unflatten256 mask{2}) = y{1} by smt().
    split; first by apply wpolylvec_srng_ntt_irng;
      apply (wpolylvec_srng_widen _ (gamma1-1) gamma1 (q-1) (q-1)); smt(mldsa65_gamma1).
    move => _ result Hntt_eq Hntt_orng.
@@ -398,25 +466,67 @@ while (
      first by apply (wpolykvec_srng_widen _ invntt_obound invntt_obound (q-1) (q-1)); smt().
    move => _ result3 Hcond_eq Hcond_urng.
    move => result4 Hw0_eq Hw1_eq Hw0_srng Hw1_urng.
+   (* After `auto => |> &1 &2 *`, _A{1} and y{1} have been substituted out;
+      goal uses (liftu_wpolymat (mat_unflatten256 matrix_A{2})) and
+      (lifts_wpolylvec (lvec_unflatten256 mask{2})) directly. Chain via the
+      ecall post equalities, no need for intermediate HA_lift / Hmask_lift. *)
    have Hreachable : lifts_wpolykvec (kvec_unflatten256 result3) =
-                     invnttv (ntt_mulmxv _A{1} (nttv y{1})).
-   + by rewrite Hcond_eq Hinvntt_eq Hred_eq Hmul_eq Hntt_eq Hmask_lift HA_lift.
+                     invnttv (ntt_mulmxv (liftu_wpolymat (mat_unflatten256 matrix_A{2}))
+                                         (nttv (lifts_wpolylvec (lvec_unflatten256 mask{2})))).
+   + by rewrite Hcond_eq Hinvntt_eq Hred_eq Hmul_eq Hntt_eq.
    have Heq_liftu_lifts := wpolykvec_urng_lifts_eq_liftu _ Hcond_urng.
    have Hw1_lifts : lifts_wpolykvec (kvec_unflatten256 result4.`2) =
                     liftu_wpolykvec (kvec_unflatten256 result4.`2).
    + apply wpolykvec_urng_lifts_eq_liftu;
      apply (wpolykvec_urng_widen _ ((q-1) %/ (2*gamma2)) q); smt(mldsa65_gamma2).
-   by rewrite Hw0_eq Hw1_lifts Hw1_eq -Heq_liftu_lifts Hreachable HA_lift Hmask_lift /#.
+   rewrite Hw0_eq Hw1_lifts Hw1_eq -Heq_liftu_lifts Hreachable; done.
 
  seq 3 3 : (#pre /\
      ct{1} = BytesCT.init (fun i => commitment_hash{2}.[i]) /\
      lifts_wpoly verifier_challenge{2} = c{1} /\
      wpoly_ntt_irng verifier_challenge{2}).
- + admit. (* commitment hash + SampleInBall bridge *)
+ + seq 0 1 : (#pre /\ BytesW1.of_list (to_list commitment_encoded{2}) = w1Encode w1{1}); last first.
+   + inline {1} SIB_RO(MLDSA_XOF_SIB).get.
+     sp 3 0.
+     wp.
+     call sample_challenge_correct.
+     ecall{2} (derive_commitment_hash_ph message_representative{2} commitment_encoded{2}).
+     auto => |> &1 &2 *.
+     rewrite Array64.of_listK 1:Bytes64.size_to_list //.
+     rewrite Bytes64.to_listK.
+     rewrite Array48.of_listK;1: by rewrite BytesCT.size_to_list;  smt(mldsa65_lambda).
+     rewrite BytesCT.to_listK.
+     split; first by smt().
+     move => Hcteq result_L result_R Hrl Hsrng; split.
+     + rewrite Hcteq; apply BytesCT.tP => i Hi; rewrite BytesCT.initiE 1:/# /=.
+       smt(Array48.get_of_list BytesCT.size_to_list BytesCT.get_to_list mldsa65_lambda).
+     apply wpoly_srng_ntt_irng; apply (wpoly_srng_widen _ 1 1 (q-1) (q-1)); smt().
+   (* Step 1: commitment_encode bridge. Flatten/map algebra tying
+      commitment_encode's output to w1Encode — pattern from verify.ec:200-219. *)
+   ecall{2} (commitment_encode_ph w1{2}).
+   auto => |> &1 &2 *.
+   split; first by smt(mldsa65_gamma2).
+   move => _ result1 Hunflat.
+   rewrite /w1Encode.
+   have Hw1eq : liftu_wpolykvec (kvec_unflatten256 w1{2}) =
+                lifts_wpolykvec (kvec_unflatten256 w1{2}).
+   + rewrite eq_sym; apply wpolykvec_urng_lifts_eq_liftu.
+     apply (wpolykvec_urng_widen _ (8380416 %/ (2 * gamma2)) q); smt(mldsa65_gamma2).
+   have Hb_w1 : (q - 1) %/ (2 * gamma2) - 1 = b_w1
+     by rewrite /b_w1 /=; smt(mldsa65_gamma2).
+   rewrite Hb_w1; apply BytesW1.tP => k kb.
+   rewrite !BytesW1.get_of_list 1,2:/# get_to_list (kvec_unflatten128iE result1 k) 1:/# Hunflat.
+   rewrite KArray.mapiE; 1: smt(mldsa65_kvec).
+   rewrite /= Array128.get_of_list 1:/# (BitChunking.nth_flatten witness 128).
+   + rewrite allP => s /mapP [wi [_ ->]] /=.
+     by rewrite size_SimpleBitPack' /b_w1 /= /#.
+   rewrite (nth_map witness); 1: by rewrite size_mkseq; smt(mldsa65_kvec).
+   rewrite nth_mkseq; 1: smt(mldsa65_kvec).
+   by rewrite Hw1eq /= /#.
 
 sp 6 0; seq 1 0 : #pre; 1: by auto.
 
- seq 0 1 : (#pre /\
+ seq 0 1 : (#{~lifts_wpoly verifier_challenge{2} = c{1}}{~wpoly_ntt_irng verifier_challenge{2}}pre /\
      wpoly_ntt_orng verifier_challenge{2} /\
      lifts_wpoly verifier_challenge{2} = ch{1}).
  + ecall{2} (polynomial__ntt_ph verifier_challenge{2}).
@@ -426,7 +536,7 @@ sp 6 0; seq 1 0 : #pre; 1: by auto.
  sp 0 1.
 
  (* ── Step 1: cs2 norm check ──────────────────────────────── *)
- seq 0 1 : (#pre /\
+ seq 0 1 : (#{~infinity_norm_check_result{2} = W64.zero}pre /\
      (infinity_norm_check_result{2} = W64.zero \/ infinity_norm_check_result{2} = W64.one) /\
      (infinity_norm_check_result{2} = W64.zero =>
         wpolykvec_infnorm_lt (gamma2 - Beta) (kvec_unflatten256 w0_minus_cs2{2}) /\
@@ -478,5 +588,42 @@ sp 6 0; seq 1 0 : #pre; 1: by auto.
  ecall{2} (__make_hint_vector_ph
               w0_minus_cs2_plus_ct0{2} w1{2} hint_0{2}
               infinity_norm_check_result{2}).
- by auto => |> &1 &2 *; smt().
+ auto => |> &1 &2 *.
+ (* Instantiate the kappa-counter machine-arithmetic helper. *)
+ have Hkbu :=
+   kappa_bit_update kappa{1} kappa_exceeded{2} domain_separator_for_mask{2}
+     _ Hkappa_max _ _ _; 1..4: smt().
+ move : Hkbu => /= [Hkappa_R_one Hkappa_R_dicho].
+ (* Goal: wpolykvec_srng w0_minus_cs2_plus_ct0 (gamma2-1) gamma2 /\ (srng => forall result1, ...) *)
+ split.
+ + admit. (* FIXME: missing srng post on __apply_ct0_and_check_norm_ph — strengthen
+             sign_norm_checks.ec:644 to give wpolykvec_srng res.`1 (gamma2-1) gamma2
+             unconditionally. *)
+ move => _ result1 Hres_dicho Hres_force Hres_gated.
+ have /= Helu :=
+   exit_loop_update result1.`2
+     (kappa_exceeded{2} `|`
+      zeroextu64 (SETcc (TEST_32
+        (zeroextu32 domain_separator_for_mask{2} `^` W32.of_int ((65535 - lvec) %/ lvec * lvec))
+        (zeroextu32 domain_separator_for_mask{2} `^` W32.of_int ((65535 - lvec) %/ lvec * lvec))).`5))
+     Hres_dicho _; 1: smt().
+split.
++ move => ??; do split.
+  move => ??; do split;1..3:smt().
+  + admit.
+  + admit.
+  + admit.
+  + admit.
+  + admit.
+  + admit.
+  + admit.
+  + admit.
++ move => ?; do split;1..3,7:smt().
+  + admit. 
+  + admit. 
+  + admit.
++ move => ?; do split;1..3,7:smt().
+  + admit. 
+  + admit. 
+  + admit.
 qed.

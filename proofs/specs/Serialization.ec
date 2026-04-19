@@ -5,6 +5,7 @@ from Jasmin require import JWord JByte_array.
 require import Parameters GFq Rq VecMat Conversion.
 import PolyLVec PolyKVec PolyMat.
 import CDR Round Zq BigZMod MLDSAParams.
+import BitChunking Array256.
 
 abbrev q_bits = 23.
 lemma q_bitlenl : 2^(q_bits-1) < q-1 <= 2^(q_bits) by auto.
@@ -39,6 +40,22 @@ abbrev pk_bytes = 32 + t_bytes.
 abbrev sig_bytes = lambda %/ 4 + z_bytes + hint_bytes.
 
 abbrev w1_bytes = (n * w1_bits * kvec) %/ 8.
+
+
+(* Size of BitsToBytes / SimpleBitPack outputs (used by key-length proofs
+   and by the encode-pack correctness bridges in verify.ec / sign.ec). *)
+lemma size_BitsToBytes' (l : bool list) : size (BitsToBytes l) = size l %/ 8
+  by rewrite /BitsToBytes size_map size_chunk //.
+
+lemma size_SimpleBitPack' (_p : poly) (b : int) :
+  1 <= b => size (SimpleBitPack _p b) = (ilog 2 b + 1) * n %/ 8.
+proof.
+move => Hb.
+rewrite /SimpleBitPack /= size_BitsToBytes' (size_flatten_ctt (ilog 2 b + 1)).
++ move => l; rewrite mapP => He; elim He => c /= [# ?->].
+  by rewrite /IntegerToBits BS2Int.size_int2bs; smt(ilog_ge0).
+by rewrite size_map size_to_list.
+qed.
 
 
 (*

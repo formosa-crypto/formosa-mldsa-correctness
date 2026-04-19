@@ -111,21 +111,6 @@ call t1__decode_polynomial_ll.
 by auto => /#.
 qed.
 
-(* Size helpers for SimpleBitPack output. Duplicated locally from keygen.ec to keep  *)
-(* verify.ec standalone; should migrate to a shared prelude eventually.              *)
-lemma size_BitsToBytes' (l : bool list) : size (BitsToBytes l) = size l %/ 8
-  by rewrite /BitsToBytes size_map size_chunk //.
-
-lemma size_SimpleBitPack' (_p : poly) (b : int) :
-  1 <= b => size (SimpleBitPack _p b) = (ilog 2 b + 1) * n %/ 8.
-proof.
-move => Hb.
-rewrite /SimpleBitPack /= size_BitsToBytes' (size_flatten_ctt (ilog 2 b + 1)).
-+ move => l; rewrite mapP => He; elim He => c /= [# ?->].
-  by rewrite /IntegerToBits BS2Int.size_int2bs; smt(ilog_ge0).
-by rewrite size_map size_to_list.
-qed.
-
 (* Spec-level t1 polykvec obtained from the t1_encoded bytes (6 chunks of 320 bytes, *)
 (* each decoded via SimpleBitUnpack with range 2^(q_bits-d)-1 = 1023 = b_t1).        *)
 op t1_from_t1enc (_t1enc : W8.t Array1920.t) : polykvec =

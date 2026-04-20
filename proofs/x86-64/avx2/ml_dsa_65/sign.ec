@@ -53,8 +53,31 @@ lemma kappa_bit_update (kappa : int) (kappa_e : W64.t) (dsep : W16.t) :
   (kappa_exc_R = W64.one) = (kappa_max <= kappa + 1) /\
   (kappa_exc_R <> W64.one => kappa_exc_R = W64.zero).
 proof.
-admit. (* FIXME: machine-arithmetic — xor/TEST_32/SETcc/zeroextu64 chain *)
-qed.
+move => ?; rewrite mldsa65_lvec /=  => ->.
+move => Hd Hke ? /=.
+case (13106 <= kappa) => ? /=.
++ rewrite (: 13106 <= kappa + 1) 1:/# /SETcc /TEST_32 /rflags_of_bwop /ZF_of /=.
+  have -> : kappa_e = one by smt().
+  have ->/= : zeroextu32 dsep `^` of_int 65530 <> zero 
+   by rewrite W32.WRing.addr_eq0 /= to_uint_eq to_uint_zeroextu32 /oppw /=; smt(W32.to_uint_eq W32.of_uintK W32.to_uintK pow2_32).
+   by rewrite eqT /zeroextu64/=.
+
+   case (kappa < 13105) => ? /=.
+rewrite (: !13106 <= kappa + 1) 1:/# /SETcc /TEST_32 /rflags_of_bwop /ZF_of /=.
+  have -> : kappa_e = zero by smt().
+have ->/= : zeroextu32 dsep `^` of_int 65530 <> zero 
+   by rewrite W32.WRing.addr_eq0 /= to_uint_eq to_uint_zeroextu32 /oppw /=; smt(W32.to_uint_eq W32.of_uintK W32.to_uintK pow2_32).
+   rewrite /zeroextu64/=;  smt(W32.to_uint_eq W32.of_uintK W32.to_uintK pow2_32).
+  
+move : Hd.
+have ->/= : kappa = 13105 by smt().
+move => Hd.
+rewrite eqT /SETcc /TEST_32 /rflags_of_bwop /ZF_of /=. 
+  have ->/= : kappa_e = zero by smt().
+  rewrite to_uint_eq to_uint_zeroextu64.
+  have -> /= : dsep = of_int 65530 by smt(W16.to_uint_eq W16.of_uintK W16.to_uintK pow2_16).
+  by rewrite /zeroextu32 /=.
+  qed.
 
 (* Companion: the exit-flag update. Given the 0/1 invariant on the norm-check
    result (`ncr`) and on the kappa-exceeded flag (`kappa_exc_R`), the new
@@ -69,8 +92,10 @@ lemma exit_loop_update (ncr kappa_exc_R : W64.t) :
   (kappa_exc_R = W64.one \/ kappa_exc_R = W64.zero) =>
   let ers_R = ncr `^` W64.one `|` kappa_exc_R in
   (ers_R = W64.zero) = (ncr = W64.one /\ kappa_exc_R = W64.zero).
-proof.
-admit. (* FIXME: W64 xor-one + or bit-level dichotomy *)
+  proof.
+simplify => H H0.
+elim H => ->; elim H0 => -> /=;
+  smt(W64.to_uint_eq W64.of_uintK W64.to_uintK pow2_64 W64.WRing.addr_eq0).
 qed.
 
 (* When all coefficients of the hint vector are 0 or 1 (wpolykvec_urng v 2),

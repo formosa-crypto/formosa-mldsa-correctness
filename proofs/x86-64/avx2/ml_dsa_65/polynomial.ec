@@ -14,6 +14,8 @@ require import XArray256 Array256.
 
 require import WArray1024.
 
+(* FIXME: PY TRY WITH COMPUTATION *)
+
 op check_inf_norm_circuit (_a : W32.t Array256.t) (_threshold : int) : bool =
    all (fun i => (W32.of_int (-_threshold) \slt _a.[i] /\ _a.[i] \slt W32.of_int (_threshold)))  (iotared 0 256).
 

@@ -544,29 +544,67 @@ sp 6 0; seq 1 0 : #pre; 1: by auto.
           lifts_wpolykvec (kvec_unflatten256 w0{2}) -
           PolyKVec.invnttv (PolyKVec.ntt_smul
             (lifts_wpoly verifier_challenge{2})
-            (lifts_wpolykvec (kvec_unflatten256 s2{2}))))).
+            (lifts_wpolykvec (kvec_unflatten256 s2{2})))) /\
+     (infinity_norm_check_result{2} = W64.zero <=>
+        PolyKVec.infnorm_lt
+          (lifts_wpolykvec (kvec_unflatten256 w0{2}) -
+           PolyKVec.invnttv (PolyKVec.ntt_smul
+             (lifts_wpoly verifier_challenge{2})
+             (lifts_wpolykvec (kvec_unflatten256 s2{2}))))
+          (gamma2 - Beta))).
  + ecall{2} (__apply_cs2_and_check_norm_ph
               w0_minus_cs2{2} w0{2} s2{2} verifier_challenge{2}
               W64.zero).
    by auto => |> &1 &2 *; smt().
 
  (* ── Step 2: ct0 norm check ──────────────────────────────── *)
- seq 0 1 : (#pre /\
+ seq 0 1 : (#{~(infinity_norm_check_result{2} = W64.zero <=>
+               PolyKVec.infnorm_lt
+                 (lifts_wpolykvec (kvec_unflatten256 w0{2}) -
+                  PolyKVec.invnttv (PolyKVec.ntt_smul
+                    (lifts_wpoly verifier_challenge{2})
+                    (lifts_wpolykvec (kvec_unflatten256 s2{2}))))
+                 (gamma2 - Beta))}pre /\
      (infinity_norm_check_result{2} = W64.zero \/ infinity_norm_check_result{2} = W64.one) /\
+     (* New: unconditional word-level range — feeds make_hint's precondition. *)
+     wpolykvec_srng (kvec_unflatten256 w0_minus_cs2_plus_ct0{2}) (gamma2 - 1) gamma2 /\
      (infinity_norm_check_result{2} = W64.zero =>
         let ct0 = PolyKVec.invnttv (PolyKVec.ntt_smul
                     (lifts_wpoly verifier_challenge{2})
                     (lifts_wpolykvec (kvec_unflatten256 t0{2}))) in
         PolyKVec.infnorm_lt ct0 gamma2 /\
         lifts_wpolykvec (kvec_unflatten256 w0_minus_cs2_plus_ct0{2}) =
-          lifts_wpolykvec (kvec_unflatten256 w0_minus_cs2{2}) + ct0)).
+          lifts_wpolykvec (kvec_unflatten256 w0_minus_cs2{2}) + ct0) /\
+     (infinity_norm_check_result{2} = W64.zero <=>
+        PolyKVec.infnorm_lt
+          (lifts_wpolykvec (kvec_unflatten256 w0{2}) -
+           PolyKVec.invnttv (PolyKVec.ntt_smul
+             (lifts_wpoly verifier_challenge{2})
+             (lifts_wpolykvec (kvec_unflatten256 s2{2}))))
+          (gamma2 - Beta) /\
+        PolyKVec.infnorm_lt
+          (PolyKVec.invnttv (PolyKVec.ntt_smul
+             (lifts_wpoly verifier_challenge{2})
+             (lifts_wpolykvec (kvec_unflatten256 t0{2}))))
+          gamma2)).
  + ecall{2} (__apply_ct0_and_check_norm_ph
               w0_minus_cs2_plus_ct0{2} w0_minus_cs2{2} t0{2}
               verifier_challenge{2} infinity_norm_check_result{2}).
    by auto => |> &1 &2 *; smt().
 
  (* ── Step 3: z norm check ──────────────────────────────── *)
- seq 0 2 : (#pre /\
+ seq 0 2 : (#{~(infinity_norm_check_result{2} = W64.zero <=>
+               PolyKVec.infnorm_lt
+                 (lifts_wpolykvec (kvec_unflatten256 w0{2}) -
+                  PolyKVec.invnttv (PolyKVec.ntt_smul
+                    (lifts_wpoly verifier_challenge{2})
+                    (lifts_wpolykvec (kvec_unflatten256 s2{2}))))
+                 (gamma2 - Beta) /\
+               PolyKVec.infnorm_lt
+                 (PolyKVec.invnttv (PolyKVec.ntt_smul
+                    (lifts_wpoly verifier_challenge{2})
+                    (lifts_wpolykvec (kvec_unflatten256 t0{2}))))
+                 gamma2)}pre /\
      (infinity_norm_check_result{2} = W64.zero \/ infinity_norm_check_result{2} = W64.one) /\
      (infinity_norm_check_result{2} = W64.zero =>
         wpolylvec_infnorm_lt (gamma1 - Beta) (lvec_unflatten256 signer_response{2}) /\
@@ -575,19 +613,82 @@ sp 6 0; seq 1 0 : #pre; 1: by auto.
           PolyLVec.invnttv (PolyLVec.ntt_smul
             (lifts_wpoly verifier_challenge{2})
             (lifts_wpolylvec (lvec_unflatten256 s1{2}))) /\
-        wpolylvec_srng (lvec_unflatten256 signer_response{2}) (gamma1 - 1) gamma1)).
+        wpolylvec_srng (lvec_unflatten256 signer_response{2}) (gamma1 - 1) gamma1) /\
+     (infinity_norm_check_result{2} = W64.zero <=>
+        PolyKVec.infnorm_lt
+          (lifts_wpolykvec (kvec_unflatten256 w0{2}) -
+           PolyKVec.invnttv (PolyKVec.ntt_smul
+             (lifts_wpoly verifier_challenge{2})
+             (lifts_wpolykvec (kvec_unflatten256 s2{2}))))
+          (gamma2 - Beta) /\
+        PolyKVec.infnorm_lt
+          (PolyKVec.invnttv (PolyKVec.ntt_smul
+             (lifts_wpoly verifier_challenge{2})
+             (lifts_wpolykvec (kvec_unflatten256 t0{2}))))
+          gamma2 /\
+        PolyLVec.infnorm_lt
+          (lifts_wpolylvec (lvec_unflatten256 mask{2}) +
+           PolyLVec.invnttv (PolyLVec.ntt_smul
+             (lifts_wpoly verifier_challenge{2})
+             (lifts_wpolylvec (lvec_unflatten256 s1{2}))))
+          (gamma1 - Beta))).
  + wp. ecall{2} (__compute_z_and_check_norm_ph
               s1{2} verifier_challenge{2} mask{2} signer_response{2}
               infinity_norm_check_result{2}).
    by auto => |> &1 &2 *; smt().
 
- (* ── Step 4: make_hint + while invariant ──────────────────── *)
- (* Remaining program: w0mc no-op + make_hint ecall + post-loop kappa/exit.
-    The seq postconditions carry enough info for smt to close. *)
- wp.
- ecall{2} (__make_hint_vector_ph
-              w0_minus_cs2_plus_ct0{2} w1{2} hint_0{2}
-              infinity_norm_check_result{2}).
+ (* ── Step 4: make_hint ────────────────────────────────────── *)
+ seq 0 2 : (#{~(infinity_norm_check_result{2} = W64.zero <=>
+               PolyKVec.infnorm_lt
+                 (lifts_wpolykvec (kvec_unflatten256 w0{2}) -
+                  PolyKVec.invnttv (PolyKVec.ntt_smul
+                    (lifts_wpoly verifier_challenge{2})
+                    (lifts_wpolykvec (kvec_unflatten256 s2{2}))))
+                 (gamma2 - Beta) /\
+               PolyKVec.infnorm_lt
+                 (PolyKVec.invnttv (PolyKVec.ntt_smul
+                    (lifts_wpoly verifier_challenge{2})
+                    (lifts_wpolykvec (kvec_unflatten256 t0{2}))))
+                 gamma2 /\
+               PolyLVec.infnorm_lt
+                 (lifts_wpolylvec (lvec_unflatten256 mask{2}) +
+                  PolyLVec.invnttv (PolyLVec.ntt_smul
+                    (lifts_wpoly verifier_challenge{2})
+                    (lifts_wpolylvec (lvec_unflatten256 s1{2}))))
+                 (gamma1 - Beta))}pre /\
+     (infinity_norm_check_result{2} = W64.zero \/ infinity_norm_check_result{2} = W64.one) /\
+     (forall k, 0 <= k < kvec =>
+        liftu_wpoly (kvec_unflatten256 hint_0{2}).[k] =
+          poly_MakeHint
+            (lifts_wpoly (kvec_unflatten256 w0_minus_cs2_plus_ct0{2}).[k])
+            (lifts_wpoly (kvec_unflatten256 w1{2}).[k])) /\
+     (infinity_norm_check_result{2} = W64.zero =>
+        wpolykvec_urng (kvec_unflatten256 hint_0{2}) 2) /\
+     (infinity_norm_check_result{2} = W64.zero <=>
+        PolyKVec.infnorm_lt
+          (lifts_wpolykvec (kvec_unflatten256 w0{2}) -
+           PolyKVec.invnttv (PolyKVec.ntt_smul
+             (lifts_wpoly verifier_challenge{2})
+             (lifts_wpolykvec (kvec_unflatten256 s2{2}))))
+          (gamma2 - Beta) /\
+        PolyKVec.infnorm_lt
+          (PolyKVec.invnttv (PolyKVec.ntt_smul
+             (lifts_wpoly verifier_challenge{2})
+             (lifts_wpolykvec (kvec_unflatten256 t0{2}))))
+          gamma2 /\
+        PolyLVec.infnorm_lt
+          (lifts_wpolylvec (lvec_unflatten256 mask{2}) +
+           PolyLVec.invnttv (PolyLVec.ntt_smul
+             (lifts_wpoly verifier_challenge{2})
+             (lifts_wpolylvec (lvec_unflatten256 s1{2}))))
+          (gamma1 - Beta) /\
+        PolyKVec.hammw
+          (liftu_wpolykvec (kvec_unflatten256 hint_0{2}))
+          w_hint)).
+ + wp. ecall{2} (__make_hint_vector_ph
+                   w0_minus_cs2_plus_ct0{2} w1{2} hint_0{2}
+                   infinity_norm_check_result{2}).
+   by auto => |> &1 &2 *; smt().
  auto => |> &1 &2 *.
  (* Instantiate the kappa-counter machine-arithmetic helper. *)
  have Hkbu :=
@@ -596,34 +697,24 @@ sp 6 0; seq 1 0 : #pre; 1: by auto.
  move : Hkbu => /= [Hkappa_R_one Hkappa_R_dicho].
  (* Goal: wpolykvec_srng w0_minus_cs2_plus_ct0 (gamma2-1) gamma2 /\ (srng => forall result1, ...) *)
  split.
- + admit. (* FIXME: missing srng post on __apply_ct0_and_check_norm_ph — strengthen
-             sign_norm_checks.ec:644 to give wpolykvec_srng res.`1 (gamma2-1) gamma2
-             unconditionally. *)
- move => _ result1 Hres_dicho Hres_force Hres_gated.
- have /= Helu :=
-   exit_loop_update result1.`2
-     (kappa_exceeded{2} `|`
-      zeroextu64 (SETcc (TEST_32
-        (zeroextu32 domain_separator_for_mask{2} `^` W32.of_int ((65535 - lvec) %/ lvec * lvec))
-        (zeroextu32 domain_separator_for_mask{2} `^` W32.of_int ((65535 - lvec) %/ lvec * lvec))).`5))
-     Hres_dicho _; 1: smt().
-split.
-+ move => ??; do split.
-  move => ??; do split;1..3:smt().
-  + admit.
-  + admit.
-  + admit.
-  + admit.
-  + admit.
-  + admit.
-  + admit.
-  + admit.
-+ move => ?; do split;1..3,7:smt().
-  + admit. 
-  + admit. 
-  + admit.
-+ move => ?; do split;1..3,7:smt().
-  + admit. 
-  + admit. 
-  + admit.
+ + move => ??;split.
+   + move => ??;do split;1..3:smt().
+     + admit.
+     + admit.
+     + admit.
+     + admit.
+     + admit.
+     + admit.
+     + admit.
+     + admit.
+   + move => ?;do split;1..3:smt(). 
+     + admit. 
+     + admit. 
+     + admit.
+     + admit.
+   + move => ?;do split;1..3:smt(). 
+     + admit.
+     + admit.
+     + admit.
+     + admit.
 qed.

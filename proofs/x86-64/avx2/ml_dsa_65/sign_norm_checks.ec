@@ -347,9 +347,17 @@ lemma __apply_cs2_and_check_norm_ph
         wpolykvec_srng (kvec_unflatten256 _w0) (gamma2 - 1) gamma2
         ==>
         (res.`2 = W64.zero \/ res.`2 = W64.one) /\
-        (_incr = W64.one => res.`2 = W64.one) /\
-        (_incr = W64.zero =>
-           res.`2 = W64.zero =>
+        (* Biconditional: failure bit is zero iff no prior failure AND
+           the abstract cs2-norm check holds. *)
+        (res.`2 = W64.zero <=>
+           _incr = W64.zero /\
+           PolyKVec.infnorm_lt
+             (lifts_wpolykvec (kvec_unflatten256 _w0) -
+              PolyKVec.invnttv (PolyKVec.ntt_smul
+                (lifts_wpoly _c)
+                (lifts_wpolykvec (kvec_unflatten256 _s2))))
+             (gamma2 - Beta)) /\
+        (res.`2 = W64.zero =>
            (* ||w0 - cs2||_inf < gamma2 - Beta = 261692 *)
            wpolykvec_infnorm_lt (gamma2 - Beta) (kvec_unflatten256 res.`1) /\
            lifts_wpolykvec (kvec_unflatten256 res.`1) =
@@ -357,9 +365,11 @@ lemma __apply_cs2_and_check_norm_ph
              (PolyKVec.invnttv (PolyKVec.ntt_smul
                (lifts_wpoly _c)
                (lifts_wpolykvec (kvec_unflatten256 _s2)))))
-    ] = 1%r
-  by conseq (__apply_cs2_and_check_norm_ll)
-            (__apply_cs2_and_check_norm_correct _w0mc _w0 _s2 _c _incr).
+    ] = 1%r.
+proof.
+admit. (* FIXME: strengthen __apply_cs2_and_check_norm_correct to give
+          biconditional on res.`2. *)
+qed.
 
 (* ================================================================== *)
 (* __apply_ct0_and_check_norm                                          *)
@@ -657,18 +667,29 @@ lemma __apply_ct0_and_check_norm_ph
           wpolykvec_infnorm_lt (gamma2 - Beta) (kvec_unflatten256 _w0mc))
         ==>
         (res.`2 = W64.zero \/ res.`2 = W64.one) /\
-        (_incr = W64.one => res.`2 = W64.one) /\
-        (_incr = W64.zero =>
-           res.`2 = W64.zero =>
+        (* Biconditional: failure bit is zero iff no prior failure AND
+           the abstract ct0-norm check holds. *)
+        (res.`2 = W64.zero <=>
+           _incr = W64.zero /\
+           PolyKVec.infnorm_lt
+             (PolyKVec.invnttv (PolyKVec.ntt_smul
+                (lifts_wpoly _c)
+                (lifts_wpolykvec (kvec_unflatten256 _t0))))
+             gamma2) /\
+        (* Unconditional word-level range on res.`1 — needed as the
+           precondition of __make_hint_vector_ph downstream. *)
+        wpolykvec_srng (kvec_unflatten256 res.`1) (gamma2 - 1) gamma2 /\
+        (res.`2 = W64.zero =>
            let ct0 = PolyKVec.invnttv (PolyKVec.ntt_smul
                        (lifts_wpoly _c)
                        (lifts_wpolykvec (kvec_unflatten256 _t0))) in
-           PolyKVec.infnorm_lt ct0 gamma2 /\
            lifts_wpolykvec (kvec_unflatten256 res.`1) =
              (lifts_wpolykvec (kvec_unflatten256 _w0mc)) + ct0)
-    ] = 1%r
-  by conseq (__apply_ct0_and_check_norm_ll)
-            (__apply_ct0_and_check_norm_correct _r _w0mc _t0 _c _incr).
+    ] = 1%r.
+proof.
+admit. (* FIXME: strengthen __apply_ct0_and_check_norm_correct to give
+          biconditional on res.`2 and unconditional wpolykvec_srng on res.`1. *)
+qed.
 
 
 lemma __compute_z_and_check_norm_ll : islossless M.__compute_z_and_check_norm.
@@ -879,9 +900,17 @@ lemma __compute_z_and_check_norm_ph
           wpolylvec_srng (lvec_unflatten256 _mask) (gamma1 - 1) gamma1)
         ==>
         (res.`2 = W64.zero \/ res.`2 = W64.one) /\
-        (_incr = W64.one => res.`2 = W64.one) /\
-        (_incr = W64.zero =>
-           res.`2 = W64.zero =>
+        (* Biconditional: failure bit is zero iff no prior failure AND
+           the abstract z-norm check holds. *)
+        (res.`2 = W64.zero <=>
+           _incr = W64.zero /\
+           PolyLVec.infnorm_lt
+             ((lifts_wpolylvec (lvec_unflatten256 _mask)) +
+              (PolyLVec.invnttv (PolyLVec.ntt_smul
+                (lifts_wpoly _c)
+                (lifts_wpolylvec (lvec_unflatten256 _s1)))))
+             (gamma1 - Beta)) /\
+        (res.`2 = W64.zero =>
            wpolylvec_infnorm_lt (gamma1 - Beta) (lvec_unflatten256 res.`1) /\
            lifts_wpolylvec (lvec_unflatten256 res.`1) =
              (lifts_wpolylvec (lvec_unflatten256 _mask)) +
@@ -889,9 +918,11 @@ lemma __compute_z_and_check_norm_ph
                (lifts_wpoly _c)
                (lifts_wpolylvec (lvec_unflatten256 _s1)))) /\
            wpolylvec_srng (lvec_unflatten256 res.`1) (gamma1 - 1) gamma1)
-    ] = 1%r
-  by conseq (__compute_z_and_check_norm_ll)
-            (__compute_z_and_check_norm_correct _s1 _c _mask _z0 _incr).
+    ] = 1%r.
+proof.
+admit. (* FIXME: strengthen __compute_z_and_check_norm_correct to give
+          biconditional on res.`2. *)
+qed.
 
 (* ================================================================== *)
 (* __make_hint_vector                                                  *)
@@ -1100,14 +1131,23 @@ lemma __make_hint_vector_ph
         wpolykvec_urng (kvec_unflatten256 _w1) ((q - 1) %/ (2 * gamma2))
         ==>
         (res.`2 = W64.zero \/ res.`2 = W64.one) /\
-        (_incr = W64.one => res.`2 = W64.one) /\
-        (_incr = W64.zero =>
-           res.`2 = W64.zero =>
-           (forall k, 0 <= k < kvec =>
-             liftu_wpoly (kvec_unflatten256 res.`1).[k] =
-               poly_MakeHint (lifts_wpoly (kvec_unflatten256 _r).[k])
-                             (lifts_wpoly (kvec_unflatten256 _w1).[k])) /\
-           PolyKVec.hammw (liftu_wpolykvec (kvec_unflatten256 res.`1)) w_hint)
-    ] = 1%r
-  by conseq (__make_hint_vector_ll)
-            (__make_hint_vector_correct _r _w1 _h _incr).
+        (* Biconditional: failure bit is zero iff no prior failure AND
+           the abstract hint-weight check holds. Hints are always 0/1 by
+           construction — the spec-level condition is just hammw. *)
+        (* Unconditional: hint array always computed correctly from inputs. *)
+        (forall k, 0 <= k < kvec =>
+           liftu_wpoly (kvec_unflatten256 res.`1).[k] =
+             poly_MakeHint (lifts_wpoly (kvec_unflatten256 _r).[k])
+                           (lifts_wpoly (kvec_unflatten256 _w1).[k])) /\
+        (res.`2 = W64.zero <=>
+           _incr = W64.zero /\
+           PolyKVec.hammw
+             (liftu_wpolykvec (kvec_unflatten256 res.`1)) w_hint) /\
+        (res.`2 = W64.zero =>
+           (* Hint coefficients are 0 or 1, so the kvec is unsigned-range 2. *)
+           wpolykvec_urng (kvec_unflatten256 res.`1) 2)
+    ] = 1%r.
+proof.
+admit. (* FIXME: strengthen __make_hint_vector_correct to give
+          biconditional on res.`2 and gated wpolykvec_urng on res.`1. *)
+qed.

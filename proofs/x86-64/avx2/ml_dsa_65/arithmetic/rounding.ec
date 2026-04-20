@@ -10,6 +10,8 @@ import CDR Round Zq.
 
 require import Array256.
 
+(* STRATEGY: TRY WITH SMT @ GUSTAVO *)
+
 (* ================================================================== *)
 (* polynomial__decompose                                                *)
 (* Decomposes each coefficient into (LowBits, HighBits) per FIPS 204. *)

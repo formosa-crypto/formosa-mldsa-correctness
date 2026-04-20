@@ -104,14 +104,13 @@ module MLDSA(XOFA : XOF_RejNTTPoly, XOFS : XOF_RejBPoly, XOFSIB : XOF_SIB, RO : 
        cs1 <- invnttv (ntt_smul ch s1);
        cs2 <- invnttv (ntt_smul ch s2);
        z <- y + cs1;
-       (* use w0 - cs2 instead of LowBits(w - cs2) *)
        r0 <- w0 - cs2;
        bz <- infnorm_lt z (gamma1 - Beta) &&
                   infnorm_lt r0 (gamma2 - Beta);
        leakage <- leakage ++ [ CheckZ bz ];
        if (bz) {
           ct0 <- invnttv (ntt_smul ch t0);
-          h <- MakeHint (PolyKVec.zerov-ct0) w0 - cs2 + ct0;
+          h <- MakeHint (PolyKVec.zerov-ct0) r0 + ct0;
           bh <- infnorm_lt ct0 gamma2 && hammw h w_hint;
           leakage <- leakage ++ [ CheckH bh ];
           if (bh) { zh <- Some (z,h); }

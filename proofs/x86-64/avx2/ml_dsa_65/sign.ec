@@ -105,7 +105,26 @@ lemma hammw_count_nonzero (v : wpolykvec) (bound : int) :
   wpolykvec_urng v 2 =>
   hammw (liftu_wpolykvec v) bound =>
   count_nonzero_coeffs_kvec (liftu_wpolykvec v) <= bound.
-proof. admit. qed.
+proof.
+rewrite /wpolykvec_urng allP => Hrng.
+rewrite /hammw /count_nonzero_coeffs /count_nonzero_coeffs_kvec /count_nonzero_coeffs /=.
+rewrite /to_list /mkseq StdBigop.Bigint.BIA.big_map /(\o) /=.
+suff: StdBigop.Bigint.BIA.big predT<:int>
+  (fun (ii : int) => count (fun (jj : int) => (liftu_wpolykvec v).[ii].[jj] <> zero) (iota_ 0 n)) (
+  iota_ 0 kvec) =
+ StdBigop.Bigint.BIA.big (fun (x : int) => predT (liftu_wpolykvec v).[x])
+  (fun (x : int) => count (fun (c : coeff) => c = one) (map ("_.[_]" (liftu_wpolykvec v).[x]) (iota_ 0 n)))
+  (iota_ 0 kvec) by smt().
+apply StdBigop.Bigint.BIA.eq_big_seq => x; rewrite mem_iota => /= *.
+rewrite count_map;apply eq_in_count => k; rewrite mem_iota => /= *.
+rewrite /preim /=.
+have := Hrng x _; 1:smt().
+rewrite /wpoly_urng allP => /= Hrngx.
+have := Hrngx k _;1:smt().
+move => H.
+rewrite /liftu_wpolykvec !mapiE 1,2:/# /=.
+smt(@Zq).
+qed.
 
 (* Correctness of the AVX2 ML-DSA-65 signing function.
    We prove an equiv between:

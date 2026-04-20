@@ -110,8 +110,24 @@ rewrite mapiE 1:/# /=.
 move => [Hl Hr]; have /# := incoeffK_centered (to_sint pw.[j]) _; 1: smt().
 qed.
 
- 
-type wpolylvec = wpoly LArray.t. 
+lemma wpoly_infnorm_unliftE (b bl bh : int) (pw : wpoly) :
+    0 < b <= q %/ 2 =>
+    bl <= q %/ 2 => bh <= q %/ 2 =>
+    wpoly_srng bl bh pw =>
+    infnorm_lt (lifts_wpoly pw) b => wpoly_infnorm_lt b pw.
+proof.
+move => Hb Hbl Hbh Hrng Hinf.
+rewrite /wpoly_infnorm_lt /wpoly_srng allP => k Hk.
+move: Hinf; rewrite /infnorm_lt /lifts_wpoly allP /= => Hinf.
+have /= Hk' := Hinf k _; 1: smt(mem_iota).
+rewrite mapiE 1:/# /= in Hk'.
+move: Hrng; rewrite /wpoly_srng allP => Hrng.
+have /= Hrng_k := Hrng k _; 1: smt().
+by have /# := incoeffK_centered (to_sint pw.[k]) _; 1: smt().
+qed.
+
+
+type wpolylvec = wpoly LArray.t.
 
 op liftu_wpolylvec(wv : wpolylvec) : polylvec =
   map liftu_wpoly wv.
@@ -282,6 +298,28 @@ have := H i _; 1: smt().
 rewrite /wpoly_srng allP => Hi'.
 have /= := Hi' k _; 1: smt().
 by  have /# := incoeffK_centered (to_sint pw.[i].[k]) _; 1: smt().
+qed.
+
+lemma wpolykvec_infnorm_unliftE (b bl bh : int) (pw : wpolykvec) :
+    0 < b <= q %/ 2 =>
+    bl <= q %/ 2 => bh <= q %/ 2 =>
+    wpolykvec_srng pw bl bh =>
+    PolyKVec.infnorm_lt (lifts_wpolykvec pw) b => wpolykvec_infnorm_lt b pw.
+proof.
+move => Hb Hbl Hbh Hrng Hinf.
+rewrite /wpolykvec_infnorm_lt /wpolykvec_srng allP => i Hi.
+rewrite /wpoly_srng allP => k /= Hk.
+move: Hinf; rewrite /PolyKVec.infnorm_lt /lifts_wpolykvec allP /= => Hinf.
+have /= Hi' := Hinf i _; 1: smt(mem_iota).
+move: Hi'; rewrite allP /= => Hi'.
+have /= Hk' := Hi' k _; 1: smt(mem_iota).
+rewrite mapiE 1:/# /= in Hk'.
+move: Hrng; rewrite /wpolykvec_srng allP => Hrng.
+have /= Hrng_i := Hrng i _; 1: smt().
+move: Hrng_i; rewrite /wpoly_srng allP => /= Hrng_i.
+have /= Hrng_k := Hrng_i k _; 1: smt().
+have := Hk'; rewrite /lifts_wpoly mapiE 1:/# /=.
+by have /# := incoeffK_centered (to_sint pw.[i].[k]) _; 1: smt().
 qed.
 
 type wpolymat = wpoly KLMatrix.t.

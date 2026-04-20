@@ -50,15 +50,15 @@ module MLDSA(XOFA : XOF_RejNTTPoly, XOFS : XOF_RejBPoly, XOFSIB : XOF_SIB, RO : 
        (ct,c) <- ctl.`1;
        leakage <- leakage ++ [ RO ctl.`2] ;
        ch <- ntt c;
-       cs1 <- invnttv (ntt_smul ch s1);
-       cs2 <- invnttv (ntt_smul ch s2);
+       cs1 <- invnttv (ntt_smul ch s1h);
+       cs2 <- invnttv (ntt_smul ch s2h);
        z <- y + cs1;
        r0 <- polykvec_LowBits (w - cs2);
        bz <- infnorm_lt z (gamma1 - Beta) &&
                   infnorm_lt r0 (gamma2 - Beta);
        leakage <- leakage ++ [ CheckZ bz ];
        if (bz) {
-          ct0 <- invnttv (ntt_smul ch t0);
+          ct0 <- invnttv (ntt_smul ch t0h);
           h <- MakeHint (PolyKVec.zerov-ct0) w - cs2 + ct0;
           bh <- infnorm_lt ct0 gamma2 && hammw h w_hint;
           leakage <- leakage ++ [ CheckH bh ];
@@ -101,16 +101,16 @@ module MLDSA(XOFA : XOF_RejNTTPoly, XOFS : XOF_RejBPoly, XOFSIB : XOF_SIB, RO : 
        (ct,c) <- ctl.`1;
        leakage <- leakage ++ [ RO ctl.`2] ;
        ch <- ntt c;
-       cs1 <- invnttv (ntt_smul ch s1);
-       cs2 <- invnttv (ntt_smul ch s2);
+       cs1 <- invnttv (ntt_smul ch s1h);
+       cs2 <- invnttv (ntt_smul ch s2h);
        z <- y + cs1;
        r0 <- w0 - cs2;
        bz <- infnorm_lt z (gamma1 - Beta) &&
                   infnorm_lt r0 (gamma2 - Beta);
        leakage <- leakage ++ [ CheckZ bz ];
        if (bz) {
-          ct0 <- invnttv (ntt_smul ch t0);
-          h <- MakeHint (PolyKVec.zerov-ct0) r0 + ct0;
+          ct0 <- invnttv (ntt_smul ch t0h);
+          h <- MakeHint w1 (r0 + ct0);
           bh <- infnorm_lt ct0 gamma2 && hammw h w_hint;
           leakage <- leakage ++ [ CheckH bh ];
           if (bh) { zh <- Some (z,h); }

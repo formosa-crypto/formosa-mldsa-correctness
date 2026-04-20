@@ -1137,8 +1137,8 @@ lemma __make_hint_vector_ph
         (* Unconditional: hint array always computed correctly from inputs. *)
         (forall k, 0 <= k < kvec =>
            liftu_wpoly (kvec_unflatten256 res.`1).[k] =
-             poly_MakeHint (lifts_wpoly (kvec_unflatten256 _r).[k])
-                           (lifts_wpoly (kvec_unflatten256 _w1).[k])) /\
+             poly_MakeHint (lifts_wpoly (kvec_unflatten256 _w1).[k])
+                           (lifts_wpoly (kvec_unflatten256 _r).[k])) /\
         (res.`2 = W64.zero <=>
            _incr = W64.zero /\
            PolyKVec.hammw

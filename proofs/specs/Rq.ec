@@ -10,17 +10,48 @@ import CDR Round Zq BigZMod PolyReduceZq.
 (******************************************************)
 
 import PolyReduce.
-type poly = coeff Array256.t.
-type apoly = polyXnD1.
-op poly2alg(p : poly) : apoly = oget (QSub.insub (canon (oget (to_poly (fun i => p.[i]))))).
 
-op alg2poly(p : apoly) : poly = init (fun i => p.[i]).
+type poly  = coeff Array256.t.
+type apoly = polyXnD1.
+
+op poly2prealg (p : poly) : prepoly =
+  fun i => if 0 <= i < n then p.[i] else zero.
+
+op poly2alg (p : poly) : apoly =
+  pinject (to_polyd (poly2prealg p)).
+
+op alg2poly (p : apoly) : poly =
+  init (fun i => p.[i]).
+
+lemma ispoly_poly2prealg (p : poly) : ispoly (poly2prealg p).
+proof. by (split; last exists 256); smt(). qed.
+
+lemma poly2algiE (p : poly) (i : int) :
+  0 <= i < 256 => (poly2alg p).[i] = p.[i].
+proof.
+move=> rgi @/"_.[_]" @/poly2alg; rewrite piK.
+- apply/reducedP/deg_leP => // j lt_ji.
+  rewrite coeffE 1:&(ispoly_poly2prealg).
+  by rewrite /poly2prealg ifF //#.
+- rewrite to_polydK 1:ispoly_poly2prealg.
+  by rewrite /poly2prealg ifT.
+qed.
+
+lemma alg2polyiE (p : apoly) (i : int) :
+  0 <= i < 256 => (alg2poly p).[i] = p.[i].
+proof. by move=> ? @/alg2poly; rewrite initiE. qed.
 
 lemma alg2polyK : cancel poly2alg alg2poly.
-admitted. (* FIXME : PY *)
+proof.
+move=> p; apply/Array256.ext_eq => i rgi.
+by rewrite alg2polyiE // poly2algiE.
+qed.
 
-lemma poly2algK : cancel poly2alg alg2poly.
-admitted. (* FIXME : PY *)
+lemma poly2algK : cancel alg2poly poly2alg.
+proof.
+move=> p; apply: polyXnD1_eqP => i rgi.
+by rewrite poly2algiE // alg2polyiE.
+qed.
 
 op (&*) (a b : poly) = alg2poly (( * ) (poly2alg a) (poly2alg b)).
 op (&+) (a b : poly) = alg2poly (( + ) (poly2alg a) (poly2alg b)).

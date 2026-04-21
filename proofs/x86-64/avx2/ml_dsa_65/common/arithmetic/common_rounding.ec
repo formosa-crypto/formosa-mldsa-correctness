@@ -41,7 +41,8 @@ lemma polynomial____make_hint_correct
         (* high: HighBits (w1) output range [0, (q-1) / (2*gamma2)] *)
         wpoly_urng ((q - 1) %/ (2 * gamma2)) _high
         ==>
-        liftu_wpoly res.`1 = poly_MakeHint (lifts_wpoly _low) (lifts_wpoly _high) /\
+        wpoly_urng 2 res.`1 /\
+        liftu_wpoly res.`1 = poly_MakeHint (lifts_wpoly _high) (lifts_wpoly _low) /\
         res.`2 = count (fun i => (liftu_wpoly res.`1).[i] <> Zq.zero) (iota_ 0 256)
     ].
 proof.
@@ -54,7 +55,8 @@ lemma polynomial____make_hint_ph
         wpoly_srng (2*gamma2 - Beta - 2) (2*gamma2 - Beta - 2) _low /\
         wpoly_urng ((q - 1) %/ (2 * gamma2)) _high
         ==>
-        liftu_wpoly res.`1 = poly_MakeHint (lifts_wpoly _low) (lifts_wpoly _high) /\
+        wpoly_urng 2 res.`1 /\
+        liftu_wpoly res.`1 = poly_MakeHint (lifts_wpoly _high) (lifts_wpoly _low) /\
         res.`2 = count (fun i => (liftu_wpoly res.`1).[i] <> Zq.zero) (iota_ 0 256)
     ] = 1%r
   by conseq polynomial____make_hint_ll (polynomial____make_hint_correct _h _low _high).

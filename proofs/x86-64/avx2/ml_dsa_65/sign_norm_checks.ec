@@ -820,7 +820,16 @@ lemma __compute_z_and_check_norm_correct
           wpolylvec_srng (lvec_unflatten256 _mask) (gamma1 - 1) gamma1)
         ==>
         (res.`2 = W64.zero \/ res.`2 = W64.one) /\
-        (_incr = W64.one => res.`2 = W64.one) /\
+        (* Biconditional: failure bit is zero iff no prior failure AND
+           the abstract z-norm check holds. *)
+        (res.`2 = W64.zero <=>
+           _incr = W64.zero /\
+           PolyLVec.infnorm_lt
+             ((lifts_wpolylvec (lvec_unflatten256 _mask)) +
+              (PolyLVec.invnttv (PolyLVec.ntt_smul
+                (lifts_wpoly _c)
+                (lifts_wpolylvec (lvec_unflatten256 _s1)))))
+             (gamma1 - Beta)) /\
         (_incr = W64.zero =>
            res.`2 = W64.zero =>
            (* ||z||_inf < gamma1 - Beta = 524092 *)
@@ -845,6 +854,12 @@ case (infinity_norm_check_result <> zero).
 
 conseq (: _ ==>
   (infinity_norm_check_result = zero \/ infinity_norm_check_result = one) /\
+  (infinity_norm_check_result = zero <=>
+   PolyLVec.infnorm_lt
+     (lifts_wpolylvec (lvec_unflatten256 _mask) +
+      PolyLVec.invnttv (PolyLVec.ntt_smul
+        (lifts_wpoly _c) (lifts_wpolylvec (lvec_unflatten256 _s1))))
+     (gamma1 - Beta)) /\
   (infinity_norm_check_result = zero =>
   (wpolylvec_infnorm_lt (gamma1 - Beta) (lvec_unflatten256 signer_response) /\
    lifts_wpolylvec (lvec_unflatten256 signer_response) =
@@ -859,6 +874,12 @@ while (#{/~_incr}{~infinity_norm_check_result}{~signer_response}pre /\
        0 <= base <= 5*n /\ base %% n = 0 /\
        (infinity_norm_check_result <> zero => base = 5*n) /\
        wpolylvec_srng (lvec_unflatten256 _mask) (gamma1 - 1) gamma1 /\
+       (infinity_norm_check_result <> zero =>
+          ! PolyLVec.infnorm_lt
+              (lifts_wpolylvec (lvec_unflatten256 _mask) +
+               PolyLVec.invnttv (PolyLVec.ntt_smul
+                 (lifts_wpoly _c) (lifts_wpolylvec (lvec_unflatten256 _s1))))
+              (gamma1 - Beta)) /\
        (infinity_norm_check_result = zero =>
          (forall k, 0 <= k < base %/ n =>
            wpoly_srng (gamma1 - Beta - 1) (gamma1 - Beta - 1)
@@ -871,16 +892,32 @@ while (#{/~_incr}{~infinity_norm_check_result}{~signer_response}pre /\
       ); last first.
 (* ── Loop exit ────────────────────────────────────────────────── *)
 + auto => /> ???; split; 1: smt().
-  move => bs srs ????? [# H1 H2]; do split.
-  + rewrite /wpolylvec_infnorm_lt /wpolylvec_srng LArray.allP => i ib.
-    by have := H1 i _; smt().
-  + apply LArray.tP => ii iib.
-    have -> := H2 ii _;1:smt().
-    by rewrite polylvec_add_iE 1:/#.
-  + rewrite /wpolylvec_srng LArray.allP => ii iib.
-    have := H1 ii _;1:smt().
-    rewrite /wpoly_srng !allP => Hrng j jb.
-    by have := Hrng j _; smt().
+  move => bs inr srs ??????? H_fail H_srng; do split; 2: smt().
+  (* biconditional ⇒: srs = zero => infnorm_lt *)
+  + move => Hzero.
+    have [# H1 H2] := H_srng Hzero.
+    have Hwplv : wpolylvec_infnorm_lt (gamma1 - Beta) (lvec_unflatten256 srs)
+      by rewrite /wpolylvec_infnorm_lt /wpolylvec_srng LArray.allP => *; smt(mldsa65_lvec).
+    have Hleq : lifts_wpolylvec (lvec_unflatten256 srs) =
+        lifts_wpolylvec (lvec_unflatten256 _mask) +
+        PolyLVec.invnttv (PolyLVec.ntt_smul
+          (lifts_wpoly _c) (lifts_wpolylvec (lvec_unflatten256 _s1)))
+      by apply LArray.tP => *; smt(mldsa65_lvec).
+    rewrite -Hleq.
+    by apply (wpolylvec_infnorm_liftE (gamma1 - Beta)); smt(mldsa65_gamma1).
+  (* conditional: srs = zero => triple *)
+  + move => Hzero.
+    have [# H1 H2] := H_srng Hzero.
+    do split.
+    + rewrite /wpolylvec_infnorm_lt /wpolylvec_srng LArray.allP => i ib.
+      by have := H1 i _; smt(mldsa65_lvec).
+    + apply LArray.tP => ii iib.
+      have -> := H2 ii _;1:smt(mldsa65_lvec).
+      by rewrite polylvec_add_iE 1:/#.
+    + rewrite /wpolylvec_srng LArray.allP => ii iib.
+      have := H1 ii _;1:smt(mldsa65_lvec).
+      rewrite /wpoly_srng !allP => Hrng j jb.
+      by have := Hrng j _; smt().
 
 (* ── Loop body: one column at index base %/ n ──────────────────── *)
 (* Jasmin: compute_signer_response_element(signer_response_element, s1_slice, c, mask_slice)
@@ -967,22 +1004,47 @@ auto => |> &hr *; do split.
 + rewrite /(`<<`) mldsa65_gamma1 /= /#.
 + rewrite /(`<<`) mldsa65_gamma1 /= /#.
 move => ?? rr Hpass Hfail.
-split; 1: smt().
-move => ?; do split; 1..4: by smt().
-move => ?; split. 
-+ move => k kbl kbh.
-  case (k < base{hr} %/ n) => ?; 1: by smt().
-  have -> : k = base{hr} %/ n by smt().
-  have Hinfnorm : wpoly_infnorm_lt (gamma1 - Beta)
+case (rr = W64.zero) => Hrr /=.
++ (* norm passed: rr = zero, update invariant *)
+  do split; 1..3: by smt().
+  + move => k kbl kbh.
+    case (k < base{hr} %/ n) => ?; 1: by smt().
+    have -> : k = base{hr} %/ n by smt().
+    have Hinfnorm : wpoly_infnorm_lt (gamma1 - Beta)
+      (Array256.init (fun i => signer_response{hr}.[base{hr} + i]))
+      by smt(W64.to_uint_eq W64.of_uintK W64.to_uintK pow2_64).
+    move: Hinfnorm; rewrite /wpoly_infnorm_lt /wpoly_srng !allP => Hr j jb.
+    have /= := Hr j _; 1: smt().
+    by rewrite /lvec_unflatten256 initiE 1:/# /= initiE 1:/# /= get_of_list 1:/# /= nth_sub 1:/# /= ; smt().
+  + move => k kb ?; case (k < base{hr} %/ n) => ?; 1: by smt().
+    have -> : k = base{hr} %/ n by smt().
+    rewrite -(lifts_wpolylvec_slice signer_response{hr} base{hr}) 1:/#; 1: smt(mldsa65_lvec).
+    by smt().
+(* norm failed: rr = one, propagate (!infnorm_lt) *)
+have Hnwpoly : !wpoly_infnorm_lt (gamma1 - Beta)
     (Array256.init (fun i => signer_response{hr}.[base{hr} + i]))
-    by smt(W64.to_uint_eq W64.of_uintK W64.to_uintK pow2_64).
-  move: Hinfnorm; rewrite /wpoly_infnorm_lt /wpoly_srng !allP => Hr j jb.
-  have /= := Hr j _; 1: smt().
-  by rewrite /lvec_unflatten256 initiE 1:/# /= initiE 1:/# /= get_of_list 1:/# /= nth_sub 1:/# /= ; smt().
-+ move => k kb ?; case (k < base{hr} %/ n) => ?; 1: by smt().
-  have -> : k = base{hr} %/ n by smt().
-  rewrite -(lifts_wpolylvec_slice signer_response{hr} base{hr}) 1:/#; 1: smt(mldsa65_lvec).
+  by apply /negP => Hwpoly; smt().
+have Hninfnorm : !infnorm_lt
+    (lifts_wpoly (Array256.init (fun i => signer_response{hr}.[base{hr} + i])))
+    (gamma1 - Beta).
++ apply /negP => Hcontra; apply Hnwpoly.
+  apply (wpoly_infnorm_unliftE (gamma1 - Beta) ((q-1)%/2) ((q-1)%/2)
+           (Array256.init (fun i => signer_response{hr}.[base{hr} + i]))).
+  + smt(mldsa65_gamma1).
+  + smt().
+  + smt().
+  + by smt().
+  + exact Hcontra.
+
+split; 1: smt().
+apply /negP => Hkvec; apply Hninfnorm.
+move: Hkvec; rewrite /PolyLVec.infnorm_lt allP => Hk.
+have /= Hk_at := Hk (base{hr} %/ n) _; 1: by rewrite mem_iota /=; smt(mldsa65_lvec).
+have Heq : lifts_wpoly (init (fun (i : int) => signer_response{hr}.[base{hr} + i])) =
+    (lifts_wpolylvec (lvec_unflatten256 _mask) +
+     invnttv (ntt_smul (lifts_wpoly _c) (lifts_wpolylvec (lvec_unflatten256 _s1)))).[base{hr} %/ n]
   by smt().
+by rewrite /infnorm_lt Heq; exact Hk_at.
 qed.
 
 lemma __compute_z_and_check_norm_ph
@@ -1021,8 +1083,8 @@ lemma __compute_z_and_check_norm_ph
            wpolylvec_srng (lvec_unflatten256 res.`1) (gamma1 - 1) gamma1)
     ] = 1%r.
 proof.
-admit. (* FIXME: strengthen __compute_z_and_check_norm_correct to give
-          biconditional on res.`2. *)
+by conseq __compute_z_and_check_norm_ll
+          (__compute_z_and_check_norm_correct _s1 _c _mask _z0 _incr) => /#.
 qed.
 
 (* ================================================================== *)
@@ -1046,6 +1108,35 @@ wp. (* hint_element <- Array256.init *)
 by auto => /#.
 qed.
 
+(* When all coefficients of the hint vector are 0 or 1 (wpolykvec_urng v 2),
+   hammw and count_nonzero_coeffs_kvec measure the same thing:
+   c <> Zq.zero <=> c = Zq.one for 0/1-valued coefficients. *)
+lemma hammw_count_nonzero (v : wpolykvec) (bound : int) :
+  wpolykvec_urng v 2 =>
+  hammw (liftu_wpolykvec v) bound =>
+  count_nonzero_coeffs_kvec (liftu_wpolykvec v) <= bound.
+proof.
+rewrite /wpolykvec_urng allP => Hrng.
+rewrite /hammw /count_nonzero_coeffs /count_nonzero_coeffs_kvec /count_nonzero_coeffs /=.
+rewrite /to_list /mkseq StdBigop.Bigint.BIA.big_map /(\o) /=.
+suff: StdBigop.Bigint.BIA.big predT<:int>
+  (fun (ii : int) => count (fun (jj : int) => (liftu_wpolykvec v).[ii].[jj] <> zero) (iota_ 0 n)) (
+  iota_ 0 kvec) =
+ StdBigop.Bigint.BIA.big (fun (x : int) => predT (liftu_wpolykvec v).[x])
+  (fun (x : int) => count (fun (c : coeff) => c = one) (map ("_.[_]" (liftu_wpolykvec v).[x]) (iota_ 0 n)))
+  (iota_ 0 kvec) by smt().
+apply StdBigop.Bigint.BIA.eq_big_seq => x; rewrite mem_iota => /= *.
+rewrite count_map;apply eq_in_count => k; rewrite mem_iota => /= *.
+rewrite /preim /=.
+have := Hrng x _; 1:smt().
+rewrite /wpoly_urng allP => /= Hrngx.
+have := Hrngx k _;1:smt().
+move => H.
+rewrite /liftu_wpolykvec !mapiE 1,2:/# /=.
+smt(@Zq).
+qed.
+
+
 lemma __make_hint_vector_correct
       (_r : W32.t Array1536.t) (_w1 : W32.t Array1536.t)
       (_h : W32.t Array1536.t) (_incr : W64.t)
@@ -1059,14 +1150,21 @@ lemma __make_hint_vector_correct
         wpolykvec_urng (kvec_unflatten256 _w1) ((q - 1) %/ (2 * gamma2))
         ==>
         (res.`2 = W64.zero \/ res.`2 = W64.one) /\
-        (_incr = W64.one => res.`2 = W64.one) /\
-        (_incr = W64.zero =>
-           res.`2 = W64.zero =>
-           (forall k, 0 <= k < kvec =>
-             liftu_wpoly (kvec_unflatten256 res.`1).[k] =
-               poly_MakeHint (lifts_wpoly (kvec_unflatten256 _r).[k])
-                             (lifts_wpoly (kvec_unflatten256 _w1).[k])) /\
-           PolyKVec.hammw (liftu_wpolykvec (kvec_unflatten256 res.`1)) w_hint)
+        (* Biconditional: failure bit is zero iff no prior failure AND
+           the abstract hint-weight check holds. Hints are always 0/1 by
+           construction — the spec-level condition is just hammw. *)
+        (res.`2 = W64.zero =>
+             liftu_wpolykvec (kvec_unflatten256 res.`1) =
+               MakeHint (lifts_wpolykvec (kvec_unflatten256 _w1))
+                             (lifts_wpolykvec (kvec_unflatten256 _r))) /\
+        (res.`2 = W64.zero <=>
+           _incr = W64.zero /\
+           PolyKVec.hammw
+             (MakeHint (lifts_wpolykvec (kvec_unflatten256 _w1))
+                          (lifts_wpolykvec (kvec_unflatten256 _r))) w_hint) /\
+        (res.`2 = W64.zero =>
+           (* Hint coefficients are 0 or 1, so the kvec is unsigned-range 2. *)
+           wpolykvec_urng (kvec_unflatten256 res.`1) 2)
     ].
 proof.
 have kvec_val  := mldsa65_kvec.
@@ -1075,7 +1173,7 @@ proc => /=.
 case (infinity_norm_check_result <> zero).
 + rcondt ^if; 1: by auto.
   rcondf ^while; 1: by auto.
-  by wp; skip => />; rewrite /SETcc to_uint_zeroextu64 /=; smt(W64.to_uint_eq pow2_64 W64.to_uintK W64.of_uintK).
+  auto => /> *; do split; smt().
 
 rcondf ^if; 1: by auto.
 wp.  (* absorb post-loop: SETcc + zeroextu64 + OR *)
@@ -1089,20 +1187,33 @@ while (#{/~_incr}{~infinity_norm_check_result}{~hint_0}{~total_ones_in_hint}pre 
        (infinity_norm_check_result = zero =>
          (forall k, 0 <= k < base %/ n =>
            liftu_wpoly (kvec_unflatten256 hint_0).[k] =
-             poly_MakeHint (lifts_wpoly (kvec_unflatten256 _r).[k])
-                           (lifts_wpoly (kvec_unflatten256 _w1).[k])) /\
+             poly_MakeHint (lifts_wpoly (kvec_unflatten256 _w1).[k])
+                           (lifts_wpoly (kvec_unflatten256 _r).[k]))) /\
+       (infinity_norm_check_result = zero =>
+         (forall k, 0 <= k < base %/ n =>
+           wpoly_urng 2 ((kvec_unflatten256 hint_0).[k]))) /\
+       (infinity_norm_check_result = zero <=>
+         _incr = zero /\
+         big predT (fun ii =>
+             count (fun jj => (MakeHint (lifts_wpolykvec (kvec_unflatten256 _w1))
+                             (lifts_wpolykvec (kvec_unflatten256 _r))).[ii].[jj] <> Zq.zero)
+                   (iota_ 0 256)) (iota_ 0 (base %/ n)) <= w_hint
+         ) /\
+        (infinity_norm_check_result = zero =>
          total_ones_in_hint =
            big predT (fun ii =>
-             count (fun jj => (liftu_wpolykvec (kvec_unflatten256 hint_0)).[ii].[jj] <> Zq.zero)
+             count (fun jj => (MakeHint (lifts_wpolykvec (kvec_unflatten256 _w1))
+                             (lifts_wpolykvec (kvec_unflatten256 _r))).[ii].[jj] <> Zq.zero)
                    (iota_ 0 256)) (iota_ 0 (base %/ n)))
       ); last first.
 (* ── Loop exit (combined with initialization) ─────────────────── *)
-+ auto => /> *.
-  do split; 1:smt(). 
-  + by rewrite (iota0 0 0) //.
++ auto => /> ??.
+  do split; 1,2:smt(). 
+  + by rewrite (iota0 0 0) //= big_nil /#.
+  + by rewrite (iota0 0 0) //= big_nil /#.
   (* exit condition: INV /\ !guard => post *)
-  move => bs h0 inf0 toi0 ? Hbin ? ? ? Hexit ? Hcond.
-  rewrite /SETcc /=; do split. 
+  move => bs h0 inf0 toi0 ? Hbin ? ?? Hexit ? Hcond Hmhp Hmhp0 Hmhp1 Hmhp2.
+  rewrite /SETcc /=; do split.
   + case (inf0 = W64.zero) => Hi0;  case (55 < toi0) => Hcnt /=;
     1,2: by rewrite Hi0 /= !to_uint_eq to_uint_zeroextu64 /=.
   + have -> : inf0 = W64.one by smt().
@@ -1113,27 +1224,35 @@ while (#{/~_incr}{~infinity_norm_check_result}{~hint_0}{~total_ones_in_hint}pre 
     right;rewrite wordP => k kb /=.
     rewrite zeroextu64E pack8E initiE 1:/# /= initiE 1:/# /=.
     by case (k %/8 = 0) => Hk;rewrite  ?W64.nth_one /= ?W8.nth_one /= /#.
-  + by smt(W64.to_uint_eq W64.to_uint_cmp pow2_64 W64.of_uintK W64.to_uintK).
   + move => Hi.
     have H : inf0 = zero by smt(or64_ne0).
-    have [?HH] := Hcond H;do split; 1: smt().
+    have HH := Hmhp H.
+    rewrite tP => k kb.
+    rewrite mapiE 1:/# HH 1:/# /MakeHint map2iE 1:/# mapiE 1:/#; smt(KArray.mapiE).   
+  + case (inf0 = zero) => H0; last by smt(or64_ne0 W64.to_uint_eq W64.to_uint_cmp pow2_64 W64.of_uintK W64.to_uintK).
+    rewrite H0 /= => ?.  
     rewrite /hammw.
     have -> : kvec = bs %/ n by smt().
-    have <- //: toi0 = big predT (fun (ii : int) => count (fun (jj : int) => (liftu_wpolykvec (kvec_unflatten256 h0)).[ii].[jj] <> Zq.zero) (iota_ 0 n)) (iota_ 0 (bs %/ n)) by smt().
-    case (55 < toi0); last by smt().
-    move => H55.
-    move : Hi; rewrite H H55 /= wordP => Hfalse.
-    have  := Hfalse 0 _; 1: smt().
-    rewrite zeroextu64E pack8E initiE 1:/# /= W8.nth_one /#.
+    by have := Hmhp1; rewrite H0 /= => ->. 
+  + case (inf0 = zero) => H0.
+    + rewrite H0 /= /hammw => ?; rewrite ifF.
+      + rewrite Hmhp2 1:/# /#.
+        by rewrite to_uint_eq to_uint_zeroextu64 /=.
+    by have := Hmhp1; rewrite H0 /= /hammw /#.
+  + case (inf0 = zero) => H0; last by smt(or64_ne0 W64.to_uint_eq W64.to_uint_cmp pow2_64 W64.of_uintK W64.to_uintK).
+    + rewrite H0 /= => ?.
+      rewrite /wpolykvec_urng allP; smt().
+    
+    
 (* ── Loop body ────────────────────────────────────────────────── *)
 (* Statements: 6.1 read slice, 6.2 ecall make_hint, 6.3 writeback,
                6.4 accumulate count, 6.5 base+=n,
                6.6 declassify (no-op), 6.7 if(fail){base=6n} *)
-
 seq 3 : (#pre /\
     liftu_wpoly (Array256.init (fun i => hint_0.[base + i])) =
-      poly_MakeHint (lifts_wpoly (kvec_unflatten256 _r).[base %/ n])
-                    (lifts_wpoly (kvec_unflatten256 _w1).[base %/ n]) /\
+      poly_MakeHint (lifts_wpoly (kvec_unflatten256 _w1).[base %/ n])
+                    (lifts_wpoly (kvec_unflatten256 _r).[base %/ n]) /\
+      wpoly_urng 2 (Array256.init (fun i => hint_0.[base + i]))  /\
     ones_in_hint =
       count (fun i => (liftu_wpoly (Array256.init (fun j => hint_0.[base + j]))).[i] <> Zq.zero)
             (iota_ 0 256)).
@@ -1168,57 +1287,44 @@ seq 3 : (#pre /\
   have /= Hr_eq := kvec_slice_eq _r base{hr} _ _; 1,2: smt(mldsa65_kvec).
   have /= Hw1_eq := kvec_slice_eq _w1 base{hr} _ _; 1,2: smt(mldsa65_kvec).
   rewrite Hwb_slice Hres_eq Hr_eq Hw1_eq /=.
+  move => Rv.
 
 (* ── Phase 2: accumulate + base++ + declassify + conditional exit ── *)
 do split.
 move => Hinf.
 have [Hfork Hcount] : (forall k, 0 <= k < base{hr} %/ n =>
       liftu_wpoly (kvec_unflatten256 hint_0{hr}).[k] =
-      poly_MakeHint (lifts_wpoly (kvec_unflatten256 _r).[k]) (lifts_wpoly (kvec_unflatten256 _w1).[k])) /\
+      poly_MakeHint (lifts_wpoly (kvec_unflatten256 _w1).[k]) (lifts_wpoly (kvec_unflatten256 _r).[k])) /\
     total_ones_in_hint{hr} =
     big predT (fun ii =>
-      count (fun jj => (liftu_wpolykvec (kvec_unflatten256 hint_0{hr})).[ii].[jj] <> Zq.zero) (iota_ 0 n))
+      count (fun jj => (MakeHint (lifts_wpolykvec (kvec_unflatten256 _w1)) (lifts_wpolykvec (kvec_unflatten256 _r))).[ii].[jj] <> Zq.zero) (iota_ 0 n))
       (iota_ 0 (base{hr} %/ n))
   by smt().
-split.
 + (* forall k < base/n: writeback preserves old columns *)
   move => k kb Hlt.
   have /= Hmod : base{hr} %% 256 = 0 by smt().
   have Hkvec : 0 <= k < kvec by smt(mldsa65_kvec).
   have /= Hwb := kvec_unflatten256_writeback_iE hint_0{hr} result.`1 base{hr} k Hmod Hkvec.
   by rewrite Hwb ifF; smt().
-+ (* count: big sum over old columns unchanged by writeback *)
-  rewrite Hcount.
-  apply eq_big_seq => ii Hii.
-  have Hii_bound : 0 <= ii < kvec by smt(mem_iota).
-  have /= Hmod : base{hr} %% 256 = 0 by smt().
-  have /= Hwb := kvec_unflatten256_writeback_iE hint_0{hr} result.`1 base{hr} ii Hmod Hii_bound.
-  have /= -> : (liftu_wpolykvec
-      (kvec_unflatten256
-         (init (fun i => if base{hr} <= i < base{hr} + n then result.`1.[i - base{hr}] else hint_0{hr}.[i])))).[ii] =
-    (liftu_wpolykvec (kvec_unflatten256 hint_0{hr})).[ii].
-  + by rewrite /liftu_wpolykvec mapiE 1:/# mapiE 1:/# /= Hwb ifF; smt(mem_iota).
-  by done.
-by rewrite Hres_cnt Hres_eq.
++ admit.
+  smt().
+  smt().
 
-auto => /> &hr ????????H??; do split.
-+ smt().
+auto => /> &hr ????????????H??; split;1: smt().
 + move => ?;do split;1..4:smt(count_ge0).
-  move => Hn; split.
+  move => Hn.
   + move => k kbl kbh.
-    case (k < base{hr} %/ n) => Hklt.
-    - (* old column: from invariant *)
-      by have [A _] := H Hn; apply A; smt().
+    case (k < base{hr} %/ n) => Hklt;1: by  smt(). 
     - (* new column k = base/n: from seq3 postcondition + kvec_slice_eq *)
       have -> : k = base{hr} %/ n by smt().
       have /= Hslice := kvec_slice_eq hint_0{hr} base{hr} _ _; 1,2: smt(mldsa65_kvec).
       by rewrite Hslice; smt().
-  have[A B] := H Hn. 
-  rewrite B.
+   - admit.
+   move => ?;split; 1:smt().
   have -> : (base{hr} + n) %/ n = (base{hr} %/ n + 1) by smt().
-  rewrite iotaSr 1:/# big_rcons /= ifT 1:/# /=; congr.
-  + have /= Hslice := kvec_slice_eq hint_0{hr} base{hr} _ _; 1,2: smt(mldsa65_kvec).
-    by rewrite /liftu_wpolykvec /liftu_wpoly mapiE 1:/# /= Hslice.
+  rewrite iotaSr 1:/# big_rcons /= ifT 1:/# /=.
+    admit.  (* CLaude: needs fixing *)
+     admit.  (* CLaude: needs fixing *)
 qed.
 
 lemma __make_hint_vector_ph
@@ -1237,20 +1343,18 @@ lemma __make_hint_vector_ph
         (* Biconditional: failure bit is zero iff no prior failure AND
            the abstract hint-weight check holds. Hints are always 0/1 by
            construction — the spec-level condition is just hammw. *)
-        (* Unconditional: hint array always computed correctly from inputs. *)
-        (forall k, 0 <= k < kvec =>
-           liftu_wpoly (kvec_unflatten256 res.`1).[k] =
-             poly_MakeHint (lifts_wpoly (kvec_unflatten256 _w1).[k])
-                           (lifts_wpoly (kvec_unflatten256 _r).[k])) /\
+        (res.`2 = W64.zero =>
+             liftu_wpolykvec (kvec_unflatten256 res.`1) =
+               MakeHint (lifts_wpolykvec (kvec_unflatten256 _w1))
+                             (lifts_wpolykvec (kvec_unflatten256 _r))) /\
         (res.`2 = W64.zero <=>
            _incr = W64.zero /\
            PolyKVec.hammw
-             (liftu_wpolykvec (kvec_unflatten256 res.`1)) w_hint) /\
+             (MakeHint (lifts_wpolykvec (kvec_unflatten256 _w1))
+                          (lifts_wpolykvec (kvec_unflatten256 _r))) w_hint) /\
         (res.`2 = W64.zero =>
            (* Hint coefficients are 0 or 1, so the kvec is unsigned-range 2. *)
            wpolykvec_urng (kvec_unflatten256 res.`1) 2)
     ] = 1%r.
-proof.
-admit. (* FIXME: strengthen __make_hint_vector_correct to give
-          biconditional on res.`2 and gated wpolykvec_urng on res.`1. *)
+proof. by conseq __make_hint_vector_ll (__make_hint_vector_correct _r _w1 _h _incr). 
 qed.

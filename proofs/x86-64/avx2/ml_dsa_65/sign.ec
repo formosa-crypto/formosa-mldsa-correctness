@@ -98,34 +98,6 @@ elim H => ->; elim H0 => -> /=;
   smt(W64.to_uint_eq W64.of_uintK W64.to_uintK pow2_64 W64.WRing.addr_eq0).
 qed.
 
-(* When all coefficients of the hint vector are 0 or 1 (wpolykvec_urng v 2),
-   hammw and count_nonzero_coeffs_kvec measure the same thing:
-   c <> Zq.zero <=> c = Zq.one for 0/1-valued coefficients. *)
-lemma hammw_count_nonzero (v : wpolykvec) (bound : int) :
-  wpolykvec_urng v 2 =>
-  hammw (liftu_wpolykvec v) bound =>
-  count_nonzero_coeffs_kvec (liftu_wpolykvec v) <= bound.
-proof.
-rewrite /wpolykvec_urng allP => Hrng.
-rewrite /hammw /count_nonzero_coeffs /count_nonzero_coeffs_kvec /count_nonzero_coeffs /=.
-rewrite /to_list /mkseq StdBigop.Bigint.BIA.big_map /(\o) /=.
-suff: StdBigop.Bigint.BIA.big predT<:int>
-  (fun (ii : int) => count (fun (jj : int) => (liftu_wpolykvec v).[ii].[jj] <> zero) (iota_ 0 n)) (
-  iota_ 0 kvec) =
- StdBigop.Bigint.BIA.big (fun (x : int) => predT (liftu_wpolykvec v).[x])
-  (fun (x : int) => count (fun (c : coeff) => c = one) (map ("_.[_]" (liftu_wpolykvec v).[x]) (iota_ 0 n)))
-  (iota_ 0 kvec) by smt().
-apply StdBigop.Bigint.BIA.eq_big_seq => x; rewrite mem_iota => /= *.
-rewrite count_map;apply eq_in_count => k; rewrite mem_iota => /= *.
-rewrite /preim /=.
-have := Hrng x _; 1:smt().
-rewrite /wpoly_urng allP => /= Hrngx.
-have := Hrngx k _;1:smt().
-move => H.
-rewrite /liftu_wpolykvec !mapiE 1,2:/# /=.
-smt(@Zq).
-qed.
-
 (* Correctness of the AVX2 ML-DSA-65 signing function.
    We prove an equiv between:
      - MLDSA(...).sign_derand(sk, m, coins) on the spec side
@@ -693,30 +665,23 @@ seq 1 0 : #pre; 1: by auto.
    by auto => |> &1 &2 *; smt().
 
  (* ── Step 4: make_hint ────────────────────────────────────── *)
- seq 0 2 : (#{~(infinity_norm_check_result{2} = W64.zero <=>
-               PolyKVec.infnorm_lt
-                 (lifts_wpolykvec (kvec_unflatten256 w0{2}) -
-                  PolyKVec.invnttv (PolyKVec.ntt_smul
-                    (lifts_wpoly verifier_challenge{2})
-                    (lifts_wpolykvec (kvec_unflatten256 s2{2}))))
-                 (gamma2 - Beta) /\
-               PolyKVec.infnorm_lt
-                 (PolyKVec.invnttv (PolyKVec.ntt_smul
-                    (lifts_wpoly verifier_challenge{2})
-                    (lifts_wpolykvec (kvec_unflatten256 t0{2}))))
-                 gamma2 /\
-               PolyLVec.infnorm_lt
-                 (lifts_wpolylvec (lvec_unflatten256 mask{2}) +
-                  PolyLVec.invnttv (PolyLVec.ntt_smul
-                    (lifts_wpoly verifier_challenge{2})
-                    (lifts_wpolylvec (lvec_unflatten256 s1{2}))))
-                 (gamma1 - Beta))}pre /\
+ seq 0 2 : (#{~(infinity_norm_check_result{2} = zero <=>
+   infnorm_lt
+     (lifts_wpolykvec (kvec_unflatten256 w0{2}) -
+      invnttv (ntt_smul (lifts_wpoly verifier_challenge{2}) (lifts_wpolykvec (kvec_unflatten256 s2{2}))))
+     (gamma2 - Beta) /\
+   infnorm_lt (invnttv (ntt_smul (lifts_wpoly verifier_challenge{2}) (lifts_wpolykvec (kvec_unflatten256 t0{2}))))
+     gamma2 /\
+   infnorm_lt
+     (lifts_wpolylvec (lvec_unflatten256 mask{2}) +
+      invnttv (ntt_smul (lifts_wpoly verifier_challenge{2}) (lifts_wpolylvec (lvec_unflatten256 s1{2}))))
+     (gamma1 - Beta))}pre /\
      (infinity_norm_check_result{2} = W64.zero \/ infinity_norm_check_result{2} = W64.one) /\
-     (forall k, 0 <= k < kvec =>
-        liftu_wpoly (kvec_unflatten256 hint_0{2}).[k] =
-          poly_MakeHint
-            (lifts_wpoly (kvec_unflatten256 w1{2}).[k])
-            (lifts_wpoly (kvec_unflatten256 w0_minus_cs2_plus_ct0{2}).[k])) /\
+     (infinity_norm_check_result{2} = W64.zero =>
+          liftu_wpolykvec (kvec_unflatten256 hint_0{2}) =
+            MakeHint
+              (lifts_wpolykvec (kvec_unflatten256 w1{2}))
+              (lifts_wpolykvec (kvec_unflatten256 w0_minus_cs2_plus_ct0{2}))) /\
      (PolyKVec.infnorm_lt
         (lifts_wpolykvec (kvec_unflatten256 w0{2}) -
          PolyKVec.invnttv (PolyKVec.ntt_smul
@@ -744,8 +709,9 @@ seq 1 0 : #pre; 1: by auto.
            (lifts_wpolykvec (kvec_unflatten256 t0{2})))) /\
      (infinity_norm_check_result{2} = W64.zero =>
         wpolykvec_urng (kvec_unflatten256 hint_0{2}) 2) /\
+        
      (infinity_norm_check_result{2} = W64.zero <=>
-        PolyKVec.infnorm_lt
+        (PolyKVec.infnorm_lt
           (lifts_wpolykvec (kvec_unflatten256 w0{2}) -
            PolyKVec.invnttv (PolyKVec.ntt_smul
              (lifts_wpoly verifier_challenge{2})
@@ -763,12 +729,14 @@ seq 1 0 : #pre; 1: by auto.
              (lifts_wpolylvec (lvec_unflatten256 s1{2}))))
           (gamma1 - Beta) /\
         PolyKVec.hammw
-          (liftu_wpolykvec (kvec_unflatten256 hint_0{2}))
-          w_hint)).
+          (MakeHint
+              (lifts_wpolykvec (kvec_unflatten256 w1{2}))
+              (lifts_wpolykvec (kvec_unflatten256 w0_minus_cs2_plus_ct0{2})))
+          w_hint))).
  + wp. ecall{2} (__make_hint_vector_ph
                    w0_minus_cs2_plus_ct0{2} w1{2} hint_0{2}
                    infinity_norm_check_result{2}).
-   by auto => |> &1 &2 *; smt().
+   auto => |> &1 &2 *;smt().  
  auto => |> &1 &2 ??????????????????????? Hh0 ??Hz.
  (* Instantiate the kappa-counter machine-arithmetic helper. *)
  have Hkbu :=
@@ -789,29 +757,15 @@ seq 1 0 : #pre; 1: by auto.
    invnttv (ntt_smul (lifts_wpoly verifier_challenge{2}) (lifts_wpolylvec (lvec_unflatten256 s1{2})))) (
   gamma1 - Beta) by smt().
   have -> : infnorm_lt (invnttv (ntt_smul (lifts_wpoly verifier_challenge{2}) (lifts_wpolykvec (kvec_unflatten256 t0{2})))) gamma2 by smt().
-  
-  have -> /=: hammw (liftu_wpolykvec (kvec_unflatten256 hint_0{2})) w_hint.
-  + suff : liftu_wpolykvec (kvec_unflatten256 hint_0{2}) =
-    (MakeHint
-        (polykvec_HighBits
-           (invnttv
-              (ntt_mulmxv (liftu_wpolymat (mat_unflatten256 matrix_A{2}))
-                 (nttv (lifts_wpolylvec (lvec_unflatten256 mask{2}))))))
-        (polykvec_LowBits
-           (invnttv
-              (ntt_mulmxv (liftu_wpolymat (mat_unflatten256 matrix_A{2}))
-                 (nttv (lifts_wpolylvec (lvec_unflatten256 mask{2}))))) -
-         invnttv (ntt_smul (ntt c{1}) (lifts_wpolykvec (kvec_unflatten256 s2{2}))) +
-         invnttv (ntt_smul (ntt c{1}) (lifts_wpolykvec (kvec_unflatten256 t0{2}))))) by smt().
-   by rewrite /MakeHint tP => i ib; rewrite mapiE 1:/#; rewrite  Hh0 1:/# map2iE 1:/#;smt(KArray.tP KArray.mapiE). 
+  have -> /=: PolyKVec.hammw
+  (MakeHint (lifts_wpolykvec (kvec_unflatten256 w1{2})) (lifts_wpolykvec (kvec_unflatten256 w0_minus_cs2_plus_ct0{2}))) w_hint by smt().
+
   move => H0.
-     do split;1..3,5,6:smt().
-     + rewrite  H0 /=;smt(or64_ne0).
-     + by rewrite /MakeHint tP => i ib; rewrite mapiE 1:/#; rewrite  Hh0 1:/# map2iE 1:/#;smt(KArray.tP KArray.mapiE).
+     do split;1..3,5,6,7,8:smt().
+     + rewrite  H0 /=;smt(or64_ne0). search count_nonzero_coeffs_kvec .
+     + by smt(hammw_count_nonzero).
      + by smt().
-     + by apply (hammw_count_nonzero (kvec_unflatten256 hint_0{2})); smt().
-     + by smt().
-     + rewrite  H0 /=;smt(or64_ne0).
+     + rewrite  H0 /=;smt(or64_ne0). search count_nonzero_coeffs_kvec .
  + move => Hn3.
    have := Hz.
    have  -> /=: !(infnorm_lt
@@ -823,20 +777,9 @@ infnorm_lt
   (lifts_wpolylvec (lvec_unflatten256 mask{2}) +
    invnttv (ntt_smul (lifts_wpoly verifier_challenge{2}) (lifts_wpolylvec (lvec_unflatten256 s1{2})))) (
   gamma1 - Beta) /\
-hammw (liftu_wpolykvec (kvec_unflatten256 hint_0{2})) w_hint ).
-  + case (infnorm_lt (invnttv (ntt_smul (ntt c{1}) (lifts_wpolykvec (kvec_unflatten256 t0{2})))) gamma2)  => ?; last by smt().
-    + suff : liftu_wpolykvec (kvec_unflatten256 hint_0{2}) = (MakeHint
-             (polykvec_HighBits
-                (invnttv
-                   (ntt_mulmxv (liftu_wpolymat (mat_unflatten256 matrix_A{2}))
-                      (nttv (lifts_wpolylvec (lvec_unflatten256 mask{2}))))))
-             (polykvec_LowBits
-                (invnttv
-                   (ntt_mulmxv (liftu_wpolymat (mat_unflatten256 matrix_A{2}))
-                      (nttv (lifts_wpolylvec (lvec_unflatten256 mask{2}))))) -
-              invnttv (ntt_smul (ntt c{1}) (lifts_wpolykvec (kvec_unflatten256 s2{2}))) +
-              invnttv (ntt_smul (ntt c{1}) (lifts_wpolykvec (kvec_unflatten256 t0{2}))))) by smt().
-   +  by rewrite /MakeHint tP => i ib; rewrite mapiE 1:/#; rewrite  Hh0 1:/# map2iE 1:/#;smt(KArray.tP KArray.mapiE). 
+hammw
+  (MakeHint (lifts_wpolykvec (kvec_unflatten256 w1{2})) (lifts_wpolykvec (kvec_unflatten256 w0_minus_cs2_plus_ct0{2})))
+  w_hint ) by smt().
 
   move => H0.
   have H1 : infinity_norm_check_result{2} = one by smt().
@@ -857,7 +800,9 @@ infnorm_lt
   (lifts_wpolylvec (lvec_unflatten256 mask{2}) +
    invnttv (ntt_smul (lifts_wpoly verifier_challenge{2}) (lifts_wpolylvec (lvec_unflatten256 s1{2})))) (
   gamma1 - Beta) /\
-hammw (liftu_wpolykvec (kvec_unflatten256 hint_0{2})) w_hint ) by smt().
+hammw
+  (MakeHint (lifts_wpolykvec (kvec_unflatten256 w1{2})) (lifts_wpolykvec (kvec_unflatten256 w0_minus_cs2_plus_ct0{2})))
+  w_hint ) by smt().
   move => H0.
   have H1 : infinity_norm_check_result{2} = one by smt().
    + do split;1..3:smt(). 

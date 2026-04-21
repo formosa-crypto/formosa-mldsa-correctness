@@ -620,8 +620,9 @@ seq 1 0 : #pre; 1: by auto.
                     (lifts_wpolykvec (kvec_unflatten256 s2{2}))))
                  (gamma2 - Beta))}pre /\
      (infinity_norm_check_result{2} = W64.zero \/ infinity_norm_check_result{2} = W64.one) /\
-     (* New: unconditional word-level range — feeds make_hint's precondition. *)
-     wpolykvec_srng (kvec_unflatten256 w0_minus_cs2_plus_ct0{2}) (gamma2 - 1) gamma2 /\
+     (* Conditional range from ct0 add: tightest bound from norm checks. *)
+     (infinity_norm_check_result{2} = W64.zero =>
+        wpolykvec_srng (kvec_unflatten256 w0_minus_cs2_plus_ct0{2}) (2*gamma2 - Beta - 2) (2*gamma2 - Beta - 2)) /\
      (infinity_norm_check_result{2} = W64.zero =>
         let ct0 = PolyKVec.invnttv (PolyKVec.ntt_smul
                     (lifts_wpoly verifier_challenge{2})

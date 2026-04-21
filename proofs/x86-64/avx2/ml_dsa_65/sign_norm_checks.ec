@@ -1306,7 +1306,12 @@ have [Hfork Hcount] : (forall k, 0 <= k < base{hr} %/ n =>
   have Hkvec : 0 <= k < kvec by smt(mldsa65_kvec).
   have /= Hwb := kvec_unflatten256_writeback_iE hint_0{hr} result.`1 base{hr} k Hmod Hkvec.
   by rewrite Hwb ifF; smt().
-+ admit.
++ move => Hzero k Hk0 Hklt.
+  have /= Hmod : base{hr} %% 256 = 0 by smt().
+  have Hkvec : 0 <= k < kvec by smt(mldsa65_kvec).
+  have /= Hwb := kvec_unflatten256_writeback_iE hint_0{hr} result.`1 base{hr} k Hmod Hkvec.
+  rewrite Hwb ifF 1:/# .
+  smt().
   smt().
   smt().
 
@@ -1314,17 +1319,20 @@ auto => /> &hr ????????????H??; split;1: smt().
 + move => ?;do split;1..4:smt(count_ge0).
   move => Hn.
   + move => k kbl kbh.
-    case (k < base{hr} %/ n) => Hklt;1: by  smt(). 
-    - (* new column k = base/n: from seq3 postcondition + kvec_slice_eq *)
-      have -> : k = base{hr} %/ n by smt().
+    case (k < base{hr} %/ n) => Hklt;1: by  smt().
+    - have -> : k = base{hr} %/ n by smt().
       have /= Hslice := kvec_slice_eq hint_0{hr} base{hr} _ _; 1,2: smt(mldsa65_kvec).
       by rewrite Hslice; smt().
-   - admit.
-   move => ?;split; 1:smt().
+  - move => Hn k kbl kbh.
+    case (k < base{hr} %/ n) => Hklt; 1: by smt().
+    have -> : k = base{hr} %/ n by smt().
+    have /= Hslice := kvec_slice_eq hint_0{hr} base{hr} _ _; 1,2: smt(mldsa65_kvec).
+    by rewrite Hslice; smt().
+  move => ?;split; 1:smt().
   have -> : (base{hr} + n) %/ n = (base{hr} %/ n + 1) by smt().
   rewrite iotaSr 1:/# big_rcons /= ifT 1:/# /=.
-    admit.  (* CLaude: needs fixing *)
-     admit.  (* CLaude: needs fixing *)
+    admit.  (* TODO: big + count <= w_hint via total_ones invariant + MakeHint bridge *)
+    admit.  (* TODO: total_ones + count = big (extended) via total_ones invariant + MakeHint bridge *)
 qed.
 
 lemma __make_hint_vector_ph

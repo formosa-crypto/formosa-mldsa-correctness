@@ -474,7 +474,7 @@ lemma signature____encode_ll : islossless M.signature____encode.
 proof.
 proc.
 call signature____encode_hint_ll.
-wp. print Gamma1.
+wp.
 call (: true ==> true); first by apply gamma1_encode_ll.
 by while true (48 - i); auto => /#.
 qed.

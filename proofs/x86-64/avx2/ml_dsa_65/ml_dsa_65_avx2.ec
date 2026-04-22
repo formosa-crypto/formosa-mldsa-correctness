@@ -11697,6 +11697,11 @@ module M = {
       );
       total_ones_in_hint <- (total_ones_in_hint + ones_in_hint);
       base <- (base + 256);
+      hint_count_exceeded <- (55 < total_ones_in_hint);
+      hint_count_fail <- (SETcc hint_count_exceeded);
+      hint_count_fail_64 <- (zeroextu64 hint_count_fail);
+      infinity_norm_check_result <-
+      (infinity_norm_check_result `|` hint_count_fail_64);
       infinity_norm_check_result <- infinity_norm_check_result;
       if ((infinity_norm_check_result <> (W64.of_int 0))) {
         base <- (6 * 256);
@@ -11704,11 +11709,6 @@ module M = {
         
       }
     }
-    hint_count_exceeded <- (55 < total_ones_in_hint);
-    hint_count_fail <- (SETcc hint_count_exceeded);
-    hint_count_fail_64 <- (zeroextu64 hint_count_fail);
-    infinity_norm_check_result <-
-    (infinity_norm_check_result `|` hint_count_fail_64);
     return (hint_0, infinity_norm_check_result);
   }
   proc __sign_internal (signature:W8.t Array3309.t,

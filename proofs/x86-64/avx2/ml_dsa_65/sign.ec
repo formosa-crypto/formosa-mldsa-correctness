@@ -142,7 +142,6 @@ have Hgamma1 := mldsa65_gamma1.
 have Htau    := mldsa65_tau.
 move => Hkappa_max.
 proc*.
-print MLDSA.
 transitivity {1} { r <@ MLDSA(MLDSA_XOFA, MLDSA_XOFS, MLDSA_XOF_SIB, SIB_RO).sign_eager(sk,m, coins); }
     (={sk,m,coins, glob MLDSA_XOFA, glob MLDSA_XOFS, glob MLDSA_XOF_SIB, glob SIB_RO} ==> ={r})
     (   Glob.mem{2} = _m

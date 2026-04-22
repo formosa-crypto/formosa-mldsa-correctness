@@ -1213,35 +1213,19 @@ while (#{/~_incr}{~infinity_norm_check_result}{~hint_0}{~total_ones_in_hint}pre 
   + by rewrite (iota0 0 0) //= big_nil /#.
   (* exit condition: INV /\ !guard => post *)
   move => bs h0 inf0 toi0 ? Hbin ? ?? Hexit ? Hcond Hmhp Hmhp0 Hmhp1 Hmhp2.
-  rewrite /SETcc /=; do split.
-  + case (inf0 = W64.zero) => Hi0;  case (55 < toi0) => Hcnt /=;
-    1,2: by rewrite Hi0 /= !to_uint_eq to_uint_zeroextu64 /=.
-  + have -> : inf0 = W64.one by smt().
-    right;rewrite wordP => k kb /=.
-    rewrite zeroextu64E pack8E initiE 1:/# /= initiE 1:/# /=.
-    by case (k %/8 = 0) => Hk;rewrite  !W64.nth_one /= ?W8.nth_one /= /#.
-  + have -> : inf0 = W64.one by smt().
-    right;rewrite wordP => k kb /=.
-    rewrite zeroextu64E pack8E initiE 1:/# /= initiE 1:/# /=.
-    by case (k %/8 = 0) => Hk;rewrite  ?W64.nth_one /= ?W8.nth_one /= /#.
+  do split.
   + move => Hi.
-    have H : inf0 = zero by smt(or64_ne0).
-    have HH := Hmhp H.
+    have HH := Hmhp Hi.
     rewrite tP => k kb.
-    rewrite mapiE 1:/# HH 1:/# /MakeHint map2iE 1:/# mapiE 1:/#; smt(KArray.mapiE).   
-  + case (inf0 = zero) => H0; last by smt(or64_ne0 W64.to_uint_eq W64.to_uint_cmp pow2_64 W64.of_uintK W64.to_uintK).
-    rewrite H0 /= => ?.  
-    rewrite /hammw.
+    rewrite mapiE 1:/# HH 1:/# /MakeHint map2iE 1:/# mapiE 1:/#; smt(KArray.mapiE).
+  + move => Hi; rewrite /hammw.
     have -> : kvec = bs %/ n by smt().
-    by have := Hmhp1; rewrite H0 /= => ->. 
-  + case (inf0 = zero) => H0.
-    + rewrite H0 /= /hammw => ?; rewrite ifF.
-      + rewrite Hmhp2 1:/# /#.
-        by rewrite to_uint_eq to_uint_zeroextu64 /=.
-    by have := Hmhp1; rewrite H0 /= /hammw /#.
-  + case (inf0 = zero) => H0; last by smt(or64_ne0 W64.to_uint_eq W64.to_uint_cmp pow2_64 W64.of_uintK W64.to_uintK).
-    + rewrite H0 /= => ?.
-      rewrite /wpolykvec_urng allP; smt().
+    by have := Hmhp1; rewrite Hi /= => ->.
+  + move => Hh.
+    move: Hh; rewrite /hammw => Hh.
+    have Hk : kvec = bs %/ n by smt().
+    have := Hmhp1; by rewrite -Hk Hh.
+  + move => Hi; rewrite /wpolykvec_urng allP; smt().
     
     
 (* ── Loop body ────────────────────────────────────────────────── *)
@@ -1290,16 +1274,12 @@ seq 3 : (#pre /\
   move => Rv.
 
 (* ── Phase 2: accumulate + base++ + declassify + conditional exit ── *)
-do split.
+do split;3..:smt().
 move => Hinf.
-have [Hfork Hcount] : (forall k, 0 <= k < base{hr} %/ n =>
+have Hfork : forall k, 0 <= k < base{hr} %/ n =>
       liftu_wpoly (kvec_unflatten256 hint_0{hr}).[k] =
-      poly_MakeHint (lifts_wpoly (kvec_unflatten256 _w1).[k]) (lifts_wpoly (kvec_unflatten256 _r).[k])) /\
-    total_ones_in_hint{hr} =
-    big predT (fun ii =>
-      count (fun jj => (MakeHint (lifts_wpolykvec (kvec_unflatten256 _w1)) (lifts_wpolykvec (kvec_unflatten256 _r))).[ii].[jj] <> Zq.zero) (iota_ 0 n))
-      (iota_ 0 (base{hr} %/ n))
-  by smt().
+      poly_MakeHint (lifts_wpoly (kvec_unflatten256 _w1).[k]) (lifts_wpoly (kvec_unflatten256 _r).[k])
+  by move => k [Hk0 Hkn]; smt().
 + (* forall k < base/n: writeback preserves old columns *)
   move => k kb Hlt.
   have /= Hmod : base{hr} %% 256 = 0 by smt().
@@ -1310,29 +1290,34 @@ have [Hfork Hcount] : (forall k, 0 <= k < base{hr} %/ n =>
   have /= Hmod : base{hr} %% 256 = 0 by smt().
   have Hkvec : 0 <= k < kvec by smt(mldsa65_kvec).
   have /= Hwb := kvec_unflatten256_writeback_iE hint_0{hr} result.`1 base{hr} k Hmod Hkvec.
-  rewrite Hwb ifF 1:/# .
-  smt().
-  smt().
-  smt().
+  by rewrite Hwb ifF;smt().
 
-auto => /> &hr ????????????H??; split;1: smt().
-+ move => ?;do split;1..4:smt(count_ge0).
-  move => Hn.
-  + move => k kbl kbh.
-    case (k < base{hr} %/ n) => Hklt;1: by  smt().
-    - have -> : k = base{hr} %/ n by smt().
-      have /= Hslice := kvec_slice_eq hint_0{hr} base{hr} _ _; 1,2: smt(mldsa65_kvec).
-      by rewrite Hslice; smt().
-  - move => Hn k kbl kbh.
-    case (k < base{hr} %/ n) => Hklt; 1: by smt().
-    have -> : k = base{hr} %/ n by smt().
-    have /= Hslice := kvec_slice_eq hint_0{hr} base{hr} _ _; 1,2: smt(mldsa65_kvec).
-    by rewrite Hslice; smt().
-  move => ?;split; 1:smt().
-  have -> : (base{hr} + n) %/ n = (base{hr} %/ n + 1) by smt().
-  rewrite iotaSr 1:/# big_rcons /= ifT 1:/# /=.
-    admit.  (* TODO: big + count <= w_hint via total_ones invariant + MakeHint bridge *)
-    admit.  (* TODO: total_ones + count = big (extended) via total_ones invariant + MakeHint bridge *)
+auto => /> &hr ???????????Hcount H??; split. 
++ rewrite /SETcc.
+  pose p := 55 <
+      total_ones_in_hint{hr} +
+      count (fun (i : int) => (liftu_wpoly (init (fun (j : int) => hint_0{hr}.[base{hr} + j]))).[i] <> zero)
+        (iota_ 0 n).
+  move => Hf;do split;2:smt(count_ge0).
+  + case p => Hp; case (infinity_norm_check_result{hr} = zero) => H0; 2,4:smt(W64.to_uint_eq W64.of_uintK W64.to_uintK pow2_64 or64_ne0); rewrite H0 /= to_uint_eq  to_uint_zeroextu64 //=;  by have := Hf;rewrite Hp H0 /= to_uint_eq /= to_uint_zeroextu64 //=.
+  + case (_incr = zero); last by smt().
+    move => Hi0 /=.
+    case (infinity_norm_check_result{hr} = zero) => Hin0; last by smt().
+    move : Hf; rewrite Hin0 /= to_uint_eq /= to_uint_zeroextu64 => ?.
+    have  : p by smt(W8.to_uint_eq W8.of_uintK W8.to_uintK pow2_8).
+    rewrite /p Hcount // => Hpp.
+    have -> : 6 = base{hr} %/n + 1 + (6 - base{hr} %/n  - 1) by ring.
+    rewrite iota_add;1,2:smt(mldsa65_kvec).
+    rewrite iota_add;1,2:smt(mldsa65_kvec).
+    simplify.
+    rewrite iota1 !big_cat big_cons /= big_nil /= /(predT (base{hr} %/ n)) /=.
+    admit.
+    
+  move => Hn; do split;1..5: smt(count_ge0).
+  + admit.
+  + admit.
+  + admit.
+  + admit.
 qed.
 
 lemma __make_hint_vector_ph

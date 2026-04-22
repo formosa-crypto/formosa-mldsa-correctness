@@ -331,8 +331,7 @@ seq 0 1 : (#pre /\
            domain_separator_for_mask <- 0
            exit_rejection_sampling_loop <- 0
            kappa_exceeded <- 0
-   Spec: (kappa <- 0, zh <- None already done; s1h/s2h/t0h from Step 2 above)
-   FIXME: NTT bridge lemmas are not yet proven. *)
+   Spec: (kappa <- 0, zh <- None already done; s1h/s2h/t0h from Step 2 above) *)
 seq 0 3 : (#{/~s1{2}}{/~s2{2}}{/~t0{2}}pre /\
     lifts_wpolylvec (lvec_unflatten256 s1{2}) = s1h{1} /\
     lifts_wpolykvec (kvec_unflatten256 s2{2}) = s2h{1} /\

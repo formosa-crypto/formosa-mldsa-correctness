@@ -95,3 +95,5 @@ op poly_LowBits(p : poly) : poly =
 
 op infnorm_lt (p : poly) (bound : int) : bool =
   all (fun j => `|p.[j]| < bound) (iota_ 0 256).
+
+lemma Rq_addC : forall (a b : poly), a &+ b = b &+ a by admit. (* ring addition commutative *)

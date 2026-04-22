@@ -76,17 +76,17 @@ axiom invntt_obound_fits_for_caddq :
 (* Admitted pending concrete instantiation of the abstract ops.        *)
 (* ------------------------------------------------------------------ *)
 lemma wpoly_ntt_orng_bmul_irng (p : wpoly) : wpoly_ntt_orng p => wpoly_bmul_irng p.
-admitted.
+admitted. (* bridge ntt orng bmul irng *)
 (* basemul outputs satisfy |to_sint coeff| < q (Barrett/Montgomery final step),
    which is sufficient input range for invNTT *)
 lemma wpoly_bmul_orng_intt_irng (p : wpoly) : wpoly_srng (q-1) (q-1) p => wpoly_intt_irng p.
-admitted.
+admitted. (* bridge bmul orng intt irng *)
 (* Fully reduced coefficients (in [0,q)) are valid basemul inputs *)
 lemma wpoly_urng_bmul_irng (p : wpoly) : wpoly_urng q p => wpoly_bmul_irng p.
-admitted.
+admitted. (* bmul accepts fully reduced coeffs (redundant) *)
 (* Coefficients with |x| < q (signed, centered or not) are valid NTT inputs *)
 lemma wpoly_srng_ntt_irng (p : wpoly) : wpoly_srng (q-1) (q-1) p => wpoly_ntt_irng p.
-admitted.
+admitted. (* ntt accepts -(q-1) .. q-1 (probably redundant) *)
 
 lemma wpoly_urng_lifts_eq_liftu (p : wpoly) :
   wpoly_urng q p => lifts_wpoly p = liftu_wpoly p.

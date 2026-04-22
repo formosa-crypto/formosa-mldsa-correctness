@@ -58,7 +58,7 @@ op (+) (v1 v2 : polylvec) : polylvec = alg2polylvec ((polylvec2alg v1) + (polylv
    Same hurdle as polykvec: (+) routes through abstract algebra (FIXME: PY). *)
 lemma polylvec_add_iE (v1 v2 : polylvec) k :
   0 <= k < lvec => (v1 + v2).[k] = v1.[k] &+ v2.[k].
-  admitted.
+  admitted. (* FIXME: PY *)
 
 op ntt_smul(p : poly, v : polylvec) : polylvec = map (fun p' => basemul p' p) v.
 
@@ -114,13 +114,13 @@ proof. by move => hk; rewrite /invnttv /ntt_smul !mapiE 1:/# /=. qed.
    Once those are filled in this axiom becomes provable by unfolding. *)
 lemma polykvec_sub_iE (v1 v2 : polykvec) k :
   0 <= k < kvec => (v1 - v2).[k] = v1.[k] &+ (&-) v2.[k].
-  admitted.
+  admitted. (* FIXME: PY *)
 
 (* Componentwise indexing of polykvec addition.
    Same hurdle as subtraction: (+) routes through abstract algebra (FIXME: PY). *)
 lemma polykvec_add_iE (v1 v2 : polykvec) k :
   0 <= k < kvec => (v1 + v2).[k] = v1.[k] &+ v2.[k].
-  admitted.
+  admitted. (* FIXME: PY *)
 
 op smul(v : polykvec, c : coeff) : polykvec =
    KArray.map (fun (vi : poly) => map (fun ci => c*ci) vi) v.
@@ -173,3 +173,15 @@ op ntt_dotp (v1 v2 : polylvec) : poly =
 op ntt_mulmxv(m : polymat, v : polylvec) : polykvec = 
    KArray.init (fun i => ntt_dotp (row m i) v).
  
+op dotp_partial (v1 v2 : polylvec) (k : int) : poly =
+  foldr (fun (i : int) (a : poly) => (basemul v1.[i] v2.[i]) &+ a)
+        poly_zero (iota_ 0 k).
+
+lemma dotp_partialS (v1 v2 : polylvec) (k : int) :
+  0 <= k => dotp_partial v1 v2 (k + 1) = basemul v1.[k] v2.[k] &+ dotp_partial v1 v2 k.
+proof. admitted. (* todo dotp algebra PY *)
+
+lemma dotp_partial_ntt_dotp (v1 v2 : polylvec) :
+  dotp_partial v1 v2 lvec = ntt_dotp v1 v2.
+proof. by rewrite /dotp_partial /ntt_dotp. qed.
+

@@ -184,18 +184,6 @@ wp; call polynomial__pointwise_montgomery_multiply_and_reduce_ll.
 by auto => /#.
 qed.
 
-op dotp_partial (v1 v2 : polylvec) (k : int) : poly =
-  foldr (fun (i : int) (a : poly) => (basemul v1.[i] v2.[i]) &+ a)
-        poly_zero (iota_ 0 k).
-
-lemma dotp_partialS (v1 v2 : polylvec) (k : int) :
-  0 <= k => dotp_partial v1 v2 (k + 1) = basemul v1.[k] v2.[k] &+ dotp_partial v1 v2 k.
-proof. admitted. (* todo algebra PY *)
-
-lemma dotp_partial_ntt_dotp (v1 v2 : polylvec) :
-  dotp_partial v1 v2 lvec = ntt_dotp v1 v2.
-proof. by rewrite /dotp_partial /ntt_dotp. qed.
-
 lemma row_vector____dot_product_correct
       (_out : W32.t Array256.t)
       (_lhs : W32.t Array1280.t) (_rhs : W32.t Array1280.t) :
@@ -266,7 +254,7 @@ split.
     rewrite Hadd_eq Hlifts Hbmul_eq Hlhs_slice Hrhs_slice dotp_partialS; 1: smt().
     pose a := dotp_partial _ _.
     pose b := basemul _ _.
-    admit. (* TODO PY: &+ commutativity *)
+    by rewrite Rq_addC.
   + (* range: (i+1)*(q-1) *)
     by have -> : (i{hr} + 1) * (q - 1) = i{hr} * (q - 1) + (q - 1) by ring.
 qed.

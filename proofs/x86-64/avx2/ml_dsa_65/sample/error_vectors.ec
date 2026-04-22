@@ -22,4 +22,4 @@ phoare error_vectors_correct _rho :
      /\ lifts_wpolykvec (kvec_unflatten256 res.`2) = (expandS (Bytes64.of_list (to_list _rho))).`2
      /\ wpolykvec_srng (kvec_unflatten256 res.`2) Eta Eta
     ] = 1%r.
-admitted. (* FIXME: PY *)
+admitted. (* sample error vectors *)

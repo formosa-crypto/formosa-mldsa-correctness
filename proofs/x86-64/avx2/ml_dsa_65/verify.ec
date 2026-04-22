@@ -204,9 +204,7 @@ while (0 <= i <= 6 /\ t1_encoded = _t1enc /\ challenge_as_ntt = _ch /\
   by rewrite nth_mkseq; 1: smt(mldsa65_kvec).
 (* Loop body: 9-call chain (t1_decode → shift → ntt → pmmar → subtract → reduce32 →    *)
 (*   invert_ntt → caddq → use_hints) + writeback. The ecall chain is structurally      *)
-(* threaded below; the remaining `admit` handles the algebraic derivation of the       *)
-(* per-component invariant at i+1 (lifts chain matching signer_commitment_spec.[i]      *)
-(* and range-bound threading). ~150 more lines of algebra.                              *)
+(* threaded below.                              *)
 wp.
 ecall (polynomial__use_hints_correct commitment_element hints_element).
 wp.

@@ -173,7 +173,7 @@ lemma polynomial__add_correct
         wpoly_srng (A + B) (A + B) res
     ].
 proof.
-admitted.
+admitted. (* poly add correct *)
 
 lemma polynomial__add_ph
       (_sum : W32.t Array256.t) (_lhs : W32.t Array256.t) (_rhs : W32.t Array256.t)
@@ -213,7 +213,7 @@ lemma polynomial__subtract_correct
         wpoly_srng (A + B) (A + B) res
     ].
 proof.
-admitted.
+admitted. (* poly sub correct *)
 
 lemma polynomial__subtract_ph
       (_diff : W32.t Array256.t) (_lhs : W32.t Array256.t) (_rhs : W32.t Array256.t)
@@ -248,7 +248,7 @@ lemma polynomial____zero_correct (_a : W32.t Array256.t) :
         wpoly_srng 0 0 res
     ].
 proof.
-admitted.
+admitted. (* poly zero correct *)
 
 lemma polynomial____zero_ph (_a : W32.t Array256.t) :
     phoare [ M.polynomial____zero :
@@ -284,7 +284,7 @@ lemma polynomial____pointwise_add_to_total_correct
         wpoly_srng (A + B) (A + B) res
     ].
 proof.
-admitted.
+admitted. (*  self add correct *)
 
 lemma polynomial____pointwise_add_to_total_ph
       (_total : W32.t Array256.t) (_poly : W32.t Array256.t) (A B : int) :
@@ -327,7 +327,7 @@ lemma polynomial____shift_coefficients_left_correct (_a : W32.t Array256.t) :
         wpoly_srng (q-1) (q-1) res
     ].
 proof.
-admitted.
+admitted. (* shif coeffs correct *)
 
 lemma polynomial____shift_coefficients_left_ph (_a : W32.t Array256.t) :
     phoare [ M.polynomial____shift_coefficients_left :

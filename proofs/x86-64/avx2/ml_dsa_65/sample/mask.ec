@@ -31,4 +31,4 @@ lemma mask_correct _seed _dom :
      /\ W16.to_uint res{2}.`2 = W16.to_uint _dom + lvec
     ].
 proc.
-admitted. (* FIXME: PY *)
+admitted. (* expand mask (y) *)

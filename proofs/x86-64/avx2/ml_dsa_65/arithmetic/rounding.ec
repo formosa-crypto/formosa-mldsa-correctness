@@ -48,7 +48,7 @@ lemma polynomial__decompose_correct
         wpoly_urng ((q - 1) %/ (2 * gamma2)) res.`2
     ].
 proof.
-admitted.
+admitted. (* poly decompose *)
 
 lemma polynomial__decompose_ph
       (_low : W32.t Array256.t) (_high : W32.t Array256.t) (_a : W32.t Array256.t) :
@@ -99,7 +99,7 @@ lemma polynomial__use_hints_correct
         wpoly_urng ((q - 1) %/ (2 * gamma2)) res
     ].
 proof.
-admitted.
+admitted. (* poly use hints *)
 
 lemma polynomial__use_hints_ph
       (_commitment : W32.t Array256.t) (_hints : W32.t Array256.t) :

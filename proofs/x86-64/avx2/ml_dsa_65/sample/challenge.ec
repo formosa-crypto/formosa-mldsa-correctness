@@ -26,4 +26,4 @@ lemma sample_challenge_correct :
        wpoly_srng 1 1 res{2}
     ].
 proc.
-admitted. (* FIXME: PY *)
+admitted. (* sample challenge *)

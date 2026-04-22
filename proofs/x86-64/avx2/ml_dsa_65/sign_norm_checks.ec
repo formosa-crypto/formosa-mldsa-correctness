@@ -98,7 +98,7 @@ have Hintt_rng_wide : wpoly_srng (q-1) (q-1) result0.
 split; 1: by smt(mldsa65_gamma1).
 move => _ _ result1 Hadd_eq _ result2 Hred_eq _.
 rewrite Hred_eq Hadd_eq Hintt_eq Hbmul_eq.
-admit. (* FIXME: PY algebra *)
+by rewrite Rq_addC.
 qed.
 
 lemma __compute_signer_response_element_ph
@@ -1311,13 +1311,100 @@ auto => /> &hr ???????????Hcount H??; split.
     rewrite iota_add;1,2:smt(mldsa65_kvec).
     simplify.
     rewrite iota1 !big_cat big_cons /= big_nil /= /(predT (base{hr} %/ n)) /=.
-    admit.
-    
+    (* Goal: !(big(0..base/n) + (MakeHint w1 r)[base/n]-count + big(base/n+1..5) <= w_hint)
+       Strategy: rewrite the middle count via Heq, then arithmetic from Hpp+Htail *)
+    have Heq : (MakeHint (lifts_wpolykvec (kvec_unflatten256 _w1))
+                   (lifts_wpolykvec (kvec_unflatten256 _r))).[base{hr} %/ n] =
+               liftu_wpoly (init (fun (i : int) => hint_0{hr}.[base{hr} + i]))
+      by rewrite /PolyKVec.MakeHint map2iE 1:/# /lifts_wpolykvec mapiE 1:/# mapiE 1:/#; smt().
+    rewrite Heq.
+    have Htail : 0 <= big predT
+        (fun (ii : int) => count (fun (jj : int) =>
+           (MakeHint (lifts_wpolykvec (kvec_unflatten256 _w1))
+              (lifts_wpolykvec (kvec_unflatten256 _r))).[ii].[jj] <> zero) (iota_ 0 n))
+        (iota_ (base{hr} %/ n + 1) (5 - base{hr} %/ n))
+      by apply sumr_ge0_seq => ??; smt( count_ge0).
+    have Hcnt : count (fun (jj : int) =>
+          (liftu_wpoly (init (fun (i : int) => hint_0{hr}.[base{hr} + i]))).[jj] <> zero)
+        (iota_ 0 n) =
+        count (fun (i : int) =>
+          (liftu_wpoly (init (fun (j : int) => hint_0{hr}.[base{hr} + j]))).[i] <> zero)
+        (iota_ 0 n) by done.
+    move: Hpp.
+    pose a := big predT<:int>
+    (fun (ii : int) =>
+       count
+         (fun (jj : int) =>
+            (MakeHint (lifts_wpolykvec (kvec_unflatten256 _w1)) (lifts_wpolykvec (kvec_unflatten256 _r))).[ii].[jj] <>
+            zero) (iota_ 0 n)) (iota_ 0 (base{hr} %/ n)).
+    pose b :=  count (fun (jj : int) => (liftu_wpoly (init (fun (i : int) => hint_0{hr}.[base{hr} + i]))).[jj] <> zero) (iota_ 0 n).
+    pose F := (fun (ii : int) =>
+       count
+         (fun (jj : int) =>
+            (MakeHint (lifts_wpolykvec (kvec_unflatten256 _w1)) (lifts_wpolykvec (kvec_unflatten256 _r))).[ii].[jj] <>
+            zero) (iota_ 0 n)).
+     by smt (sumr_ge0 count_ge0).
+
   move => Hn; do split;1..5: smt(count_ge0).
-  + admit.
-  + admit.
-  + admit.
-  + admit.
+  + (* MakeHint forall: extend from k < base/n to k < (base+n)/n *)
+    move => _ k Hk0 Hklt.
+    have Hinf0 : infinity_norm_check_result{hr} = zero
+      by smt(or64_ne0 W64.to_uint_eq W64.of_uintK W64.to_uintK pow2_64).
+    have /= Hslice := kvec_slice_eq hint_0{hr} base{hr} _ _; 1,2: smt(mldsa65_kvec).
+    have Hkdec : k < base{hr} %/ n \/ k = base{hr} %/ n by smt().
+    elim Hkdec => [Hklt2|->].
+    + by smt().
+    + by rewrite Hslice; smt().
+  + (* wpoly_urng forall: extend from k < base/n to k < (base+n)/n *)
+    move => _ k Hk0 Hklt.
+    have Hinf0 : infinity_norm_check_result{hr} = zero
+      by smt(or64_ne0 W64.to_uint_eq W64.of_uintK W64.to_uintK pow2_64).
+    have /= Hslice := kvec_slice_eq hint_0{hr} base{hr} _ _; 1,2: smt(mldsa65_kvec).
+    have Hkdec : k < base{hr} %/ n \/ k = base{hr} %/ n by smt().
+    elim Hkdec => [Hklt2|->].
+    + by smt().
+    + by rewrite Hslice; smt().
+  + (* Biconditional: inf_new = zero <=> _incr = zero /\ big(0..(base+n)/n) <= w_hint *)
+    move => ?.
+    have Hinf0 : infinity_norm_check_result{hr} = zero
+      by smt(or64_ne0 W64.to_uint_eq W64.of_uintK W64.to_uintK pow2_64).
+    pose p := 55 <
+      total_ones_in_hint{hr} +
+      count (fun (i : int) => (liftu_wpoly (init (fun (j : int) => hint_0{hr}.[base{hr} + j]))).[i] <> zero)
+        (iota_ 0 n).
+    have Hnp : !p
+      by smt(W8.to_uint_eq W8.of_uintK W8.to_uintK pow2_8
+             W64.to_uint_eq W64.of_uintK W64.to_uintK pow2_64 or64_ne0).
+    split; 1: smt().
+    have -> : (base{hr} + n) %/ n = base{hr} %/ n + 1 by smt().
+    rewrite iota_add; 1,2: smt().
+    rewrite iota1 big_cat big_cons /= big_nil /=.
+    have Heq2 : (MakeHint (lifts_wpolykvec (kvec_unflatten256 _w1))
+                   (lifts_wpolykvec (kvec_unflatten256 _r))).[base{hr} %/ n] =
+                 liftu_wpoly (init (fun (i : int) => hint_0{hr}.[base{hr} + i]))
+      by rewrite /PolyKVec.MakeHint map2iE 1:/# /lifts_wpolykvec mapiE 1:/# mapiE 1:/#; smt().
+    rewrite Heq2.
+    have Hcnt : count (fun (jj : int) => (liftu_wpoly (init (fun (i : int) => hint_0{hr}.[base{hr} + i]))).[jj] <> zero) (iota_ 0 n) =
+                count (fun (i : int) => (liftu_wpoly (init (fun (j : int) => hint_0{hr}.[base{hr} + j]))).[i] <> zero) (iota_ 0 n)
+      by done.
+    rewrite Hcnt -(Hcount Hinf0); smt().
+  + (* count equality: inf_new = zero => total_new = big(0..(base+n)/n) *)
+    move => _.
+    have Hinf0 : infinity_norm_check_result{hr} = zero
+      by smt(or64_ne0 W64.to_uint_eq W64.of_uintK W64.to_uintK pow2_64).
+    have -> : (base{hr} + n) %/ n = base{hr} %/ n + 1 by smt().
+    rewrite iota_add; 1,2: smt().
+    rewrite iota1 big_cat big_cons /= big_nil /=.
+    have Heq2 : (MakeHint (lifts_wpolykvec (kvec_unflatten256 _w1))
+                   (lifts_wpolykvec (kvec_unflatten256 _r))).[base{hr} %/ n] =
+                 liftu_wpoly (init (fun (i : int) => hint_0{hr}.[base{hr} + i]))
+      by rewrite /PolyKVec.MakeHint map2iE 1:/# /lifts_wpolykvec mapiE 1:/# mapiE 1:/#; smt().
+    rewrite Heq2.
+    have Hcnt : count (fun (jj : int) => (liftu_wpoly (init (fun (i : int) => hint_0{hr}.[base{hr} + i]))).[jj] <> zero) (iota_ 0 n) =
+                count (fun (i : int) => (liftu_wpoly (init (fun (j : int) => hint_0{hr}.[base{hr} + j]))).[i] <> zero) (iota_ 0 n)
+      by done.
+    rewrite Hcnt -(Hcount Hinf0).
+    ring.
 qed.
 
 lemma __make_hint_vector_ph

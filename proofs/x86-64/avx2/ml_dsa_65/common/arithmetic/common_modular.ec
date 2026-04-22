@@ -27,7 +27,7 @@ lemma montgomery_multiply_and_reduce_correct (u v : W256.t) :
         ==>
         true (* TODO: state word-level correctness in terms of Zq multiplication *)
     ].
-proof. admitted.
+proof. admitted. (* montgomery multiply and reduce *)
 
 lemma montgomery_multiply_and_reduce_ph (u v : W256.t) :
     phoare [ M.montgomery_multiply_and_reduce :
@@ -64,7 +64,7 @@ lemma polynomial__reduce32_correct (_a : W32.t Array256.t) :
         wpoly_srng ((q-1) %/ 2) ((q-1) %/ 2) res
     ].
 proof.
-admitted.
+admitted. (* reduce *)
 
 lemma polynomial__reduce32_ph (_a : W32.t Array256.t) :
     phoare [ M.polynomial__reduce32 :
@@ -107,7 +107,7 @@ lemma polynomial__pointwise_montgomery_multiply_and_reduce_correct
         wpoly_srng (q-1) (q-1) res
     ].
 proof.
-admitted.
+admitted. (* pointwise mont mul and reduce *)
 
 lemma polynomial__pointwise_montgomery_multiply_and_reduce_ph
       (_prod : W32.t Array256.t) (_lhs : W32.t Array256.t) (_rhs : W32.t Array256.t) :
@@ -147,7 +147,7 @@ lemma polynomial__conditionally_add_modulus_correct (_a : W32.t Array256.t) :
         wpoly_urng q res
     ].
 proof.
-admitted.
+admitted. (* cond add modulus *)
 
 lemma polynomial__conditionally_add_modulus_ph (_a : W32.t Array256.t) :
     phoare [ M.polynomial__conditionally_add_modulus :

@@ -21,7 +21,7 @@ require import Array256.
 lemma polynomial__ntt_ll : islossless M.polynomial__ntt.
 proof.
 proc.
-do 7!(wp; call (: true ==> true); [by proc; admit |]).
+do 7!(wp; call (: true ==> true); [by proc; admit |]). (* to : ntt ll *)
 by auto.
 qed.
 

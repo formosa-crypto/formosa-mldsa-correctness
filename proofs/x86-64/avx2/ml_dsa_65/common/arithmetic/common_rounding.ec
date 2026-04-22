@@ -46,7 +46,7 @@ lemma polynomial____make_hint_correct
         res.`2 = count (fun i => (liftu_wpoly res.`1).[i] <> Zq.zero) (iota_ 0 256)
     ].
 proof.
-admitted.
+admitted. (*poly  make hint *)
 
 lemma polynomial____make_hint_ph
       (_h : W32.t Array256.t) (_low : W32.t Array256.t) (_high : W32.t Array256.t) :
@@ -94,7 +94,7 @@ lemma polynomial____power2round_correct
         wpoly_srng (2^(d-1) - 1) (2^(d-1)) res.`2
     ].
 proof.
-admitted.
+admitted. (* poly power2round *)
 
 lemma polynomial____power2round_ph
       (_high : W32.t Array256.t) (_low : W32.t Array256.t) (_a : W32.t Array256.t) :

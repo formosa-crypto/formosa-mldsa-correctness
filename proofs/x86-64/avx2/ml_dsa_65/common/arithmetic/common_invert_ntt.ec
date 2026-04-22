@@ -23,7 +23,7 @@ proof.
 proc.
 wp; while (0 <= i <= (256 * 32) %/ 8 /\ i %% 32 = 0) ((256 * 32) %/ 8 - i);
   last first.
-+ do 8!(wp; call (: true ==> true); 1: by admit). (* to do *)
++ do 8!(wp; call (: true ==> true); 1: by admit). (* to do, ntt lossless *)
   by auto => /#.
 move => *.
 wp; call montgomery_multiply_and_reduce_ll.
@@ -38,7 +38,7 @@ lemma polynomial__invert_ntt_montgomery_correct (_a : W32.t Array256.t) :
         wpoly_srng invntt_obound invntt_obound res
     ].
 proof.
-admitted.
+admitted. (* invert ntt correct *)
 
 lemma polynomial__invert_ntt_montgomery_ph (_a : W32.t Array256.t) :
     phoare [ M.polynomial__invert_ntt_montgomery :

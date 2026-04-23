@@ -925,7 +925,22 @@ wp; ecall (a66_update_updstate_avx2_h state prefix ([<:W8.t>])).
 wp; ecall (init_updstate_avx2_h).
 wp; skip => /> &hr -> -> ?? rr Hrr rr0.
 move => H; do split.
-+ admit.
++ have := H.
+  pose a := Array66.init (get8 (set256_direct (WArray66.init8 ("_.[_]" (Array66.init (get8 (set256_direct (WArray66.init8 ("_.[_]" witness<:W8.t Array66.t>)) 0 (get256_direct (WArray64.init8 ("_.[_]" _vk_hash)) 0)))))) 32 (get256_direct (WArray64.init8 ("_.[_]" _vk_hash)) 32))).
+  suff : (Array66.to_list (a.[64 <- zero].[65 <- truncateu8 (W64.of_int (size _ctx))])) =
+      (to_list _vk_hash ++ [zero; truncateu8 (W64.of_int (size _ctx))])by smt().
+  apply (eq_from_nth witness).
+  + by rewrite size_cat !size_to_list //=.
+  + move => i; rewrite size_to_list //= => ib.
+    rewrite nth_cat size_to_list //=.
+  case (i < 64).
+  + rewrite /a !get_setE // => ?.
+    rewrite ifF 1:/# ifF 1:/# initiE 1:/# get8_set256_directE //.
+    case (i < 32) => ?.
+    + by rewrite ifF 1:/# /= /get8 initiE //= initiE //= /set256_direct initiE 1:/# /= ifT 1:/# /get256_direct pack32bE 1:/# initiE 1:/# /= initiE 1:/#.
+    + by rewrite ifT 1:/# /get256_direct pack32bE 1:/# initiE 1:/# /= initiE 1:/#.
+  case (i = 64); 1: by  move => -> //.
+  by move => ??; have -> /= : i = 65; 1:smt().
 + smt(size_ge0).
 + by move => _ _ result2 Hr2.
 qed.
@@ -985,5 +1000,6 @@ phoare derive_seed_for_mask_ph _k _randomness _mu _arr :
     res = Array64.of_list witness
             (SHAKE256 (to_list _k ++ to_list _randomness ++ to_list _mu) 64)
   ] = 1%r.
+proc.
 admitted. (* FIXME: prove by chaining shake256_absorb_128_ph and squeeze_64_bytes_correct
              after showing the AVX2 block assembly produces to_list _k ++ to_list _randomness ++ to_list _mu *)

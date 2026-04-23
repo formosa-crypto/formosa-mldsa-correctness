@@ -725,6 +725,7 @@ qed.
 (* Correctness lemmas (complete hash operations)                            *)
 (****************************************************************************)
 require import Mldsa_65_prelude.
+from Keccak require import Keccak1600_updstate_avx2.
 hoare hash_verification_key_h' _vk :
  K.hash_verification_key
  : arg.`2 = _vk
@@ -881,16 +882,15 @@ proof.
 by conseq keygen_prf_eq (keygen_prf_ph' _seed) => // /#.
 qed.
 
-(*
 lemma K_derive_message_representative_ll : islossless K.__derive_message_representative.
 proof.
 proc.
 call a64_squeeze_updstate_avx2_ll.
-call finish_updstate_avx2_ll.
+wp;call finish_updstate_avx2_ll.
 call absorb_m_updstate_avx2_ll.
 wp;call absorb_m_updstate_avx2_ll.
 wp;call a66_update_updstate_avx2_ll.
-call init_updstate_avx2_ll.
+wp;call init_updstate_avx2_ll.
 by auto.
 qed.
 
@@ -923,20 +923,11 @@ wp; wp; ecall (absorb_m_updstate_avx2_h Glob.mem state
   context_pointer context_size).
 wp; ecall (a66_update_updstate_avx2_h state prefix ([<:W8.t>])).
 wp; ecall (init_updstate_avx2_h).
-wp; skip => /> &hr -> -> ?? rr Hrr rr0 ->.
-do split.
-+ do congr; apply (eq_from_nth witness); 1: by  rewrite size_to_list size_cat size_to_list /=.
-  move => i;  rewrite size_to_list /= => ib.
-  rewrite nth_cat size_to_list !get_setE 1,2:/#.
-  case (i < 64) => ?; last by smt().
-  rewrite ifF 1:/# ifF 1:/# initiE 1:/# /=.
-  case (32 <= i < 64) => ?.
-  + rewrite /get256_direct /pack32_t /(\bits8) wordP  /= => k kb.
-    by rewrite initiE 1:/# /= initiE 1:/# /= initiE 1:/# /= initiE 1:/# /= /#.
-  rewrite /get256_direct /set256_direct /get8 /pack32_t /(\bits8) wordP => k kb.
-  by rewrite initiE 1:/# /= initiE 1:/# /= initiE 1:/# /= ifT 1:/# initiE 1:/# /= initiE 1:/# /= initiE /= 1:/# initiE /= /#.
-+ by smt(size_ge0).
-+ by smt(size_ge0).
+wp; skip => /> &hr -> -> ?? rr Hrr rr0.
+move => H; do split.
++ admit.
++ smt(size_ge0).
++ by move => _ _ result2 Hr2.
 qed.
 
 phoare K_derive_message_representative_ph' _vk_hash _ctx _msg :
@@ -956,7 +947,7 @@ proof.
 by conseq K_derive_message_representative_ll
           (K_derive_message_representative_h' _vk_hash _ctx _msg).
 qed.
-*)
+
 phoare derive_message_representative_ph _vk_hash _ctx _msg :
  [ M.__derive_message_representative
  : arg.`1 = _vk_hash /\
@@ -970,18 +961,15 @@ phoare derive_message_representative_ph _vk_hash _ctx _msg :
      (H_mu (Bytes64.of_list (to_list _vk_hash))
            ([W8.zero; truncateu8 (W64.of_int (List.size _ctx))] ++ _ctx ++ _msg)))
  ] = 1%r.
- admitted. (* FIXME: Waiting for Keccak updstate *)
- (* 
 proof.
 have Hconseq := (K_derive_message_representative_ph' _vk_hash _ctx _msg).
 conseq derive_message_representative_eq Hconseq => |>.
 + move => &1 ???????; exists Glob.mem{1} arg{1}  =>/=;do split;smt(W64.to_uint_cmp pow2_64).
 rewrite Bytes64.of_listK;1: by rewrite size_SHAKE256 // Bytes64.to_listK.
-congr;congr.  
+congr;congr.
 rewrite Bytes64.of_listK;1: by rewrite size_to_list.
 by rewrite -!catA /=.
 qed.
-*)
 
 (* ---------- derive_seed_for_mask ---------- *)
 

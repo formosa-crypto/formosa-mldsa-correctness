@@ -292,6 +292,27 @@ module K = {
     return prf_output;
   }
 
+  proc derive_seed_for_mask (k:W8.t Array32.t, randomness:W8.t Array32.t,
+                             message_representative:W8.t Array64.t,
+                             seed_for_mask:W8.t Array64.t) : W8.t Array64.t = {
+    var copied_32_bytes:W256.t;
+    var block:W8.t Array128.t;
+    var state:W256.t Array7.t;
+    block <- witness;
+    state <- witness;
+    copied_32_bytes <- (get256_direct (WArray32.init8 (fun i => k.[i])) 0);
+    block <- (Array128.init (WArray128.get8 (WArray128.set256_direct (WArray128.init8 (fun i => block.[i])) 0 copied_32_bytes)));
+    copied_32_bytes <- (get256_direct (WArray32.init8 (fun i => randomness.[i])) 0);
+    block <- (Array128.init (WArray128.get8 (WArray128.set256_direct (WArray128.init8 (fun i => block.[i])) 32 copied_32_bytes)));
+    copied_32_bytes <- (get256_direct (WArray64.init8 (fun i => message_representative.[i])) 0);
+    block <- (Array128.init (WArray128.get8 (WArray128.set256_direct (WArray128.init8 (fun i => block.[i])) 64 copied_32_bytes)));
+    copied_32_bytes <- (get256_direct (WArray64.init8 (fun i => message_representative.[i])) 32);
+    block <- (Array128.init (WArray128.get8 (WArray128.set256_direct (WArray128.init8 (fun i => block.[i])) 96 copied_32_bytes)));
+    state <@ shake256_absorb_128(block);
+    seed_for_mask <@ squeeze_64_bytes(seed_for_mask, state);
+    return seed_for_mask;
+  }
+
   (* __derive_message_representative uses the streaming updstate interface
      (variable-length absorb via memory pointers). No abstract EC theory exists
      for updstate in formosa-keccak yet, so K mirrors M exactly — calling M's
@@ -437,6 +458,13 @@ equiv keygen_prf_eq:
  : ={arg} ==> ={res}.
 proc.
 inline *; sim; auto => />.
+qed.
+
+equiv derive_seed_for_mask_eq:
+ M.derive_seed_for_mask ~ K.derive_seed_for_mask
+ : ={arg} ==> ={res}.
+proc.
+by inline *; sim; auto => />.
 qed.
 
 (****************************************************************************)
@@ -993,6 +1021,56 @@ qed.
    The result is SHAKE256(k || randomness || mu, 64) = H_rhopp(K, coins, mu)
    when rnd_to_list coins = to_list randomness. *)
 
+hoare K_derive_seed_for_mask_h' _k _randomness _mu _arr :
+  K.derive_seed_for_mask :
+    arg.`1 = _k /\ arg.`2 = _randomness /\ arg.`3 = _mu /\ arg.`4 = _arr
+    ==>
+    res = Array64.of_list witness
+            (SHAKE256 (to_list _k ++ to_list _randomness ++ to_list _mu) 64).
+proof.
+proc.
+ecall (squeeze_64_bytes_h' seed_for_mask (to_list _k ++ to_list _randomness ++ to_list _mu)).
+wp; ecall (shake256_absorb_128_h' block).
+wp; skip => />.
+congr; congr;congr;  apply (eq_from_nth witness).
+  + by rewrite size_to_list !size_cat !size_to_list /=.
+  move => i; rewrite size_to_list /= => Hi.
+  rewrite !nth_cat !size_to_list !size_cat !size_to_list.
+  case (i < 32) => Hi32.
+  + rewrite ifT 1:/#.
+    rewrite /get256_direct /set256_direct /get8 /pack32_t /(\bits8) wordP => k kb.
+    by rewrite !initiE 1:/# /= !initiE 1:/# /= !initiE 1..3:/# /= ifF 1:/# ifF 1:/# !initiE 1..3:/# /= ifF 1:/# initiE 1:/# initiE 1:/# initiE 1:/# /= ifT 1:/# initiE 1:/# /= initiE 1:/# /= initiE 1:/# initiE 1:/# /#.
+  case (i < 64) => Hi64.
+  + (* 32 <= i < 64: from randomness[i-32] via set256_direct at offset 32 — ifF(96) ifF(64) ifT(32) *)
+    rewrite /get256_direct /set256_direct /get8 /pack32_t /(\bits8) wordP => k kb.
+    by rewrite !initiE 1:/# /= !initiE 1:/# /= !initiE 1..3:/# /= ifF 1:/# ifF 1:/# !initiE 1..3:/# /= ifT 1:/# initiE 1:/# /= initiE 1:/# /= initiE 1:/# initiE 1:/# /#.
+  case (i < 96) => Hi96.
+  + (* 64 <= i < 96: from mu[i-64] via set256_direct at offset 64 — ifF(96) ifT(64) *)
+    rewrite /get256_direct /set256_direct /get8 /pack32_t /(\bits8) wordP => k kb.
+    by rewrite !initiE 1:/# /= !initiE 1:/# /= !initiE 1..3:/# /= ifF 1:/# !initiE 1..3:/# /= ifT 1:/# initiE 1:/# /= initiE 1:/# /= initiE 1:/# initiE 1:/# /#.
+  + (* 96 <= i < 128: from mu[i-64] via set256_direct at offset 96 — ifT(96) *)
+    rewrite /get256_direct /set256_direct /get8 /pack32_t /(\bits8) wordP => k kb.
+    rewrite !initiE 1:/# /= !initiE 1:/# /= !initiE 1..3:/# /= ifT 1:/# initiE 1:/# /= initiE 1:/# /= ifF 1:/# initiE 1:/# /= initiE 1:/# /#.
+qed.
+
+lemma K_derive_seed_for_mask_ll : islossless K.derive_seed_for_mask.
+proof.
+proc.
+call squeeze_64_bytes_ll.
+call shake256_absorb_128_ll.
+by auto.
+qed.
+
+phoare K_derive_seed_for_mask_ph' _k _randomness _mu _arr :
+ [ K.derive_seed_for_mask
+ : arg.`1 = _k /\ arg.`2 = _randomness /\ arg.`3 = _mu /\ arg.`4 = _arr
+ ==> res = Array64.of_list witness
+             (SHAKE256 (to_list _k ++ to_list _randomness ++ to_list _mu) 64)
+ ] = 1%r.
+proof.
+by conseq K_derive_seed_for_mask_ll (K_derive_seed_for_mask_h' _k _randomness _mu _arr).
+qed.
+
 phoare derive_seed_for_mask_ph _k _randomness _mu _arr :
   [ M.derive_seed_for_mask :
     arg.`1 = _k /\ arg.`2 = _randomness /\ arg.`3 = _mu /\ arg.`4 = _arr
@@ -1000,6 +1078,6 @@ phoare derive_seed_for_mask_ph _k _randomness _mu _arr :
     res = Array64.of_list witness
             (SHAKE256 (to_list _k ++ to_list _randomness ++ to_list _mu) 64)
   ] = 1%r.
-proc.
-admitted. (* FIXME: prove by chaining shake256_absorb_128_ph and squeeze_64_bytes_correct
-             after showing the AVX2 block assembly produces to_list _k ++ to_list _randomness ++ to_list _mu *)
+proof.
+by conseq derive_seed_for_mask_eq (K_derive_seed_for_mask_ph' _k _randomness _mu _arr) => // /#.
+qed.

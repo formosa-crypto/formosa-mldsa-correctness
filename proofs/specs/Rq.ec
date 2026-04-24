@@ -84,8 +84,11 @@ op poly_Power2Round(p : poly) : poly * poly =
 op poly_UseHint(h : poly, r : poly) : poly = 
      init (fun ii => UseHint (!h.[ii] = Zq.zero) r.[ii]).
 
-op poly_MakeHint(p1 : poly, p2 : poly) : poly = 
+op poly_MakeHint(p1 : poly, p2 : poly) : poly =
      init (fun ii => incoeff (b2i (MakeHint p1.[ii] p2.[ii]))).
+
+op poly_MakeHintImpl(p1 : poly, p2 : poly) : poly =
+     init (fun ii => incoeff (b2i (MakeHintImpl p1.[ii] p2.[ii]))).
 
 op poly_HighBits(p : poly) : poly = 
      init (fun ii => incoeff (HighBits p.[ii])).

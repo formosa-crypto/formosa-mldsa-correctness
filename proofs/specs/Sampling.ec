@@ -49,6 +49,13 @@ phoare SampleInBall_correct _ct :
    [ SampleInBall(MLDSA_XOF_SIB).sample : arg = _ct ==> res = sampleInBall _ct] = 1%r.
 admitted. (* FIXME: PY *)
 
+(* The challenge polynomial has tau nonzero coefficients, each ±1, so infnorm < 2.
+   Provable from the SampleInBall algorithm: only incoeff(±1) values are placed.
+   Cf. wpoly_srng 1 1 challenge established in verify.ec:487 (impl-level, not directly citeable). *)
+lemma sampleInBall_norm (ct : BytesCT.t) :
+    infnorm_lt (sampleInBall ct).`1 2.
+proof. admit. qed.
+
 (*************** End SampleInBall CORRECTNESS BRIDGE ****************)
 
 

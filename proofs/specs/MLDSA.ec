@@ -59,7 +59,7 @@ module MLDSA(XOFA : XOF_RejNTTPoly, XOFS : XOF_RejBPoly, XOFSIB : XOF_SIB, RO : 
        leakage <- leakage ++ [ CheckZ bz ];
        if (bz) {
           ct0 <- invnttv (ntt_smul ch t0h);
-          h <- MakeHint (PolyKVec.zerov-ct0) w - cs2 + ct0;
+          h <- MakeHint (PolyKVec.zerov-ct0) (w - cs2 + ct0);
           bh <- infnorm_lt ct0 gamma2 && hammw h w_hint;
           leakage <- leakage ++ [ CheckH bh ];
           if (bh) { zh <- Some (z,h); }
@@ -110,7 +110,7 @@ module MLDSA(XOFA : XOF_RejNTTPoly, XOFS : XOF_RejBPoly, XOFSIB : XOF_SIB, RO : 
        leakage <- leakage ++ [ CheckZ bz ];
        if (bz) {
           ct0 <- invnttv (ntt_smul ch t0h);
-          h <- MakeHint w1 (r0 + ct0);
+          h <- PolyKVec.MakeHintImpl w1 (r0 + ct0);
           bh <- infnorm_lt ct0 gamma2 && hammw h w_hint;
           leakage <- leakage ++ [ CheckH bh ];
           if (bh) { zh <- Some (z,h); }
@@ -145,14 +145,85 @@ module MLDSA(XOFA : XOF_RejNTTPoly, XOFS : XOF_RejBPoly, XOFSIB : XOF_SIB, RO : 
 }.
 
 (* The eager decomposition is equivalent to the standard one.
-   Proof requires the commutativity of LowBits and subtraction of a small vector,
-   i.e. LowBits(w - cs2) = LowBits(w) - cs2 when ||LowBits(w) - cs2||_inf < gamma2 - Beta. *)
-lemma sign_eager_equiv
-      (XOFA <: XOF_RejNTTPoly {-MLDSA}) (XOFS <: XOF_RejBPoly {-MLDSA})
-      (XOFSIB <: XOF_SIB {-MLDSA}) (RO <: LeakyRO {-MLDSA}) :
-    equiv [ MLDSA(XOFA, XOFS, XOFSIB, RO).sign_derand ~
-            MLDSA(XOFA, XOFS, XOFSIB, RO).sign_eager :
-      ={sk, m, coins, glob XOFA, glob XOFS, glob XOFSIB, glob RO}
+   Stated for the concrete XOFs to avoid module restriction issues.
+   Two algebraic facts are needed in the loop body:
+   (1) LowBits commutativity: LowBits(w-cs2) = LowBits(w)-cs2 (same bz infnorm check).
+   (2) MakeHintImpl_MakeHint_equiv: MakeHintImpl(w1, r0+ct0) = MakeHint(-ct0, w-cs2+ct0)
+       where w1 = HighBits(w) and r0 = LowBits(w)-cs2. *)
+lemma sign_eager_equiv :
+    equiv [ MLDSA(MLDSA_XOFA, MLDSA_XOFS, MLDSA_XOF_SIB, SIB_RO).sign_derand ~
+            MLDSA(MLDSA_XOFA, MLDSA_XOFS, MLDSA_XOF_SIB, SIB_RO).sign_eager :
+      ={sk, m, coins,
+        glob MLDSA_XOFA, glob MLDSA_XOFS, glob MLDSA_XOF_SIB, glob SIB_RO}
+      /\ valid_sk_s2 sk{1}
       ==>
       ={res} ].
-proof. admitted. (* Semantic reasoning about lowbits/highbits commuting with norm check tests. Justifies all reasonable implementations *)
+proof.
+proc.
+(* Break seq 13 13 into: 4 witness/leakage assignments (sim), skDecode (equiv bridge
+   skDecode_equiv_bound which yields infnorm_lt s2), 3 nttv assignments (auto yields
+   s2h = nttv s2), 5 remaining assignments (sim). *)
+seq 13 13 : (={rho, _K, tr, s1, s2, t0, s1h, s2h, t0h, _A, mu, rhopp,
+               kappa, zh, leakage, sigma, ct, ctl,
+               glob MLDSA_XOFA, glob MLDSA_XOFS, glob MLDSA_XOF_SIB, glob SIB_RO}
+            /\ PolyKVec.infnorm_lt s2{1} (Eta + 1)
+            /\ s2h{1} = nttv s2{1}).
++ seq 4 4 : (={sk, m, coins, ct, ctl, sigma, leakage,
+               glob MLDSA_XOFA, glob MLDSA_XOFS, glob MLDSA_XOF_SIB, glob SIB_RO}
+             /\ valid_sk_s2 sk{1}); 1: by auto.
+  seq 1 1 : (={sk, m, coins, ct, ctl, sigma, leakage, rho, _K, tr, s1, s2, t0,
+               glob MLDSA_XOFA, glob MLDSA_XOFS, glob MLDSA_XOF_SIB, glob SIB_RO}
+             /\ PolyKVec.infnorm_lt s2{1} (Eta + 1)); 1: by call skDecode_equiv_bound.
+  seq 3 3 : (={sk, m, coins, ct, ctl, sigma, leakage, rho, _K, tr, s1, s2, t0,
+               s1h, s2h, t0h,
+               glob MLDSA_XOFA, glob MLDSA_XOFS, glob MLDSA_XOF_SIB, glob SIB_RO}
+             /\ PolyKVec.infnorm_lt s2{1} (Eta + 1)
+             /\ s2h{1} = nttv s2{1}); 1: by auto.
+  wp; call(: ={glob MLDSA_XOFA, glob MLDSA_XOFS, glob MLDSA_XOF_SIB, glob SIB_RO});
+    first by sim.
+  by auto.
+seq 1 1 : (={rho, _K, tr, s1, s2, t0, s1h, s2h, t0h, _A, mu, rhopp,
+              kappa, zh, leakage, sigma, ct, ctl,
+              glob MLDSA_XOFA, glob MLDSA_XOFS,  glob SIB_RO}
+            /\ PolyKVec.infnorm_lt s2{1} (Eta + 1)
+            /\ s2h{1} = nttv s2{1}); last by sim.
+while (={rho, _K, tr, s1, s2, t0, s1h, s2h, t0h, _A, mu, rhopp,
+           kappa, zh, leakage, sigma, ct, ctl,
+           glob MLDSA_XOFA, glob MLDSA_XOFS,  glob SIB_RO}
+        /\ PolyKVec.infnorm_lt s2{1} (Eta + 1)
+        /\ s2h{1} = nttv s2{1}); last by auto => />.
+seq 10 11 : (={_K, tr, s1, s2, t0,
+                   w, w1, c, ch, cs1, cs2, z, ct, ctl, leakage,
+                   rho, s1h, s2h, t0h, _A, mu, rhopp, kappa, zh, sigma,
+                   glob MLDSA_XOFA, glob MLDSA_XOFS,  glob SIB_RO}
+             /\ PolyKVec.infnorm_lt s2{1} (Eta + 1)
+             /\ s2h{1} = nttv s2{1}
+             /\ PolyKVec.infnorm_lt cs2{1} (Beta + 1)
+             /\ w1{1} = polykvec_HighBits w{1}
+             /\ w0{2} = polykvec_LowBits w{2}).
++ seq 1 1 : (#pre /\ ={y}); 1: by conseq />;sim.
+  sp; inline {1} 1; inline {2} 1.
+  wp. 
+  ecall{2} (SampleInBall_correct ct1{2}).
+  ecall{1} (SampleInBall_correct ct1{1}).
+  auto => /> &2 Hs2 Hkappa.
+  by apply cs2_norm_bound; [apply sampleInBall_norm | exact Hs2].
+sp 1 1; seq 1 1 : (#pre /\ ={bz} /\
+             bz{1} = (infnorm_lt z{1} (gamma1 - Beta) &&
+                     infnorm_lt r0{1} (gamma2 - Beta))).
++ auto => /> &1 &2 *.
+  by rewrite (bz_sync w{1} cs2{1} _) 1:/#.
+
+seq 1 1 : #pre; 1: by auto.
+if;1,3: by auto => />.
+sp 2 2; seq 1 1 : (#pre /\ ={bh} /\ ={h} /\
+          bh{1} = (infnorm_lt ct0{1} gamma2 && hammw h{1} w_hint)).
++ auto => /> &1 &2 *.
+  by rewrite (polykvec_MakeHintImpl_MakeHint_equiv w{1} cs2{1}
+                (invnttv (ntt_smul ch{1} t0h{1})) _) 1:/#.
+
+seq 1 1 : (#pre); 1: by auto.
+
+if; 1,3: by auto => />.
+by auto => />.
+qed.

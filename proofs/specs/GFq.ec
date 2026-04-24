@@ -35,10 +35,15 @@ op HighBits(r : coeff) = (Decompose r).`1.
 
 op LowBits(r : coeff) = (Decompose r).`2.
 
-op MakeHint(z r : coeff) : bool = 
+op MakeHint(z r : coeff) : bool =
    let r1 = HighBits(r) in
    let v1 = HighBits(r+z) in
       r1 <> v1.
+
+(* Implementation convention: high = w1 = HighBits(w), low = r0+ct0 = LowBits(w)-cs2+ct0.
+   Computes whether adding low to high*2*gamma2 changes the high bits. *)
+op MakeHintImpl(high low : coeff) : bool =
+  MakeHint (Zq.zero - low) (incoeff (asint high * 2 * gamma2) + low).
 
 op UseHint(h : bool, r : coeff) : coeff = 
     let m = (q-1) %/ (2*gamma2) in
@@ -48,4 +53,14 @@ op UseHint(h : bool, r : coeff) : coeff =
     else if (h && r0 <= 0)
          then incoeff ((r1 - 1) %% m)
          else incoeff r1.
+
+(* Key equivalence: MakeHintImpl with (HighBits(w), LowBits(w)-cs2+ct0) equals
+   MakeHint(-ct0, w-cs2+ct0), connecting the eager/impl convention to FIPS 204.
+   The cs2 bound (`|asint cs2| <= Beta`) implies no 2*gamma2 boundary crossing,
+   so HighBits(w-cs2) = HighBits(w) and LowBits reconstruction holds. *)
+lemma MakeHintImpl_MakeHint_equiv (w cs2 ct0 : coeff) :
+    `|asint cs2| <= Beta =>
+    MakeHintImpl (incoeff (HighBits w)) (incoeff (LowBits w) - cs2 + ct0) =
+    MakeHint (Zq.zero - ct0) (w - cs2 + ct0).
+proof. admit. qed.
 

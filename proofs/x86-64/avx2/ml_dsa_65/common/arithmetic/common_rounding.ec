@@ -16,9 +16,9 @@ require import Array256.
 (*   hints[i] = MakeHint(low_coefficients[i], high_coefficients[i])   *)
 (*            = 1 if HighBits(low+high) != HighBits(high), else 0     *)
 (* Also returns the total weight (count of 1s).                        *)
-(* Spec connection (via poly_MakeHint from Rq.ec):                     *)
-(*   liftu_wpoly res.`1 = poly_MakeHint (lifts_wpoly _low)             *)
-(*                                       (lifts_wpoly _high)           *)
+(* Spec connection (via poly_MakeHintImpl from Rq.ec):                 *)
+(*   liftu_wpoly res.`1 = poly_MakeHintImpl (lifts_wpoly _high)        *)
+(*                                           (lifts_wpoly _low)         *)
 (*   res.`2 = count (fun i => (liftu_wpoly res.`1).[i] <> Zq.zero)    *)
 (*                  (iota_ 0 256)                                      *)
 (* ================================================================== *)
@@ -42,7 +42,7 @@ lemma polynomial____make_hint_correct
         wpoly_urng ((q - 1) %/ (2 * gamma2)) _high
         ==>
         wpoly_urng 2 res.`1 /\
-        liftu_wpoly res.`1 = poly_MakeHint (lifts_wpoly _high) (lifts_wpoly _low) /\
+        liftu_wpoly res.`1 = poly_MakeHintImpl (lifts_wpoly _high) (lifts_wpoly _low) /\
         res.`2 = count (fun i => (liftu_wpoly res.`1).[i] <> Zq.zero) (iota_ 0 256)
     ].
 proof.
@@ -56,7 +56,7 @@ lemma polynomial____make_hint_ph
         wpoly_urng ((q - 1) %/ (2 * gamma2)) _high
         ==>
         wpoly_urng 2 res.`1 /\
-        liftu_wpoly res.`1 = poly_MakeHint (lifts_wpoly _high) (lifts_wpoly _low) /\
+        liftu_wpoly res.`1 = poly_MakeHintImpl (lifts_wpoly _high) (lifts_wpoly _low) /\
         res.`2 = count (fun i => (liftu_wpoly res.`1).[i] <> Zq.zero) (iota_ 0 256)
     ] = 1%r
   by conseq polynomial____make_hint_ll (polynomial____make_hint_correct _h _low _high).

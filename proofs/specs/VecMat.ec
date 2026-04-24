@@ -135,6 +135,9 @@ op UseHint(h : polykvec, r : polykvec) : polykvec =
 op MakeHint(v1 : polykvec, v2 : polykvec) : polykvec =
     map2 poly_MakeHint v1 v2.
 
+op MakeHintImpl(v1 : polykvec, v2 : polykvec) : polykvec =
+    map2 poly_MakeHintImpl v1 v2.
+
 op infnorm_lt(v : polykvec, bound : int) : bool = 
   all (fun ii => all (fun jj => `|v.[ii].[jj]| < bound) (iota_ 0 256)) (iota_ 0 kvec).
 
@@ -142,11 +145,28 @@ import Bigint BIA.
 op hammw(v : polykvec, bound : int) : bool =
  big predT (fun ii => count (fun jj => v.[ii].[jj] <> Zq.zero) (iota_ 0 256)) (iota_ 0 kvec) <= bound.
 
-op polykvec_HighBits(v : polykvec) : polykvec = 
+op polykvec_HighBits(v : polykvec) : polykvec =
   map poly_HighBits v.
 
-op polykvec_LowBits(v : polykvec) : polykvec = 
+op polykvec_LowBits(v : polykvec) : polykvec =
   map poly_LowBits v.
+
+(* When |cs2| <= Beta at every coefficient, LowBits(w-cs2) and LowBits(w)-cs2 agree
+   for the infnorm check at threshold gamma2-Beta.  If cs2 were to cross a
+   2*gamma2 rounding boundary, then |LowBits(w)-cs2| >= gamma2 > gamma2-Beta,
+   making both sides false; in the no-crossing case the two representations are equal. *)
+lemma bz_sync (w cs2 : polykvec) :
+    infnorm_lt cs2 (Beta + 1) =>
+    infnorm_lt (polykvec_LowBits (w - cs2)) (gamma2 - Beta) =
+    infnorm_lt (polykvec_LowBits w - cs2) (gamma2 - Beta).
+proof. admit. qed.
+
+(* Coefficient-wise lift of MakeHintImpl_MakeHint_equiv from GFq.ec. *)
+lemma polykvec_MakeHintImpl_MakeHint_equiv (w cs2 ct0 : polykvec) :
+    infnorm_lt cs2 (Beta + 1) =>
+    MakeHintImpl (polykvec_HighBits w) (polykvec_LowBits w - cs2 + ct0) =
+    MakeHint (zerov - ct0) (w - cs2 + ct0).
+proof. admit. qed.
 
 end PolyKVec.
 
@@ -184,4 +204,14 @@ proof. admitted. (* todo dotp algebra PY *)
 lemma dotp_partial_ntt_dotp (v1 v2 : polylvec) :
   dotp_partial v1 v2 lvec = ntt_dotp v1 v2.
 proof. by rewrite /dotp_partial /ntt_dotp. qed.
+
+(* NTT/INTT cancellation + polynomial multiplication norm bound:
+   invnttv(ntt_smul(ntt c)(nttv s2)) = c * s2 componentwise, and
+   |c * s2|_inf <= tau * Eta = Beta when c has tau nonzero +-1 coefficients
+   and |s2|_inf <= Eta.  The infnorm_lt c 2 hypothesis encodes the +-1 bound. *)
+lemma cs2_norm_bound (c : poly) (s2 : polykvec) :
+    infnorm_lt c 2 =>
+    PolyKVec.infnorm_lt s2 (Eta + 1) =>
+    PolyKVec.infnorm_lt (PolyKVec.invnttv (PolyKVec.ntt_smul (ntt c) (PolyKVec.nttv s2))) (Beta + 1).
+proof. admit. qed.
 

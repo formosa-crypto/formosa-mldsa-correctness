@@ -19,6 +19,12 @@ op BytesToBits(x : W8.t list) : bool list = flatten (map W8.w2bits x).
 
 op IntegerToBytes(x alpha : int) : W8.t list = take alpha (BitsToBytes (IntegerToBits x (alpha*8))).
 
+lemma size_BytesToBits (l : W8.t list) : size (BytesToBits l) = 8 * size l by
+     rewrite size_flatten /= StdBigop.Bigint.sumzE /= -map_comp /(\o) /=;
+     rewrite !StdBigop.Bigint.BIA.big_mapT /= /(\o) /=;
+     rewrite !StdBigop.Bigint.big_constz /=;
+     rewrite !count_predT /= /= /#.
+
 op CoeffFromThreeBytes(b0 b1 b2 : W8.t) : int option = 
    let b2 = if 127 < to_uint b2 then b2 - W8.of_int 128 else b2 in
    let z = 2^16*to_uint b2 + 2^8 * to_uint b1 + to_uint b0 in
@@ -48,6 +54,37 @@ op BitUnpack(v : W8.t list, a b : int) : poly =
    let c = ilog 2 (a + b) + 1 in
    let z = BytesToBits(v) in
      init (fun i => nth witness (map (fun co => Zq.incoeff (b - BitsToInteger co)) (BitChunking.chunk c z)) i).
+
+(* Validity predicate for byte-encoded eta-bounded polynomials at the spec level.
+   Each (ilog 2 (2*Eta) + 1)-bit chunk of v represents an integer in [0, 2*Eta],
+   matching valid_eta_bytes from the implementation proofs. *)
+op valid_eta_bytes (v : W8.t list) : bool =
+    forall i, 0 <= i < n =>
+       BitsToInteger (nth witness
+                          (BitChunking.chunk (ilog 2 (Eta + Eta) + 1) (BytesToBits v))
+                          i) <= 2*Eta.
+
+(* Each coefficient of BitUnpack v Eta Eta lies in [-Eta, Eta], so infnorm < Eta+1.
+   Requires v has valid size and each nibble is in [0, 2*Eta] (valid_eta_bytes). *)
+lemma BitUnpack_infnorm (v : W8.t list) :
+    size v = (n * (ilog 2 (Eta + Eta) + 1)) %/ 8 =>
+    valid_eta_bytes v =>
+    infnorm_lt (BitUnpack v Eta Eta) (Eta + 1).
+proof.
+move => Hs Hval.
+have ? : 8 * (n * (ilog 2 (Eta + Eta) + 1) %/ 8) %/ (ilog 2 (Eta + Eta) + 1) = n.
++ have hk : 0 < ilog 2 (Eta + Eta) + 1 by smt(ilog_ge0 param_sets).
+  have h8nk : 8 %| n * (ilog 2 (Eta + Eta) + 1) by rewrite dvdz_mulr.
+  by rewrite mulrC divzK // mulzK 1:/#.
+rewrite /infnorm_lt /BitUnpack allP => k; rewrite mem_iota /= => kb.
+rewrite initiE 1:/# (nth_map witness) /=.
++ rewrite BitChunking.size_chunk /=; 1: smt(ilog_ge0 param_sets).
+  rewrite size_BytesToBits Hs /= /#.
+pose x := (BitChunking.chunk (ilog 2 (Eta + Eta) + 1) (BytesToBits v)).
+suff : 0 <= BitsToInteger (nth witness<:bool list> x k) <= 2*Eta by smt(@Zq).
+split; first by rewrite /BitsToInteger; smt(BS2Int.bs2int_ge0).
+by move => _; apply Hval; smt().
+qed.
 
 module HintPackUnpack = {
    proc hintBitPack(h : polykvec) : W8.t list = {

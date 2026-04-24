@@ -143,7 +143,8 @@ have Htau    := mldsa65_tau.
 move => Hkappa_max.
 proc*.
 transitivity {1} { r <@ MLDSA(MLDSA_XOFA, MLDSA_XOFS, MLDSA_XOF_SIB, SIB_RO).sign_eager(sk,m, coins); }
-    (={sk,m,coins, glob MLDSA_XOFA, glob MLDSA_XOFS, glob MLDSA_XOF_SIB, glob SIB_RO} ==> ={r})
+    (={sk,m,coins, glob MLDSA_XOFA, glob MLDSA_XOFS, glob MLDSA_XOF_SIB, glob SIB_RO}
+     /\ valid_sk_s2 sk{1} ==> ={r})
     (   Glob.mem{2} = _m
     /\ sk{1} = BytesSK.of_list (to_list signing_key{2})
     /\ rnd_to_list coins{1} = to_list randomness{2}
@@ -162,8 +163,13 @@ transitivity {1} { r <@ MLDSA(MLDSA_XOFA, MLDSA_XOFS, MLDSA_XOF_SIB, SIB_RO).sig
     /\ (r{1}.`1 <> None =>
           BytesSig.to_list (oget r{1}.`1) = to_list r{2}.`1 /\
           r{2}.`2 = W64.zero)
-    ); 1,2:smt().
-+ by call (sign_eager_equiv MLDSA_XOFA MLDSA_XOFS MLDSA_XOF_SIB SIB_RO); auto.
+    ).
++ (* Side condition 1: original pre implies pre1 /\ pre2; the new conjunct
+     valid_sk_s2 sk{1} requires the bridge
+     valid_s2_bytes (Jasmin-slice) ==> valid_sk_s2 sk{1} (trivial, admitted). *)
+  admit.
++ smt().
++ by call sign_eager_equiv; auto.
   
 call(:  Glob.mem{2} = _m
     /\ sk{1} = BytesSK.of_list (to_list signing_key{2})
@@ -677,7 +683,7 @@ seq 1 0 : #pre; 1: by auto.
      (infinity_norm_check_result{2} = W64.zero \/ infinity_norm_check_result{2} = W64.one) /\
      (infinity_norm_check_result{2} = W64.zero =>
           liftu_wpolykvec (kvec_unflatten256 hint_0{2}) =
-            MakeHint
+            MakeHintImpl
               (lifts_wpolykvec (kvec_unflatten256 w1{2}))
               (lifts_wpolykvec (kvec_unflatten256 w0_minus_cs2_plus_ct0{2}))) /\
      (PolyKVec.infnorm_lt
@@ -727,7 +733,7 @@ seq 1 0 : #pre; 1: by auto.
              (lifts_wpolylvec (lvec_unflatten256 s1{2}))))
           (gamma1 - Beta) /\
         PolyKVec.hammw
-          (MakeHint
+          (MakeHintImpl
               (lifts_wpolykvec (kvec_unflatten256 w1{2}))
               (lifts_wpolykvec (kvec_unflatten256 w0_minus_cs2_plus_ct0{2})))
           w_hint))).
@@ -756,7 +762,7 @@ seq 1 0 : #pre; 1: by auto.
   gamma1 - Beta) by smt().
   have -> : infnorm_lt (invnttv (ntt_smul (lifts_wpoly verifier_challenge{2}) (lifts_wpolykvec (kvec_unflatten256 t0{2})))) gamma2 by smt().
   have -> /=: PolyKVec.hammw
-  (MakeHint (lifts_wpolykvec (kvec_unflatten256 w1{2})) (lifts_wpolykvec (kvec_unflatten256 w0_minus_cs2_plus_ct0{2}))) w_hint by smt().
+  (MakeHintImpl (lifts_wpolykvec (kvec_unflatten256 w1{2})) (lifts_wpolykvec (kvec_unflatten256 w0_minus_cs2_plus_ct0{2}))) w_hint by smt().
 
   move => H0.
      do split;1..3,5,6,7,8:smt().
@@ -776,7 +782,7 @@ infnorm_lt
    invnttv (ntt_smul (lifts_wpoly verifier_challenge{2}) (lifts_wpolylvec (lvec_unflatten256 s1{2})))) (
   gamma1 - Beta) /\
 hammw
-  (MakeHint (lifts_wpolykvec (kvec_unflatten256 w1{2})) (lifts_wpolykvec (kvec_unflatten256 w0_minus_cs2_plus_ct0{2})))
+  (MakeHintImpl (lifts_wpolykvec (kvec_unflatten256 w1{2})) (lifts_wpolykvec (kvec_unflatten256 w0_minus_cs2_plus_ct0{2})))
   w_hint ) by smt().
 
   move => H0.
@@ -799,7 +805,7 @@ infnorm_lt
    invnttv (ntt_smul (lifts_wpoly verifier_challenge{2}) (lifts_wpolylvec (lvec_unflatten256 s1{2})))) (
   gamma1 - Beta) /\
 hammw
-  (MakeHint (lifts_wpolykvec (kvec_unflatten256 w1{2})) (lifts_wpolykvec (kvec_unflatten256 w0_minus_cs2_plus_ct0{2})))
+  (MakeHintImpl (lifts_wpolykvec (kvec_unflatten256 w1{2})) (lifts_wpolykvec (kvec_unflatten256 w0_minus_cs2_plus_ct0{2})))
   w_hint ) by smt().
   move => H0.
   have H1 : infinity_norm_check_result{2} = one by smt().

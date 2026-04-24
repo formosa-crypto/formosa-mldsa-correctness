@@ -14,6 +14,10 @@ abbrev noise_bits = if Eta = 4 then 4 else 3.
 lemma noise_bitlen :  2^(noise_bits-1) < 2*Eta+1 (* signed range + 1 *) <= 2^(noise_bits)
   by  have/= H := param_sets; elim H => /> ??????-> /=.
 
+(* noise_bits is the bit width used by BitPack/BitUnpack for eta-bounded coefficients. *)
+lemma noise_bits_eq : noise_bits = ilog 2 (Eta + Eta) + 1.
+proof. by have/= H := param_sets; elim H => /> ??????->. qed.
+
 abbrev gamma1_bits = 20.
 lemma gamma1_bitlen :  2^(gamma1_bits-1) < 2*gamma1 (* signed range *) <= 2^(gamma1_bits)
   by  have/= H := param_sets; elim H => /> ??->???? /=.
@@ -77,6 +81,16 @@ clone import JArray.MonoArray as BytesPK with op size <= pk_bytes, type elem <= 
 clone import JArray.MonoArray as BytesSig with op size <= sig_bytes, type elem <= W8.t, op dfl <= witness.
 clone import JArray.MonoArray as BytesCT with op size <= lambda %/ 4, type elem <= W8.t, op dfl <= witness.
 clone import JArray.MonoArray as BytesW1 with op size <= w1_bytes, type elem <= W8.t, op dfl <= witness.
+
+(* Validity predicate on sk: its s2 slice decodes to polynomials in [-Eta, Eta].
+   Each of the kvec chunks (of size (n*noise_bits)/8) encodes a polynomial whose
+   nibbles are all in [0, 2*Eta].  Together with skDecode this gives
+   infnorm_lt s2 (Eta+1) via BitUnpack_infnorm. *)
+op valid_sk_s2 (sk : BytesSK.t) : bool =
+    forall k, 0 <= k < kvec =>
+       valid_eta_bytes (take ((n * noise_bits) %/ 8)
+                             (drop (128 + s1_bytes + k * ((n * noise_bits) %/ 8))
+                                   (BytesSK.to_list sk))).
 
 module PkEncDec = {
   proc pkEncode(rho : Bytes32.t, t1 : polykvec) : BytesPK.t = {
@@ -346,6 +360,58 @@ by rewrite initiE 1:/# /= /#.
 
 qed.
 
+(* Bridge: valid_sk_s2 lifts through skDecode to give infnorm_lt s2 (Eta+1).
+   conseq of skDecode_corr extracts the functional form res.`5 = KArray.init (BitUnpack ...);
+   then BitUnpack_infnorm applies pointwise using valid_sk_s2 on each of kvec chunks. *)
+lemma skDecode_s2_bound _sk :
+    valid_sk_s2 _sk =>
+    phoare [ SkEncDec.skDecode : arg = _sk ==>
+             PolyKVec.infnorm_lt res.`5 (Eta+1) ] = 1%r.
+proof.
+move => Hval.
+proc *.
+call (skDecode_corr _sk).
+auto => /> r [#] _ _ _ _ Hs5 _.
+rewrite Hs5 /PolyKVec.infnorm_lt allP /=.
+move => ii /mem_iota /= Hi.
+rewrite KArray.initiE 1:/# /=.
+apply BitUnpack_infnorm.
+- rewrite size_take; first smt(param_sets).
+  rewrite size_drop; first smt(param_sets).
+  rewrite BytesSK.size_to_list -noise_bits_eq.
+  have /= := param_sets; case=> />; smt().
+- by have := Hval ii _; smt().
+qed.
+
+(* Two-sided relational version: apply skDecode_corr on both sides; arg equality gives ={res},
+   valid_sk_s2 + BitUnpack_infnorm applied to the left's functional form gives the bound. *)
+equiv skDecode_equiv_bound :
+    SkEncDec.skDecode ~ SkEncDec.skDecode :
+    ={arg} /\ valid_sk_s2 arg{1}
+    ==>
+    ={res} /\ PolyKVec.infnorm_lt res{1}.`5 (Eta+1).
+proof.
+exists * arg{1}, arg{2}; elim* => _sk1 _sk2.
+proc *.
+call{2} (skDecode_corr _sk2).
+call{1} (skDecode_corr _sk1).
+skip => /> Hval r2 H21 H22 H23 H24 Hs5_r2 H26 r1 H11 H12 H13 H14 Hs5_r1 H16.
+split. 
++ (* r1 = r2: both equal the functional form of arg{1} = arg{2} = _sk2. *)
+  have : r1 = (r1.`1, r1.`2, r1.`3, r1.`4, r1.`5, r1.`6) by smt().
+  have : r2 = (r2.`1, r2.`2, r2.`3, r2.`4, r2.`5, r2.`6) by smt().
+  by smt().
++ (* infnorm_lt r1.`5 (Eta+1): from r1 = functional form + valid_sk_s2 + BitUnpack_infnorm. *)
+  rewrite Hs5_r2 /PolyKVec.infnorm_lt allP /= => ii /mem_iota /= Hi.
+  rewrite KArray.initiE 1:/# /=.
+  apply BitUnpack_infnorm.
+  - rewrite size_take; first smt(param_sets).
+    rewrite size_drop; first smt(param_sets).
+    rewrite BytesSK.size_to_list -noise_bits_eq.
+    have /= := param_sets; case=> />; smt().
+  - by have := Hval ii _; smt().
+qed.
+    
 module SigEncDec = {
   proc sigEncode(ct : BytesCT.t, z : polylvec, h : polykvec) : BytesSig.t = {
     var sigma, sigbytes, zi, hb, i;

@@ -100,3 +100,16 @@ op infnorm_lt (p : poly) (bound : int) : bool =
   all (fun j => `|p.[j]| < bound) (iota_ 0 256).
 
 lemma Rq_addC : forall (a b : poly), a &+ b = b &+ a by admit. (* ring addition commutative *)
+
+(* Componentwise indexing for poly-level +/- and the zero element. *)
+lemma poly_addE (a b : poly) (i : int) :
+  0 <= i < 256 => (a &+ b).[i] = a.[i] + b.[i].
+proof. by move => Hi; rewrite /(&+) alg2polyiE // rcoeffD !poly2algiE. qed.
+
+lemma poly_negE (a : poly) (i : int) :
+  0 <= i < 256 => ((&-) a).[i] = - a.[i].
+proof. by move => Hi; rewrite /(&-) alg2polyiE // -rcoeffN poly2algiE. qed.
+
+lemma poly_zeroE (i : int) :
+  0 <= i < 256 => poly_zero.[i] = Zq.zero.
+proof. by move => Hi; rewrite /poly_zero Array256.createiE. qed.

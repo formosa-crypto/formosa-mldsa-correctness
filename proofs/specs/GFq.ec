@@ -59,8 +59,21 @@ op UseHint(h : bool, r : coeff) : coeff =
    The cs2 bound (`|asint cs2| <= Beta`) implies no 2*gamma2 boundary crossing,
    so HighBits(w-cs2) = HighBits(w) and LowBits reconstruction holds. *)
 lemma MakeHintImpl_MakeHint_equiv (w cs2 ct0 : coeff) :
-    `|asint cs2| <= Beta =>
+    `|cs2| <= Beta =>
     MakeHintImpl (incoeff (HighBits w)) (incoeff (LowBits w) - cs2 + ct0) =
     MakeHint (Zq.zero - ct0) (w - cs2 + ct0).
-proof. admit. qed.
+proof. admit. qed. (* FIXME: PY *)
+
+(* Coefficient-level synchronization for the bz norm check:
+   when |cs2| <= Beta, the infnorm check on LowBits(a - cs2) and on LowBits(a) - cs2
+   agree at threshold gamma2 - Beta.
+   - No 2*gamma2 crossing case: LowBits(a - cs2) = LowBits(a) - cs2 (as coeffs).
+   - Crossing case: |LowBits(a) - cs2| >= gamma2 > gamma2 - Beta, and likewise
+     |LowBits(a - cs2)| >= gamma2 - Beta (since LowBits is bounded but cs2 was the
+     boundary-crosser). Both checks fail. *)
+lemma LowBits_sub_sync (a cs2 : coeff) :
+    `|cs2| <= Beta =>
+    (`|incoeff (LowBits (a - cs2))| < gamma2 - Beta) =
+    (`|incoeff (LowBits a) - cs2| < gamma2 - Beta).
+proof. admit. qed. (* FIXME: PY *)
 

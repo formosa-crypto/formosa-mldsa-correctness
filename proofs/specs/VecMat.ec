@@ -159,14 +159,69 @@ lemma bz_sync (w cs2 : polykvec) :
     infnorm_lt cs2 (Beta + 1) =>
     infnorm_lt (polykvec_LowBits (w - cs2)) (gamma2 - Beta) =
     infnorm_lt (polykvec_LowBits w - cs2) (gamma2 - Beta).
-proof. admit. qed.
+proof.
+move => Hcs2.
+rewrite /infnorm_lt eq_iff.
+apply eq_all_in => k Hk_iota.
+have Hk : 0 <= k < kvec by smt(mem_iota).
+rewrite /=.
+apply eq_all_in => j Hj_iota.
+have Hj : 0 <= j < n by smt(mem_iota).
+rewrite /=.
+rewrite /polykvec_LowBits.
+rewrite KArray.mapiE 1:/#.
+rewrite polykvec_sub_iE 1:/#.
+rewrite polykvec_sub_iE 1:/#.
+rewrite KArray.mapiE 1:/#.
+rewrite /poly_LowBits !Array256.initiE 1,2:/# /=.
+rewrite poly_addE 1:/#.
+rewrite poly_negE 1:/#.
+have rewr_sub : forall (a b : coeff), a + -b = a - b by smt(@Zq).
+have HLBS := LowBits_sub_sync w.[k].[j] cs2.[k].[j] _.
++ move: Hcs2; rewrite /infnorm_lt !allP => Hcs2.
+  have := Hcs2 k _; first by rewrite mem_iota /#.
+  rewrite /= allP => Hcs2k.
+  have := Hcs2k j _; first by rewrite mem_iota /#.
+  by simplify => /#.
+rewrite PolyReduce.rcoeffD poly2algiE 1:/# poly2algiE 1:/# Array256.initiE 1:/# /=.
+rewrite poly_negE 1:/#.
+rewrite rewr_sub.
+by rewrite HLBS.
+qed.
 
 (* Coefficient-wise lift of MakeHintImpl_MakeHint_equiv from GFq.ec. *)
 lemma polykvec_MakeHintImpl_MakeHint_equiv (w cs2 ct0 : polykvec) :
     infnorm_lt cs2 (Beta + 1) =>
     MakeHintImpl (polykvec_HighBits w) (polykvec_LowBits w - cs2 + ct0) =
     MakeHint (zerov - ct0) (w - cs2 + ct0).
-proof. admit. qed.
+proof.
+move => Hcs2.
+apply KArray.tP => k Hk.
+rewrite /MakeHintImpl /MakeHint !KArray.map2iE //.
+rewrite /polykvec_HighBits /polykvec_LowBits !KArray.mapiE //.
+rewrite !polykvec_add_iE //.
+rewrite !polykvec_sub_iE //.
+rewrite KArray.mapiE 1:/# /= /zerov KArray.createiE 1:/#.
+apply Array256.tP => j Hj.
+rewrite /poly_MakeHintImpl /poly_MakeHint !Array256.initiE 1,2:/# /=.
+do 2!(rewrite poly_addE /= 1:/#).
+do 1!(rewrite poly_negE /= 1:/#).
+do 1!(rewrite poly_addE /= 1:/#).
+do 1!(rewrite poly_negE /= 1:/#).
+do 2!(rewrite poly_addE /= 1:/#).
+do 1!(rewrite poly_negE /= 1:/#).
+do 1!(rewrite poly_zeroE 1:/#).
+rewrite /poly_HighBits /poly_LowBits !Array256.initiE 1,2:/# /=.
+congr. congr.
+have rewr_sub : forall (a b : coeff), a + -b = a - b by smt(@Zq).
+(* do 10!(rewrite rewr_sub). *)
+apply MakeHintImpl_MakeHint_equiv.
+move: Hcs2; rewrite /infnorm_lt !allP => Hcs2.
+have := Hcs2 k _; first by rewrite mem_iota /#.
+rewrite /= allP => Hcs2k.
+have := Hcs2k j _; first by rewrite mem_iota /#.
+by simplify => /#.
+qed. (* Ours *)
 
 end PolyKVec.
 
@@ -213,5 +268,5 @@ lemma cs2_norm_bound (c : poly) (s2 : polykvec) :
     infnorm_lt c 2 =>
     PolyKVec.infnorm_lt s2 (Eta + 1) =>
     PolyKVec.infnorm_lt (PolyKVec.invnttv (PolyKVec.ntt_smul (ntt c) (PolyKVec.nttv s2))) (Beta + 1).
-proof. admit. qed.
+proof. admit. qed. (* FIXME: PY *)
 

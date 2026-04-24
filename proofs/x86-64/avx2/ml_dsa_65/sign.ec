@@ -164,9 +164,15 @@ transitivity {1} { r <@ MLDSA(MLDSA_XOFA, MLDSA_XOFS, MLDSA_XOF_SIB, SIB_RO).sig
           BytesSig.to_list (oget r{1}.`1) = to_list r{2}.`1 /\
           r{2}.`2 = W64.zero)
     ).
-+ (* Side condition 1: original pre implies pre1 /\ pre2; the new conjunct
-     valid_sk_s2 sk{1} requires the bridge
-     valid_s2_bytes (Jasmin-slice) ==> valid_sk_s2 sk{1} (trivial, admitted). *)
++ auto => /> &1 &2 ??????H.
+  exists (MLDSA_XOFA.pos{1}) (MLDSA_XOFA.seed{1}) MLDSA_XOFS.pos{1} MLDSA_XOFS.seed{1}.
+  exists MLDSA_XOF_SIB.pos{1} MLDSA_XOF_SIB.seed{1}. print rnd_to_list.
+  exists coins{1} (zero :: truncateu8 context{2}.[1] :: (memread _m (to_uint context{2}.[0]) (to_uint context{2}.[1]) ++ memread _m message_pointer{2} message_size{2})).
+  exists (BytesSK.of_list (to_list signing_key{2})).
+  simplify;split; last by smt().
+  move : H; rewrite /valid_s2_bytes /valid_sk_s2 => H k kb.
+  have := H k kb; rewrite /valid_eta_bytes => Hi i ib.
+  have := Hi i ib.
   admit.
 + smt().
 + by call sign_eager_equiv; auto.

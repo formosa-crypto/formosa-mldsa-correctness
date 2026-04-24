@@ -54,7 +54,7 @@ admitted. (* FIXME: PY *)
    Cf. wpoly_srng 1 1 challenge established in verify.ec:487 (impl-level, not directly citeable). *)
 lemma sampleInBall_norm (ct : BytesCT.t) :
     infnorm_lt (sampleInBall ct).`1 2.
-proof. admit. qed.
+proof. admit. qed. (* FIXME: PY *)
 
 (*************** End SampleInBall CORRECTNESS BRIDGE ****************)
 

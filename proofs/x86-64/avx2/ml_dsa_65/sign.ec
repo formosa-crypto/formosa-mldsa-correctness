@@ -17,7 +17,7 @@ import CDR Round Zq PolyReduceZq BigZMod.
 require import Array2 Array32 Array48 Array64 Array128 Array256
                Array416 Array640 Array768 Array1280 Array1536 Array2496
                Array3309 Array4032 Array7680 WArray5120.
-require import XArray5120.
+require import XArray5120 XWord4.
 
 require import BitEncoding.
 from CryptoSpecs require import JWordList.
@@ -98,6 +98,38 @@ elim H => ->; elim H0 => -> /=;
   smt(W64.to_uint_eq W64.of_uintK W64.to_uintK pow2_64 W64.WRing.addr_eq0).
 qed.
 
+lemma s2_valid_commutes (sk : W8.t Array4032.t) :
+     valid_s2_bytes (init (fun (i : int) => sk.[768 + i])) =>
+        valid_sk_s2 (BytesSK.of_list (to_list sk)).
+proof. 
+have Hlvec   := mldsa65_lvec.
+have Hkvec   := mldsa65_kvec.
+have HEta    := mldsa65_Eta.
+have Hgamma1 := mldsa65_gamma1.
+have Htau    := mldsa65_tau.
+  rewrite /valid_s2_bytes /valid_sk_s2 /valid_eta_bytes   mldsa65_Eta /==> H k kb.
+  move  =>  i ib.
+  have := H k kb => Hi.
+  have := Hi i ib.
+  rewrite BytesSK.of_listK;1: by rewrite size_to_list /#.
+  rewrite /BitsToInteger /to_uint.
+  pose a := BS2Int.bs2int _.
+  pose b := BS2Int.bs2int _.
+  suff : (a = b) by smt().
+  rewrite /a /b;congr; apply (eq_from_nth false).
+  + rewrite  size_nth_chunk;1,3:smt(ilog_ge0).
+    by rewrite size_BytesToBits size_take 1:/# size_drop 1:/# size_to_list ifT /#.
+  move => j; rewrite  size_w2bits => jb.
+  rewrite get_w2bits initiE 1:/# /= initiE 1:/# /= initiE 1:/# /=.
+  rewrite (nth_change_dfl [] witness);1: by  rewrite size_chunk 1:/#  size_BytesToBits /= size_take 1:/# /= size_drop 1:/# /= size_to_list /#.
+   rewrite nth_chunk; 1,2: by smt().
+   + by rewrite size_BytesToBits size_take 1:/# /= size_drop 1:/# /= size_to_list /#.
+   rewrite nth_take 1,2:/# nth_drop 1,2:/# /BytesToBits (nth_flatten false 8).
+   + by rewrite allP => ii; rewrite mapP => He /=; elim He => x [# ? ->]; rewrite size_w2bits.
+   rewrite (nth_map witness); 1: by rewrite size_take 1:/# size_drop 1:/# size_to_list /#.
+   rewrite get_w2bits nth_take 1,2:/# nth_drop 1,2:/# get_to_list /#.
+qed.
+
 (* Correctness of the AVX2 ML-DSA-65 signing function.
    We prove an equiv between:
      - MLDSA(...).sign_derand(sk, m, coins) on the spec side
@@ -170,10 +202,7 @@ transitivity {1} { r <@ MLDSA(MLDSA_XOFA, MLDSA_XOFS, MLDSA_XOF_SIB, SIB_RO).sig
   exists coins{1} (zero :: truncateu8 context{2}.[1] :: (memread _m (to_uint context{2}.[0]) (to_uint context{2}.[1]) ++ memread _m message_pointer{2} message_size{2})).
   exists (BytesSK.of_list (to_list signing_key{2})).
   simplify;split; last by smt().
-  move : H; rewrite /valid_s2_bytes /valid_sk_s2 => H k kb.
-  have := H k kb; rewrite /valid_eta_bytes => Hi i ib.
-  have := Hi i ib.
-  admit.
+  by apply s2_valid_commutes=> /#.
 + smt().
 + by call sign_eager_equiv; auto.
   

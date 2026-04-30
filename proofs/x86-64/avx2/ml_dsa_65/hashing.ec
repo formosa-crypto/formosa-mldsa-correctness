@@ -39,6 +39,7 @@ equiv keccakf1600_st25_avx2_eq:
 (****************************************************************************)
 
 from Keccak require import Keccak1600_fixedsizes_avx2.
+from Keccak require import Keccak1600_updstate_avx2.
 
 clone KeccakArrayAvx2 as A2avx2
  with op _ASIZE <- 2,
@@ -93,6 +94,20 @@ clone KeccakArrayAvx2 as A1952avx2
  with op _ASIZE <- 1952,
       theory A <- Array1952,
       theory WA <- WArray1952
+      proof _ASIZE_ge0 by done
+      proof _ASIZE_u64 by done.
+
+clone KeccakUpdstateAvx2 as A64updstate
+ with op _ASIZE <- 64,
+      theory A <- Array64,
+      theory WA <- WArray64
+      proof _ASIZE_ge0 by done
+      proof _ASIZE_u64 by done.
+
+clone KeccakUpdstateAvx2 as A66updstate
+ with op _ASIZE <- 66,
+      theory A <- Array66,
+      theory WA <- WArray66
       proof _ASIZE_ge0 by done
       proof _ASIZE_u64 by done.
 
@@ -155,9 +170,34 @@ qed.
 equiv a_VERIFICATION_KEY__absorb_avx2_eq:
  M.a_VERIFICATION_KEY____absorb_avx2 ~ A1952avx2.MM.__absorb_avx2
  : ={arg} ==> ={res}.
-proc. 
+proc.
 by  sim; auto => />.
 qed.
+
+equiv init_updstate_avx2_eq:
+ M._init_updstate_avx2 ~ Keccak1600_Jazz.M._init_updstate_avx2
+ : ={arg} ==> ={res}
+ by sim.
+
+equiv finish_updstate_avx2_eq:
+ M._finish_updstate_avx2 ~ Keccak1600_Jazz.M._finish_updstate_avx2
+ : ={arg} ==> ={res}
+ by sim.
+
+equiv absorb_m_updstate_avx2_eq:
+ M._absorb_m_updstate_avx2 ~ Keccak1600_Jazz.M._absorb_m_updstate_avx2
+ : ={arg, Glob.mem} ==> ={res, Glob.mem}
+ by sim.
+
+equiv a64_squeeze_updstate_avx2_eq:
+ M.a64___squeeze_updstate_avx2 ~ A64updstate.MM._squeeze_updstate_avx2
+ : ={arg} ==> ={res}
+ by sim.
+
+equiv a66_update_updstate_avx2_eq:
+ M.a66___update_updstate_avx2 ~ A66updstate.MM._update_updstate_avx2
+ : ={arg} ==> ={res}
+ by sim.
 
 (****************************************************************************)
 (* Module K: keccak-library wrapper mirroring M's hashing procedures        *)
@@ -314,11 +354,9 @@ module K = {
   }
 
   (* __derive_message_representative uses the streaming updstate interface
-     (variable-length absorb via memory pointers). No abstract EC theory exists
-     for updstate in formosa-keccak yet, so K mirrors M exactly — calling M's
-     own updstate sub-procedures. The M ~ K equiv is by sim (identical call
-     structure). The leaf-level keccakf1600_st25 connection to Keccak1600_Jazz
-     is established by keccakf1600_st25_avx2_eq above. *)
+     (variable-length absorb via memory pointers). K calls Keccak1600_Jazz.M
+     directly for the size-independent updstate procs and the size-dependent
+     A{64,66}updstate.MM clones for the parametric ones. *)
   proc __derive_message_representative (verification_key_hash:W8.t Array64.t,
                                         context_pointer:int, context_size:int,
                                         message_pointer:int, message_size:int) :
@@ -352,18 +390,18 @@ module K = {
     prefix.[65] <- (truncateu8 (W64.of_int context_size));
     rate64 <- 17;
     trailb <- (W8.of_int 31);
-    state <@ M._init_updstate_avx2 (state, rate64, trailb);
+    state <@ Keccak1600_Jazz.M._init_updstate_avx2 (state, rate64, trailb);
     len <- 66;
-    state <@ M.a66___update_updstate_avx2 (state, prefix, len);
+    state <@ A66updstate.MM._update_updstate_avx2 (state, prefix, len);
     buf <- context_pointer;
     len <- context_size;
-    state <@ M._absorb_m_updstate_avx2 (state, buf, len);
+    state <@ Keccak1600_Jazz.M._absorb_m_updstate_avx2 (state, buf, len);
     buf <- message_pointer;
     len <- message_size;
-    state <@ M._absorb_m_updstate_avx2 (state, buf, len);
-    state <@ M._finish_updstate_avx2 (state);
+    state <@ Keccak1600_Jazz.M._absorb_m_updstate_avx2 (state, buf, len);
+    state <@ Keccak1600_Jazz.M._finish_updstate_avx2 (state);
     len <- 64;
-    (state, message_representative) <@ M.a64___squeeze_updstate_avx2 (state,
+    (state, message_representative) <@ A64updstate.MM._squeeze_updstate_avx2 (state,
     message_representative, len);
     return message_representative;
   }
@@ -753,7 +791,6 @@ qed.
 (* Correctness lemmas (complete hash operations)                            *)
 (****************************************************************************)
 require import Mldsa_65_prelude.
-from Keccak require import Keccak1600_updstate_avx2.
 hoare hash_verification_key_h' _vk :
  K.hash_verification_key
  : arg.`2 = _vk
@@ -913,11 +950,11 @@ qed.
 lemma K_derive_message_representative_ll : islossless K.__derive_message_representative.
 proof.
 proc.
-call a64_squeeze_updstate_avx2_ll.
+call A64updstate.squeeze_updstate_avx2_ll.
 wp;call finish_updstate_avx2_ll.
 call absorb_m_updstate_avx2_ll.
 wp;call absorb_m_updstate_avx2_ll.
-wp;call a66_update_updstate_avx2_ll.
+wp;call A66updstate.update_updstate_avx2_ll.
 wp;call init_updstate_avx2_ll.
 by auto.
 qed.
@@ -937,40 +974,108 @@ hoare K_derive_message_representative_h' _vk_hash _ctx _msg :
        ++ _ctx ++ _msg) 64).
 proof.
 proc.
-ecall (a64_squeeze_updstate_avx2_h state message_representative
-  (to_list _vk_hash ++ [W8.zero; truncateu8 (W64.of_int (List.size _ctx))]
-   ++ _ctx ++ _msg)).
-wp; ecall (finish_updstate_avx2_h state
-  (to_list _vk_hash ++ [W8.zero; truncateu8 (W64.of_int (List.size _ctx))]
-   ++ _ctx ++ _msg)).
-wp; wp; ecall (absorb_m_updstate_avx2_h Glob.mem state
-  (to_list _vk_hash ++ [W8.zero; truncateu8 (W64.of_int (List.size _ctx))] ++ _ctx)
-  message_pointer message_size).
-wp; wp; ecall (absorb_m_updstate_avx2_h Glob.mem state
-  (to_list _vk_hash ++ [W8.zero; truncateu8 (W64.of_int (List.size _ctx))])
-  context_pointer context_size).
-wp; ecall (a66_update_updstate_avx2_h state prefix ([<:W8.t>])).
-wp; ecall (init_updstate_avx2_h).
-wp; skip => /> &hr -> -> ?? rr Hrr rr0.
-move => H; do split.
-+ have := H.
-  pose a := Array66.init (get8 (set256_direct (WArray66.init8 ("_.[_]" (Array66.init (get8 (set256_direct (WArray66.init8 ("_.[_]" witness<:W8.t Array66.t>)) 0 (get256_direct (WArray64.init8 ("_.[_]" _vk_hash)) 0)))))) 32 (get256_direct (WArray64.init8 ("_.[_]" _vk_hash)) 32))).
-  suff : (Array66.to_list (a.[64 <- zero].[65 <- truncateu8 (W64.of_int (size _ctx))])) =
-      (to_list _vk_hash ++ [zero; truncateu8 (W64.of_int (size _ctx))])by smt().
-  apply (eq_from_nth witness).
-  + by rewrite size_cat !size_to_list //=.
-  + move => i; rewrite size_to_list //= => ib.
-    rewrite nth_cat size_to_list //=.
-  case (i < 64).
-  + rewrite /a !get_setE // => ?.
-    rewrite ifF 1:/# ifF 1:/# initiE 1:/# get8_set256_directE //.
-    case (i < 32) => ?.
+ecall (A64updstate.squeeze_updstate_avx2_h state message_representative len).
+wp; ecall (finish_updstate_avx2_h state).
+wp; ecall (absorb_m_updstate_avx2_h Glob.mem state buf len).
+wp; ecall (absorb_m_updstate_avx2_h Glob.mem state buf len).
+wp; ecall (A66updstate.update_updstate_avx2_h state prefix len).
+wp; ecall (init_updstate_avx2_h state rate64 trailb).
+wp; skip => />.
+move=> &hr Hctx Hmsg Hctx_bnd Hmsg_bnd.
+(* Name the prefix bytes computed by the K body. *)
+pose prefix_built := (Array66.init (get8 (set256_direct (WArray66.init8 ("_.[_]" (Array66.init (get8 (set256_direct (WArray66.init8 ("_.[_]" witness<:W8.t Array66.t>)) 0 (get256_direct (WArray64.init8 ("_.[_]" _vk_hash)) 0)))))) 32 (get256_direct (WArray64.init8 ("_.[_]" _vk_hash)) 32)))).[64 <- zero].[65 <- truncateu8 (W64.of_int (size _ctx))].
+have prefix_first66 :
+  take 66 (to_list prefix_built)
+    = to_list _vk_hash ++ [W8.zero; truncateu8 (W64.of_int (size _ctx))].
++   apply (eq_from_nth witness); 1: by rewrite size_cat size_to_list size_take // size_to_list /=.
+  move => i; rewrite size_take // size_to_list /= => ib.
+  rewrite nth_take 1,2:/# nth_cat size_to_list /=.
+  rewrite /prefix_built !get_setE // initiE 1:/# /=.
+  case (i < 64) => Hi64. 
+  + rewrite ifF 1:/# ifF 1:/# /=.
+    case (i < 32) => Hi32.
     + by rewrite ifF 1:/# /= /get8 initiE //= initiE //= /set256_direct initiE 1:/# /= ifT 1:/# /get256_direct pack32bE 1:/# initiE 1:/# /= initiE 1:/#.
     + by rewrite ifT 1:/# /get256_direct pack32bE 1:/# initiE 1:/# /= initiE 1:/#.
-  case (i = 64); 1: by  move => -> //.
-  by move => ??; have -> /= : i = 65; 1:smt().
-+ smt(size_ge0).
-+ by move => _ _ result2 Hr2.
+  by smt(). 
+(* Composition chain: derive absorb_msg / sponge_state / squeeze. *)
+have [Hi_msg [Hi_r8 Hi_tb]] := absorb_msg_init witness<:W64.t Array26.t> 17 (W8.of_int 31).
+have [Hu_msg [Hu_r8 Hu_tb]] := A66updstate.absorb_msg_update
+  (init_updstate_avx2_spec witness<:W64.t Array26.t> 17 (W8.of_int 31))
+  prefix_built 66.
+have [Hac_msg [Hac_r8 Hac_tb]] := absorb_msg_absorb_m Glob.mem{hr}
+  (A66updstate.update_updstate_avx2_spec
+     (init_updstate_avx2_spec witness<:W64.t Array26.t> 17 (W8.of_int 31))
+     prefix_built 66)
+  context_pointer{hr} (size _ctx).
+have [Ham_msg [Ham_r8 Ham_tb]] := absorb_msg_absorb_m Glob.mem{hr}
+  (absorb_m_updstate_avx2_spec Glob.mem{hr}
+     (A66updstate.update_updstate_avx2_spec
+        (init_updstate_avx2_spec witness<:W64.t Array26.t> 17 (W8.of_int 31))
+        prefix_built 66)
+     context_pointer{hr} (size _ctx))
+  message_pointer{hr} (size _msg).
+have [Hf_sp Hf_r8] := sponge_state_finish
+  (absorb_m_updstate_avx2_spec Glob.mem{hr}
+     (absorb_m_updstate_avx2_spec Glob.mem{hr}
+        (A66updstate.update_updstate_avx2_spec
+           (init_updstate_avx2_spec witness<:W64.t Array26.t> 17 (W8.of_int 31))
+           prefix_built 66)
+        context_pointer{hr} (size _ctx))
+     message_pointer{hr} (size _msg)).
+have Hsq := A64updstate.squeeze_yields_bytes
+  (finish_updstate_avx2_spec
+     (absorb_m_updstate_avx2_spec Glob.mem{hr}
+        (absorb_m_updstate_avx2_spec Glob.mem{hr}
+           (A66updstate.update_updstate_avx2_spec
+              (init_updstate_avx2_spec witness<:W64.t Array26.t> 17 (W8.of_int 31))
+              prefix_built 66)
+           context_pointer{hr} (size _ctx))
+        message_pointer{hr} (size _msg)))
+  witness<:W8.t Array64.t> 64.
+(* Prove the final equality by extensionality on Array64. *)
+apply Array64.tP => i Hi.
+rewrite Array64.get_of_list 1://.
+have squeeze_size :
+  size (to_list (A64updstate.squeeze_updstate_avx2_spec
+    (finish_updstate_avx2_spec
+       (absorb_m_updstate_avx2_spec Glob.mem{hr}
+          (absorb_m_updstate_avx2_spec Glob.mem{hr}
+             (A66updstate.update_updstate_avx2_spec
+                (init_updstate_avx2_spec witness<:W64.t Array26.t> 17 (W8.of_int 31))
+                prefix_built 66)
+             context_pointer{hr} (size _ctx))
+          message_pointer{hr} (size _msg)))
+    witness<:W8.t Array64.t> 64).`2) = 64
+  by rewrite size_to_list.
+
+(* Destructure the let in Hsq to expose buf' and unify with the goal's
+   (squeeze_spec ...).`2 occurrence. *)
+move: Hsq.
+case (A64updstate.squeeze_updstate_avx2_spec
+        (finish_updstate_avx2_spec
+           (absorb_m_updstate_avx2_spec Glob.mem{hr}
+              (absorb_m_updstate_avx2_spec Glob.mem{hr}
+                 (A66updstate.update_updstate_avx2_spec
+                    (init_updstate_avx2_spec witness<:W64.t Array26.t> 17
+                       (W8.of_int 31))
+                    prefix_built 66) context_pointer{hr} (size _ctx))
+              message_pointer{hr} (size _msg)))
+        witness<:W8.t Array64.t> 64) => st' buf'.
+move=> /= Hsq.
+(* Convert array access to take-64 of the to_list view. *)
+rewrite -Array64.get_to_list.
+rewrite -(nth_take witness 64) //; 1: smt().
+(* Apply the squeeze conclusion. *)
+rewrite Hsq.
+(* Reduce sponge_state and rate8_of through finish/absorb_m/update/init. *)
+rewrite Hf_sp Hf_r8.
+rewrite Ham_msg Ham_r8 Ham_tb Hac_msg Hac_r8 Hac_tb Hu_msg Hu_r8 Hu_tb
+        Hi_msg Hi_r8 Hi_tb /=.
+(* Compute the absorbed message bytes from prefix_built and the memreads. *)
+rewrite prefix_first66 Hctx Hmsg.
+(* SHAKE256 unfolds to SQUEEZE1600 c512_r8 outlen (ABSORB1600 SHAKE_DS_BYTE
+   c512_r8 m), with c512_r8 = 136 and SHAKE_DS_BYTE = W8.of_int 31. *)
+by rewrite /SHAKE256 /KECCAK1600 /SHAKE_DS_BYTE /c512_r8.
 qed.
 
 phoare K_derive_message_representative_ph' _vk_hash _ctx _msg :

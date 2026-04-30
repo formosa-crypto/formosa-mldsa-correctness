@@ -75,7 +75,7 @@ move: h => @/wpoly_srng /array256_allP /(_ v _) //= /=.
 + rewrite /to_list /mkseq mapP; exists ((i * 8 + j) %/ d); smt(mem_iota).
 move => h. 
 rewrite incoeffK_centered 1,2:/# /W32_sub truncateu_32_13E get_bits2w 1:/#.
-rewrite nth_take 1,2:/# w2bitsE. 
+rewrite nth_take 1,2:/# w2bits_int2bsE.
 have  -> := BS2Int.int2bs_cat 13 32 (to_uint (W32.of_int dpow - v)) _;1:smt().
 rewrite /IntegerToBits nth_cat ifT;1: by rewrite BS2Int.size_int2bs /#.
 congr;2:smt().

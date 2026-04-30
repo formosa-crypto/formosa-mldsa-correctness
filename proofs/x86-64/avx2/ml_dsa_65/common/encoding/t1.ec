@@ -69,7 +69,7 @@ move: h => @/wpoly_urng /array256_allP /(_ v _) //= /=.
 move => h.
 rewrite incoeffK truncateu_32_10E get_bits2w 1:/#.
 rewrite nth_take 1,2:/#.
-rewrite /IntegerToBits w2bitsE /l ilog_b_t1 /bitlenqm1md /= (modz_small _ q) 1:/# /BS2Int.int2bs.
+rewrite /IntegerToBits w2bits_int2bsE /l ilog_b_t1 /bitlenqm1md /= (modz_small _ q) 1:/# /BS2Int.int2bs.
 by rewrite !nth_mkseq 1,2:/# /= /#.
 qed.
 

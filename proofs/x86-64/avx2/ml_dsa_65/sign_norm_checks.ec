@@ -7,7 +7,7 @@ from JazzEC require import Ml_dsa_65_avx2 Mldsa_65_prelude Signature
 
 from Spec require import GFq Rq Parameters VecMat MLDSA_W32_Rep.
 import PolyLVec PolyKVec.
-import CDR Round Zq PolyReduceZq BigZMod.
+import Round ZModQ ZpC Zp Zq PolyReduceZq.
 import StdBigop.Bigint BIA.
 
 require import Array256 Array1280 Array1536.
@@ -1110,7 +1110,7 @@ qed.
 
 (* When all coefficients of the hint vector are 0 or 1 (wpolykvec_urng v 2),
    hammw and count_nonzero_coeffs_kvec measure the same thing:
-   c <> Zq.zero <=> c = Zq.one for 0/1-valued coefficients. *)
+   c <> Zp.zero <=> c = Zp.one for 0/1-valued coefficients. *)
 lemma hammw_count_nonzero (v : wpolykvec) (bound : int) :
   wpolykvec_urng v 2 =>
   hammw (liftu_wpolykvec v) bound =>
@@ -1120,10 +1120,10 @@ rewrite /wpolykvec_urng allP => Hrng.
 rewrite /hammw /count_nonzero_coeffs /count_nonzero_coeffs_kvec /count_nonzero_coeffs /=.
 rewrite /to_list /mkseq StdBigop.Bigint.BIA.big_map /(\o) /=.
 suff: StdBigop.Bigint.BIA.big predT<:int>
-  (fun (ii : int) => count (fun (jj : int) => (liftu_wpolykvec v).[ii].[jj] <> zero) (iota_ 0 n)) (
+  (fun (ii : int) => count (fun (jj : int) => (liftu_wpolykvec v).[ii].[jj] <> Zp.zero) (iota_ 0 n)) (
   iota_ 0 kvec) =
  StdBigop.Bigint.BIA.big (fun (x : int) => predT (liftu_wpolykvec v).[x])
-  (fun (x : int) => count (fun (c : coeff) => c = one) (map ("_.[_]" (liftu_wpolykvec v).[x]) (iota_ 0 n)))
+  (fun (x : int) => count (fun (c : coeff) => c = Zp.one) (map ("_.[_]" (liftu_wpolykvec v).[x]) (iota_ 0 n)))
   (iota_ 0 kvec) by smt().
 apply StdBigop.Bigint.BIA.eq_big_seq => x; rewrite mem_iota => /= *.
 rewrite count_map;apply eq_in_count => k; rewrite mem_iota => /= *.
@@ -1133,7 +1133,7 @@ rewrite /wpoly_urng allP => /= Hrngx.
 have := Hrngx k _;1:smt().
 move => H.
 rewrite /liftu_wpolykvec !mapiE 1,2:/# /=.
-smt(@Zq).
+smt(@Zp).
 qed.
 
 
@@ -1196,14 +1196,14 @@ while (#{/~_incr}{~infinity_norm_check_result}{~hint_0}{~total_ones_in_hint}pre 
          _incr = zero /\
          big predT (fun ii =>
              count (fun jj => (MakeHintImpl (lifts_wpolykvec (kvec_unflatten256 _w1))
-                             (lifts_wpolykvec (kvec_unflatten256 _r))).[ii].[jj] <> Zq.zero)
+                             (lifts_wpolykvec (kvec_unflatten256 _r))).[ii].[jj] <> Zp.zero)
                    (iota_ 0 256)) (iota_ 0 (base %/ n)) <= w_hint
          ) /\
         (infinity_norm_check_result = zero =>
          total_ones_in_hint =
            big predT (fun ii =>
              count (fun jj => (MakeHintImpl (lifts_wpolykvec (kvec_unflatten256 _w1))
-                             (lifts_wpolykvec (kvec_unflatten256 _r))).[ii].[jj] <> Zq.zero)
+                             (lifts_wpolykvec (kvec_unflatten256 _r))).[ii].[jj] <> Zp.zero)
                    (iota_ 0 256)) (iota_ 0 (base %/ n)))
       ); last first.
 (* ── Loop exit (combined with initialization) ─────────────────── *)
@@ -1238,7 +1238,7 @@ seq 3 : (#pre /\
                     (lifts_wpoly (kvec_unflatten256 _r).[base %/ n]) /\
       wpoly_urng 2 (Array256.init (fun i => hint_0.[base + i]))  /\
     ones_in_hint =
-      count (fun i => (liftu_wpoly (Array256.init (fun j => hint_0.[base + j]))).[i] <> Zq.zero)
+      count (fun i => (liftu_wpoly (Array256.init (fun j => hint_0.[base + j]))).[i] <> Zp.zero)
             (iota_ 0 256)).
 + wp.
   ecall (polynomial____make_hint_correct

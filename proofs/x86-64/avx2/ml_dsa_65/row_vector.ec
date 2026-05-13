@@ -13,7 +13,7 @@ from Spec require import GFq Rq Serialization Conversion Parameters VecMat
 require import Polynomial.
                          
 import PolyLVec PolyKVec PolyMat.
-import CDR Round Zq PolyReduceZq BigZMod.
+import Round ZModQ ZpC Zp Zq PolyReduceZq.
 
 require import Array2 Array32 Array48 Array64 Array256 Array768 Array1280 Array1536
                Array1920 Array1952 Array3309 Array7680.

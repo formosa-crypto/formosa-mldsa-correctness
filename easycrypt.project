@@ -10,9 +10,7 @@ idirs = proofs/eclib
 rdirs = Jasmin:submodules/jasmin-compiler/eclib
 
 idirs = Spec:proofs/specs
-
-idirs = submodules/dilithium/proofs/utils
-idirs = submodules/dilithium/proofs/security
+idirs = Spec:proofs/specs/properties
 
 idirs = JazzEC:proofs/arrays
 idirs = JazzEC:proofs/xarrays

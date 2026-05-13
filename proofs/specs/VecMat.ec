@@ -1,26 +1,14 @@
 require import AllCore List StdBigop.
 require import Parameters GFq Rq.
-require DVect Subtype.
 require import Array256.
 
-import CDR Round Zq BigZMod PolyReduceZq MLDSAParams.
+import Round ZModQ ZpC Zp PolyReduceZq MLDSAParams.
 
-clone import DVect as VecMat with 
-  theory DR <= DR,
-  op HL.alpha <- 2*gamma2,
-  op HL.d     <- d
-proof 
-  HL.ge2_alpha, 
-  HL.alpha_halfq_le, 
-  HL.even_alpha, 
-  HL.alpha_almost_divides_q.
-realize HL.ge2_alpha by smt(gamma2_bound).
-realize HL.even_alpha by smt().
-realize HL.alpha_halfq_le by smt(gamma2_bound).
-realize HL.alpha_almost_divides_q by apply gamma2_div.
-
-import VecMat.MatRq. (* Matrices and Vectors over Rq *)
-import VecMat.HL.    (* highBitsV and lowBitsV with HL.alpha = 2 * gamma2 and HL.d = d *)
+(* polyXnD1-typed vectors/matrices, from PolyReduceZq's DynMatrix clone.   *)
+(* (Previously these came from cloning [DVect] in the dilithium submodule.) *)
+import PolyReduceZq.VM.
+import PolyReduceZq.VM.Vectors.
+import PolyReduceZq.VM.Matrices.
 
 from Jasmin require import JArray. 
 clone export PolyArray as LArray  with
@@ -143,7 +131,7 @@ op infnorm_lt(v : polykvec, bound : int) : bool =
 
 import Bigint BIA. 
 op hammw(v : polykvec, bound : int) : bool =
- big predT (fun ii => count (fun jj => v.[ii].[jj] <> Zq.zero) (iota_ 0 256)) (iota_ 0 kvec) <= bound.
+ big predT (fun ii => count (fun jj => v.[ii].[jj] <> Zp.zero) (iota_ 0 256)) (iota_ 0 kvec) <= bound.
 
 op polykvec_HighBits(v : polykvec) : polykvec =
   map poly_HighBits v.
@@ -176,14 +164,14 @@ rewrite KArray.mapiE 1:/#.
 rewrite /poly_LowBits !Array256.initiE 1,2:/# /=.
 rewrite poly_addE 1:/#.
 rewrite poly_negE 1:/#.
-have rewr_sub : forall (a b : coeff), a + -b = a - b by smt(@Zq).
+have rewr_sub : forall (a b : coeff), a + -b = a - b by smt(@Zp).
 have HLBS := LowBits_sub_sync w.[k].[j] cs2.[k].[j] _.
 + move: Hcs2; rewrite /infnorm_lt !allP => Hcs2.
   have := Hcs2 k _; first by rewrite mem_iota /#.
   rewrite /= allP => Hcs2k.
   have := Hcs2k j _; first by rewrite mem_iota /#.
   by simplify => /#.
-rewrite PolyReduce.rcoeffD poly2algiE 1:/# poly2algiE 1:/# Array256.initiE 1:/# /=.
+rewrite PolyReduceZp.PolyReduce.rcoeffD poly2algiE 1:/# poly2algiE 1:/# Array256.initiE 1:/# /=.
 rewrite poly_negE 1:/#.
 rewrite rewr_sub.
 by rewrite HLBS.
@@ -213,7 +201,7 @@ do 1!(rewrite poly_negE /= 1:/#).
 do 1!(rewrite poly_zeroE 1:/#).
 rewrite /poly_HighBits /poly_LowBits !Array256.initiE 1,2:/# /=.
 congr. congr.
-have rewr_sub : forall (a b : coeff), a + -b = a - b by smt(@Zq).
+have rewr_sub : forall (a b : coeff), a + -b = a - b by smt(@Zp).
 (* do 10!(rewrite rewr_sub). *)
 apply MakeHintImpl_MakeHint_equiv.
 move: Hcs2; rewrite /infnorm_lt !allP => Hcs2.

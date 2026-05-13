@@ -9,7 +9,7 @@ require import Polynomial.
 
 from Spec require import GFq Rq Parameters MLDSA_W32_Rep VecMat.
 
-import CDR Round Zq PolyKVec.
+import Round ZModQ ZpC Zp Zq PolyKVec.
 
 require import Array256 Array1536.
 

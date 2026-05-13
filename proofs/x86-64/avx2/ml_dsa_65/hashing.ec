@@ -6,7 +6,7 @@ from JazzEC require import Ml_dsa_65_avx2.
 
 from Spec require import GFq Rq Serialization Conversion Parameters VecMat Symmetric Sampling MLDSA_W32_Rep MLDSA.
 import PolyLVec PolyKVec PolyMat.
-import CDR Round Zq PolyReduceZq BigZMod.
+import Round ZModQ ZpC Zp Zq PolyReduceZq.
 
 require import Array2 Array26 Array32 Array48 Array64 Array66 Array128 Array136 Array768 Array1952.
 require import WArray2 Array7 WArray32 WArray48 WArray64 WArray66 WArray128 WArray136 WArray208 WArray768 WArray1952.
@@ -974,7 +974,7 @@ hoare K_derive_message_representative_h' _vk_hash _ctx _msg :
        ++ _ctx ++ _msg) 64).
 proof.
 proc.
-ecall (A64updstate.squeeze_updstate_avx2_h state message_representative len).
+ecall (A64updstate.squeeze_updstate_avx2_h message_representative state 136 len).
 wp; ecall (finish_updstate_avx2_h state).
 wp; ecall (absorb_m_updstate_avx2_h Glob.mem state buf len).
 wp; ecall (absorb_m_updstate_avx2_h Glob.mem state buf len).

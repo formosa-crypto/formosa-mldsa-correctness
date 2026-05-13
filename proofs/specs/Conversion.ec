@@ -4,7 +4,7 @@ require import Array256.
 
 require import Parameters.
 require import GFq.
-import CDR Round Zq BigZMod PolyReduceZq MLDSAParams.
+import Round ZModQ ZpC Zp PolyReduceZq MLDSAParams.
 require import Rq.
 require import VecMat.
 import PolyLVec.
@@ -39,7 +39,7 @@ op CoeffFromHalfByte(b : int) : int option =
 
 op SimpleBitPack(w : poly, b : int) : W8.t list = 
    let blen_b = ilog 2 b + 1 in
-     BitsToBytes (flatten (map (fun wi => IntegerToBits (Zq.asint wi) blen_b) (to_list w))).
+     BitsToBytes (flatten (map (fun wi => IntegerToBits (asint wi) blen_b) (to_list w))).
 
 op BitPack(w : poly, a b : int) : W8.t list = 
    let blen_ab = ilog 2 (a + b) + 1 in
@@ -48,12 +48,12 @@ op BitPack(w : poly, a b : int) : W8.t list =
 op SimpleBitUnpack(v : W8.t list, b : int) : poly =
    let c = ilog 2 b + 1 in
    let z = BytesToBits(v) in
-     init (fun i => nth witness (map (fun co => Zq.incoeff (BitsToInteger co)) (BitChunking.chunk c z)) i).
+     init (fun i => nth witness (map (fun co => incoeff (BitsToInteger co)) (BitChunking.chunk c z)) i).
 
 op BitUnpack(v : W8.t list, a b : int) : poly =
    let c = ilog 2 (a + b) + 1 in
    let z = BytesToBits(v) in
-     init (fun i => nth witness (map (fun co => Zq.incoeff (b - BitsToInteger co)) (BitChunking.chunk c z)) i).
+     init (fun i => nth witness (map (fun co => incoeff (b - BitsToInteger co)) (BitChunking.chunk c z)) i).
 
 (* Validity predicate for byte-encoded eta-bounded polynomials at the spec level.
    Each (ilog 2 (2*Eta) + 1)-bit chunk of v represents an integer in [0, 2*Eta],
@@ -81,7 +81,7 @@ rewrite initiE 1:/# (nth_map witness) /=.
 + rewrite BitChunking.size_chunk /=; 1: smt(ilog_ge0 param_sets).
   rewrite size_BytesToBits Hs /= /#.
 pose x := (BitChunking.chunk (ilog 2 (Eta + Eta) + 1) (BytesToBits v)).
-suff : 0 <= BitsToInteger (nth witness<:bool list> x k) <= 2*Eta by smt(@Zq).
+suff : 0 <= BitsToInteger (nth witness<:bool list> x k) <= 2*Eta by smt(@Zp @ZpC).
 split; first by rewrite /BitsToInteger; smt(BS2Int.bs2int_ge0).
 by move => _; apply Hval; smt().
 qed.
@@ -97,7 +97,7 @@ module HintPackUnpack = {
      while (i < kvec) {
         j <- 0;
         while (j < 256) {
-           if (h.[i].[j] = Zq.one) {
+           if (h.[i].[j] = Zp.one) {
               y <- put y index (W8.of_int j);
               index <- index + 1;
            }
@@ -120,7 +120,7 @@ module HintPackUnpack = {
      error <- false;
      i <- 0;
      while (i < kvec && !error) {
-       h.[i] <- Array256.init (fun k => Zq.zero);
+       h.[i] <- Array256.init (fun k => Zp.zero);
        if (to_uint (nth witness y (w_hint+i)) < index || 
                    w_hint < to_uint (nth witness y (w_hint+i))) {
            error <- true; 
@@ -132,7 +132,7 @@ module HintPackUnpack = {
                 error <- true;
              }
              else {
-                h.[i] <- h.[i].[to_uint (nth witness y index) <- Zq.one];
+                h.[i] <- h.[i].[to_uint (nth witness y index) <- Zp.one];
                 index <- index + 1;
              }
           }

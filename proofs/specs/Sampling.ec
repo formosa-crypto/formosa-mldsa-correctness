@@ -3,7 +3,7 @@ from Jasmin require import JByte_array JWord.
 require import Array256.
 require import Parameters GFq Rq VecMat Conversion Serialization Symmetric.
 import PolyLVec PolyKVec PolyMat.
-import CDR Round Zq PolyReduceZq BigZMod MLDSAParams.
+import Round ZModQ ZpC Zp Zq PolyReduceZq MLDSAParams.
 
 op "_.[_]" : 'a list -> int -> 'a = nth witness.
 

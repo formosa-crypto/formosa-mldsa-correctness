@@ -3,7 +3,7 @@ from Jasmin require import JByte_array JWord.
 
 require import Parameters GFq Rq VecMat Conversion Serialization.
 import PolyLVec PolyKVec PolyMat.
-import CDR Round Zq BigZMod MLDSAParams.
+import Round ZModQ ZpC Zp Zq MLDSAParams.
 
 from CryptoSpecs require import Keccak1600_Spec.
 

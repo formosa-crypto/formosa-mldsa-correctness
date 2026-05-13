@@ -8,7 +8,7 @@ from JazzEC require import Array256 Array320.
 from Spec require import GFq Rq Serialization Conversion Parameters VecMat MLDSA_W32_Rep.
 import BitEncoding BitChunking.
 
-import CDR Round Zq.
+import Round ZModQ ZpC Zp Zq.
 
 from CryptoSpecs require import JWord_extra EclibExtra JWordList.
 

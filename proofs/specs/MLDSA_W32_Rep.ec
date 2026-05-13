@@ -5,7 +5,7 @@ from Jasmin require import JWord.
 require import GFq Rq VecMat.
 require import Array256.
 
-import Parameters CDR Round Zq PolyLVec PolyKVec PolyMat.
+import Parameters Round ZModQ ZpC Zp Zq PolyLVec PolyKVec PolyMat.
 
 (******************************************************)
 (* Representations of polys as 32-bit word arrays     *)

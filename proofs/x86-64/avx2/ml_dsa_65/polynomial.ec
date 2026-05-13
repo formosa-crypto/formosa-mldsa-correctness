@@ -8,7 +8,7 @@ require import CircuitBindings Bindings.
 
 from Spec require import GFq Rq Parameters MLDSA_W32_Rep Symmetric Serialization.
 
-import CDR Round Zq.
+import Round ZModQ ZpC Zp Zq.
 
 require import XArray256 Array256.
 

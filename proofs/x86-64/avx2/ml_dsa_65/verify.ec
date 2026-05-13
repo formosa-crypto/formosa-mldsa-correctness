@@ -12,7 +12,7 @@ from Spec require import GFq Rq Serialization Conversion Parameters VecMat
                          Symmetric Sampling MLDSA_W32_Rep MLDSA.
 
 import PolyLVec PolyKVec PolyMat.
-import Round ZModQ ZpC Zp Zq PolyReduceZq.
+import Round ZModQ Zq.
 
 require import Array2 Array32 Array48 Array64 Array256 Array768 Array1280 Array1536
                Array1920 Array1952 Array3309 Array7680.

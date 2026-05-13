@@ -7,7 +7,7 @@ from JazzEC require import Ml_dsa_65_avx2 Mldsa_65_prelude Signature
 
 from Spec require import GFq Rq Parameters VecMat MLDSA_W32_Rep.
 import PolyLVec PolyKVec.
-import Round ZModQ ZpC Zp Zq PolyReduceZq.
+import Round ZModQ Zq.
 import StdBigop.Bigint BIA.
 
 require import Array256 Array1280 Array1536.
@@ -1110,7 +1110,7 @@ qed.
 
 (* When all coefficients of the hint vector are 0 or 1 (wpolykvec_urng v 2),
    hammw and count_nonzero_coeffs_kvec measure the same thing:
-   c <> Zp.zero <=> c = Zp.one for 0/1-valued coefficients. *)
+   c <> Zq.zero <=> c = Zq.one for 0/1-valued coefficients. *)
 lemma hammw_count_nonzero (v : wpolykvec) (bound : int) :
   wpolykvec_urng v 2 =>
   hammw (liftu_wpolykvec v) bound =>
@@ -1120,10 +1120,10 @@ rewrite /wpolykvec_urng allP => Hrng.
 rewrite /hammw /count_nonzero_coeffs /count_nonzero_coeffs_kvec /count_nonzero_coeffs /=.
 rewrite /to_list /mkseq StdBigop.Bigint.BIA.big_map /(\o) /=.
 suff: StdBigop.Bigint.BIA.big predT<:int>
-  (fun (ii : int) => count (fun (jj : int) => (liftu_wpolykvec v).[ii].[jj] <> Zp.zero) (iota_ 0 n)) (
+  (fun (ii : int) => count (fun (jj : int) => (liftu_wpolykvec v).[ii].[jj] <> Zq.zero) (iota_ 0 n)) (
   iota_ 0 kvec) =
  StdBigop.Bigint.BIA.big (fun (x : int) => predT (liftu_wpolykvec v).[x])
-  (fun (x : int) => count (fun (c : coeff) => c = Zp.one) (map ("_.[_]" (liftu_wpolykvec v).[x]) (iota_ 0 n)))
+  (fun (x : int) => count (fun (c : coeff) => c = Zq.one) (map ("_.[_]" (liftu_wpolykvec v).[x]) (iota_ 0 n)))
   (iota_ 0 kvec) by smt().
 apply StdBigop.Bigint.BIA.eq_big_seq => x; rewrite mem_iota => /= *.
 rewrite count_map;apply eq_in_count => k; rewrite mem_iota => /= *.
@@ -1133,7 +1133,7 @@ rewrite /wpoly_urng allP => /= Hrngx.
 have := Hrngx k _;1:smt().
 move => H.
 rewrite /liftu_wpolykvec !mapiE 1,2:/# /=.
-smt(@Zp).
+smt(@Zq).
 qed.
 
 
@@ -1196,14 +1196,14 @@ while (#{/~_incr}{~infinity_norm_check_result}{~hint_0}{~total_ones_in_hint}pre 
          _incr = zero /\
          big predT (fun ii =>
              count (fun jj => (MakeHintImpl (lifts_wpolykvec (kvec_unflatten256 _w1))
-                             (lifts_wpolykvec (kvec_unflatten256 _r))).[ii].[jj] <> Zp.zero)
+                             (lifts_wpolykvec (kvec_unflatten256 _r))).[ii].[jj] <> Zq.zero)
                    (iota_ 0 256)) (iota_ 0 (base %/ n)) <= w_hint
          ) /\
         (infinity_norm_check_result = zero =>
          total_ones_in_hint =
            big predT (fun ii =>
              count (fun jj => (MakeHintImpl (lifts_wpolykvec (kvec_unflatten256 _w1))
-                             (lifts_wpolykvec (kvec_unflatten256 _r))).[ii].[jj] <> Zp.zero)
+                             (lifts_wpolykvec (kvec_unflatten256 _r))).[ii].[jj] <> Zq.zero)
                    (iota_ 0 256)) (iota_ 0 (base %/ n)))
       ); last first.
 (* ── Loop exit (combined with initialization) ─────────────────── *)
@@ -1238,7 +1238,7 @@ seq 3 : (#pre /\
                     (lifts_wpoly (kvec_unflatten256 _r).[base %/ n]) /\
       wpoly_urng 2 (Array256.init (fun i => hint_0.[base + i]))  /\
     ones_in_hint =
-      count (fun i => (liftu_wpoly (Array256.init (fun j => hint_0.[base + j]))).[i] <> Zp.zero)
+      count (fun i => (liftu_wpoly (Array256.init (fun j => hint_0.[base + j]))).[i] <> Zq.zero)
             (iota_ 0 256)).
 + wp.
   ecall (polynomial____make_hint_correct
@@ -1296,7 +1296,7 @@ auto => /> &hr ???????????Hcount H??; split.
 + rewrite /SETcc.
   pose p := 55 <
       total_ones_in_hint{hr} +
-      count (fun (i : int) => (liftu_wpoly (init (fun (j : int) => hint_0{hr}.[base{hr} + j]))).[i] <> zero)
+      count (fun (i : int) => (liftu_wpoly (init (fun (j : int) => hint_0{hr}.[base{hr} + j]))).[i] <> Zq.zero)
         (iota_ 0 n).
   move => Hf;do split;2:smt(count_ge0).
   + case p => Hp; case (infinity_norm_check_result{hr} = zero) => H0; 2,4:smt(W64.to_uint_eq W64.of_uintK W64.to_uintK pow2_64 or64_ne0); rewrite H0 /= to_uint_eq  to_uint_zeroextu64 //=;  by have := Hf;rewrite Hp H0 /= to_uint_eq /= to_uint_zeroextu64 //=.
@@ -1321,14 +1321,14 @@ auto => /> &hr ???????????Hcount H??; split.
     have Htail : 0 <= big predT
         (fun (ii : int) => count (fun (jj : int) =>
            (MakeHintImpl (lifts_wpolykvec (kvec_unflatten256 _w1))
-              (lifts_wpolykvec (kvec_unflatten256 _r))).[ii].[jj] <> zero) (iota_ 0 n))
+              (lifts_wpolykvec (kvec_unflatten256 _r))).[ii].[jj] <> Zq.zero) (iota_ 0 n))
         (iota_ (base{hr} %/ n + 1) (5 - base{hr} %/ n))
       by apply sumr_ge0_seq => ??; smt( count_ge0).
     have Hcnt : count (fun (jj : int) =>
-          (liftu_wpoly (init (fun (i : int) => hint_0{hr}.[base{hr} + i]))).[jj] <> zero)
+          (liftu_wpoly (init (fun (i : int) => hint_0{hr}.[base{hr} + i]))).[jj] <> Zq.zero)
         (iota_ 0 n) =
         count (fun (i : int) =>
-          (liftu_wpoly (init (fun (j : int) => hint_0{hr}.[base{hr} + j]))).[i] <> zero)
+          (liftu_wpoly (init (fun (j : int) => hint_0{hr}.[base{hr} + j]))).[i] <> Zq.zero)
         (iota_ 0 n) by done.
     move: Hpp.
     pose a := big predT<:int>
@@ -1336,13 +1336,13 @@ auto => /> &hr ???????????Hcount H??; split.
        count
          (fun (jj : int) =>
             (MakeHintImpl (lifts_wpolykvec (kvec_unflatten256 _w1)) (lifts_wpolykvec (kvec_unflatten256 _r))).[ii].[jj] <>
-            zero) (iota_ 0 n)) (iota_ 0 (base{hr} %/ n)).
-    pose b :=  count (fun (jj : int) => (liftu_wpoly (init (fun (i : int) => hint_0{hr}.[base{hr} + i]))).[jj] <> zero) (iota_ 0 n).
+            Zq.zero) (iota_ 0 n)) (iota_ 0 (base{hr} %/ n)).
+    pose b :=  count (fun (jj : int) => (liftu_wpoly (init (fun (i : int) => hint_0{hr}.[base{hr} + i]))).[jj] <> Zq.zero) (iota_ 0 n).
     pose F := (fun (ii : int) =>
        count
          (fun (jj : int) =>
             (MakeHintImpl (lifts_wpolykvec (kvec_unflatten256 _w1)) (lifts_wpolykvec (kvec_unflatten256 _r))).[ii].[jj] <>
-            zero) (iota_ 0 n)).
+            Zq.zero) (iota_ 0 n)).
      by smt (sumr_ge0 count_ge0).
 
   move => Hn; do split;1..5: smt(count_ge0).
@@ -1370,7 +1370,7 @@ auto => /> &hr ???????????Hcount H??; split.
       by smt(or64_ne0 W64.to_uint_eq W64.of_uintK W64.to_uintK pow2_64).
     pose p := 55 <
       total_ones_in_hint{hr} +
-      count (fun (i : int) => (liftu_wpoly (init (fun (j : int) => hint_0{hr}.[base{hr} + j]))).[i] <> zero)
+      count (fun (i : int) => (liftu_wpoly (init (fun (j : int) => hint_0{hr}.[base{hr} + j]))).[i] <> Zq.zero)
         (iota_ 0 n).
     have Hnp : !p
       by smt(W8.to_uint_eq W8.of_uintK W8.to_uintK pow2_8
@@ -1384,8 +1384,8 @@ auto => /> &hr ???????????Hcount H??; split.
                  liftu_wpoly (init (fun (i : int) => hint_0{hr}.[base{hr} + i]))
       by rewrite /PolyKVec.MakeHintImpl map2iE 1:/# /lifts_wpolykvec mapiE 1:/# mapiE 1:/#; smt().
     rewrite Heq2.
-    have Hcnt : count (fun (jj : int) => (liftu_wpoly (init (fun (i : int) => hint_0{hr}.[base{hr} + i]))).[jj] <> zero) (iota_ 0 n) =
-                count (fun (i : int) => (liftu_wpoly (init (fun (j : int) => hint_0{hr}.[base{hr} + j]))).[i] <> zero) (iota_ 0 n)
+    have Hcnt : count (fun (jj : int) => (liftu_wpoly (init (fun (i : int) => hint_0{hr}.[base{hr} + i]))).[jj] <> Zq.zero) (iota_ 0 n) =
+                count (fun (i : int) => (liftu_wpoly (init (fun (j : int) => hint_0{hr}.[base{hr} + j]))).[i] <> Zq.zero) (iota_ 0 n)
       by done.
     rewrite Hcnt -(Hcount Hinf0); smt().
   + (* count equality: inf_new = zero => total_new = big(0..(base+n)/n) *)
@@ -1400,8 +1400,8 @@ auto => /> &hr ???????????Hcount H??; split.
                  liftu_wpoly (init (fun (i : int) => hint_0{hr}.[base{hr} + i]))
       by rewrite /PolyKVec.MakeHintImpl map2iE 1:/# /lifts_wpolykvec mapiE 1:/# mapiE 1:/#; smt().
     rewrite Heq2.
-    have Hcnt : count (fun (jj : int) => (liftu_wpoly (init (fun (i : int) => hint_0{hr}.[base{hr} + i]))).[jj] <> zero) (iota_ 0 n) =
-                count (fun (i : int) => (liftu_wpoly (init (fun (j : int) => hint_0{hr}.[base{hr} + j]))).[i] <> zero) (iota_ 0 n)
+    have Hcnt : count (fun (jj : int) => (liftu_wpoly (init (fun (i : int) => hint_0{hr}.[base{hr} + i]))).[jj] <> Zq.zero) (iota_ 0 n) =
+                count (fun (i : int) => (liftu_wpoly (init (fun (j : int) => hint_0{hr}.[base{hr} + j]))).[i] <> Zq.zero) (iota_ 0 n)
       by done.
     rewrite Hcnt -(Hcount Hinf0).
     ring.

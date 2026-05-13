@@ -2,7 +2,7 @@ require import AllCore IntDiv List Ring BitEncoding.
 require import Array256.
 
 require import GFq Parameters.
-import Round ZModQ ZpC Zp PolyReduceZq PolyReduceZp PolyReduce.
+import Round ZModQ Zq .
 
 
 (******************************************************)
@@ -15,7 +15,7 @@ type poly  = coeff Array256.t.
 type apoly = polyXnD1.
 
 op poly2prealg (p : poly) : prepoly =
-  fun i => if 0 <= i < n then p.[i] else zero.
+  fun i => if 0 <= i < n then p.[i] else Zq.zero.
 
 op poly2alg (p : poly) : apoly =
   pinject (to_polyd (poly2prealg p)).
@@ -56,7 +56,7 @@ qed.
 op (&*) (a b : poly) = alg2poly (( * ) (poly2alg a) (poly2alg b)).
 op (&+) (a b : poly) = alg2poly (( + ) (poly2alg a) (poly2alg b)).
 op (&-) (a   : poly) = alg2poly (PolyReduce.([-]) (poly2alg a)).
-op poly_zero : poly = create Zp.zero.
+op poly_zero : poly = create Zq.zero.
 
 
 (**************************************************)
@@ -82,7 +82,7 @@ op poly_Power2Round(p : poly) : poly * poly =
       init (fun i => (Power2Round p.[i]).`2)).
 
 op poly_UseHint(h : poly, r : poly) : poly = 
-     init (fun ii => UseHint (!h.[ii] = Zp.zero) r.[ii]).
+     init (fun ii => UseHint (!h.[ii] = Zq.zero) r.[ii]).
 
 op poly_MakeHint(p1 : poly, p2 : poly) : poly =
      init (fun ii => incoeff (b2i (MakeHint p1.[ii] p2.[ii]))).
@@ -111,5 +111,5 @@ lemma poly_negE (a : poly) (i : int) :
 proof. by move => Hi; rewrite /(&-) alg2polyiE // -rcoeffN poly2algiE. qed.
 
 lemma poly_zeroE (i : int) :
-  0 <= i < 256 => poly_zero.[i] = Zp.zero.
+  0 <= i < 256 => poly_zero.[i] = Zq.zero.
 proof. by move => Hi; rewrite /poly_zero Array256.createiE. qed.

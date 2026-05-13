@@ -4,7 +4,7 @@ require import Array256.
 
 require import Parameters.
 require import GFq.
-import Round ZModQ ZpC Zp PolyReduceZq MLDSAParams.
+import Round ZModQ Zq MLDSAParams.
 require import Rq.
 require import VecMat.
 import PolyLVec.
@@ -81,7 +81,8 @@ rewrite initiE 1:/# (nth_map witness) /=.
 + rewrite BitChunking.size_chunk /=; 1: smt(ilog_ge0 param_sets).
   rewrite size_BytesToBits Hs /= /#.
 pose x := (BitChunking.chunk (ilog 2 (Eta + Eta) + 1) (BytesToBits v)).
-suff : 0 <= BitsToInteger (nth witness<:bool list> x k) <= 2*Eta by smt(@Zp @ZpC).
+suff : 0 <= BitsToInteger (nth witness<:bool list> x k) <= 2*Eta
+  by smt(@Zq incoeffK_centered gamma2_bound param_sets).
 split; first by rewrite /BitsToInteger; smt(BS2Int.bs2int_ge0).
 by move => _; apply Hval; smt().
 qed.
@@ -97,7 +98,7 @@ module HintPackUnpack = {
      while (i < kvec) {
         j <- 0;
         while (j < 256) {
-           if (h.[i].[j] = Zp.one) {
+           if (h.[i].[j] = Zq.one) {
               y <- put y index (W8.of_int j);
               index <- index + 1;
            }
@@ -120,7 +121,7 @@ module HintPackUnpack = {
      error <- false;
      i <- 0;
      while (i < kvec && !error) {
-       h.[i] <- Array256.init (fun k => Zp.zero);
+       h.[i] <- Array256.init (fun k => Zq.zero);
        if (to_uint (nth witness y (w_hint+i)) < index || 
                    w_hint < to_uint (nth witness y (w_hint+i))) {
            error <- true; 
@@ -132,7 +133,7 @@ module HintPackUnpack = {
                 error <- true;
              }
              else {
-                h.[i] <- h.[i].[to_uint (nth witness y index) <- Zp.one];
+                h.[i] <- h.[i].[to_uint (nth witness y index) <- Zq.one];
                 index <- index + 1;
              }
           }

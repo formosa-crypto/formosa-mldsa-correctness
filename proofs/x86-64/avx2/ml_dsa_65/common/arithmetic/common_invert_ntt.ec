@@ -6,7 +6,7 @@ from JazzEC require import Ml_dsa_65_avx2 Mldsa_65_prelude Common_modular.
 
 from Spec require import GFq Rq Parameters MLDSA_W32_Rep.
 
-import Round ZModQ ZpC Zp Zq.
+import Round ZModQ Zq.
 
 require import Array256.
 

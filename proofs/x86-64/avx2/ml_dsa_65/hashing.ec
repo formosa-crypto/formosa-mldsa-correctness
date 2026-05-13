@@ -6,7 +6,7 @@ from JazzEC require import Ml_dsa_65_avx2.
 
 from Spec require import GFq Rq Serialization Conversion Parameters VecMat Symmetric Sampling MLDSA_W32_Rep MLDSA.
 import PolyLVec PolyKVec PolyMat.
-import Round ZModQ ZpC Zp Zq PolyReduceZq.
+import Round ZModQ Zq.
 
 require import Array2 Array26 Array32 Array48 Array64 Array66 Array128 Array136 Array768 Array1952.
 require import WArray2 Array7 WArray32 WArray48 WArray64 WArray66 WArray128 WArray136 WArray208 WArray768 WArray1952.

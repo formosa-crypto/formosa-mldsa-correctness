@@ -7,7 +7,7 @@ from JazzEC require import Array256 Array61 Array1536 Array3309.
 from Spec require import GFq Rq Serialization Conversion Parameters VecMat MLDSA_W32_Rep.
 import BitEncoding BitChunking.
 
-import Round ZModQ ZpC Zp Zq.
+import Round ZModQ Zq.
 
 require import ArrayExtra.
 from CryptoSpecs require import JWord_extra EclibExtra JWordList.
@@ -283,7 +283,7 @@ do split; 1:smt().
     
 qed.
 
-op count_nonzero_coeffs(p : poly) = count (fun c => c = Zp.one) (to_list p).
+op count_nonzero_coeffs(p : poly) = count (fun c => c = Zq.one) (to_list p).
 
 import Bigint BIA. 
 op count_nonzero_coeffs_kvec(v : polykvec) =
@@ -292,13 +292,13 @@ op count_nonzero_coeffs_kvec(v : polykvec) =
 op count_nonzero_prefix(v : polykvec) (i j : int) : int =
   big predT count_nonzero_coeffs (take i (to_list v)) +
   (if 0 <= i < kvec then
-     count (fun c => c = Zp.one) (take j (to_list v.[i]))
+     count (fun c => c = Zq.one) (take j (to_list v.[i]))
    else 0).
 
 lemma count_nonzero_prefix_one(v : W32.t Array1536.t) (i j : int)  :
    0 <= i < kvec =>
    0 <= j < n =>
-   (liftu_wpolykvec (kvec_unflatten256 v)).[i].[j] = Zp.one =>
+   (liftu_wpolykvec (kvec_unflatten256 v)).[i].[j] = Zq.one =>
    count_nonzero_coeffs_kvec (liftu_wpolykvec (kvec_unflatten256 v)) <= w_hint =>
       count_nonzero_prefix (liftu_wpolykvec (kvec_unflatten256 v)) i j < w_hint.
 have eq_kvec := mldsa65_kvec.
@@ -310,7 +310,7 @@ rewrite big_cat.
 have {1}<- := cat_take_drop 1 (drop i (to_list (liftu_wpolykvec (kvec_unflatten256 v)))).
 rewrite (drop_take1_nth witness);1: by rewrite size_to_list 1:/#.
 rewrite big_cat /= drop_drop 1,2:/# /= big_cons big_nil /= ifT 1:/#.
-have :  count (fun (c : coeff) => c = Zp.one) (take j (to_list (liftu_wpolykvec (kvec_unflatten256 v)).[i])) <
+have :  count (fun (c : coeff) => c = Zq.one) (take j (to_list (liftu_wpolykvec (kvec_unflatten256 v)).[i])) <
   count_nonzero_coeffs (liftu_wpolykvec (kvec_unflatten256 v)).[i]; last by smt(count_ge0 sumr_ge0_seq).
 rewrite /count_nonzero_coeffs.
 have {2}<- := cat_take_drop j (to_list (liftu_wpolykvec (kvec_unflatten256 v)).[i]).

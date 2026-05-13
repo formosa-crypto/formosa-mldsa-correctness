@@ -4,7 +4,7 @@ from Jasmin require import JWord JByte_array.
 
 require import Parameters GFq Rq VecMat Conversion.
 import PolyLVec PolyKVec PolyMat.
-import Round ZModQ ZpC Zp Zq MLDSAParams.
+import Round ZModQ Zq MLDSAParams.
 import BitChunking Array256.
 
 abbrev q_bits = 23.

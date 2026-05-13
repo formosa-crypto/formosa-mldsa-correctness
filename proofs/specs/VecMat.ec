@@ -2,13 +2,11 @@ require import AllCore List StdBigop.
 require import Parameters GFq Rq.
 require import Array256.
 
-import Round ZModQ ZpC Zp PolyReduceZq MLDSAParams.
+import Round ZModQ Zq MLDSAParams.
 
-(* polyXnD1-typed vectors/matrices, from PolyReduceZq's DynMatrix clone.   *)
+(* polyXnD1-typed vectors/matrices, from's DynMatrix clone.   *)
 (* (Previously these came from cloning [DVect] in the dilithium submodule.) *)
-import PolyReduceZq.VM.
-import PolyReduceZq.VM.Vectors.
-import PolyReduceZq.VM.Matrices.
+import VM VM.Vectors VM.Matrices.
 
 from Jasmin require import JArray. 
 clone export PolyArray as LArray  with
@@ -131,7 +129,7 @@ op infnorm_lt(v : polykvec, bound : int) : bool =
 
 import Bigint BIA. 
 op hammw(v : polykvec, bound : int) : bool =
- big predT (fun ii => count (fun jj => v.[ii].[jj] <> Zp.zero) (iota_ 0 256)) (iota_ 0 kvec) <= bound.
+ big predT (fun ii => count (fun jj => v.[ii].[jj] <> Zq.zero) (iota_ 0 256)) (iota_ 0 kvec) <= bound.
 
 op polykvec_HighBits(v : polykvec) : polykvec =
   map poly_HighBits v.
@@ -164,14 +162,14 @@ rewrite KArray.mapiE 1:/#.
 rewrite /poly_LowBits !Array256.initiE 1,2:/# /=.
 rewrite poly_addE 1:/#.
 rewrite poly_negE 1:/#.
-have rewr_sub : forall (a b : coeff), a + -b = a - b by smt(@Zp).
+have rewr_sub : forall (a b : coeff), a + -b = a - b by smt(@Zq).
 have HLBS := LowBits_sub_sync w.[k].[j] cs2.[k].[j] _.
 + move: Hcs2; rewrite /infnorm_lt !allP => Hcs2.
   have := Hcs2 k _; first by rewrite mem_iota /#.
   rewrite /= allP => Hcs2k.
   have := Hcs2k j _; first by rewrite mem_iota /#.
   by simplify => /#.
-rewrite PolyReduceZp.PolyReduce.rcoeffD poly2algiE 1:/# poly2algiE 1:/# Array256.initiE 1:/# /=.
+rewrite PolyReduce.rcoeffD poly2algiE 1:/# poly2algiE 1:/# Array256.initiE 1:/# /=.
 rewrite poly_negE 1:/#.
 rewrite rewr_sub.
 by rewrite HLBS.
@@ -201,7 +199,7 @@ do 1!(rewrite poly_negE /= 1:/#).
 do 1!(rewrite poly_zeroE 1:/#).
 rewrite /poly_HighBits /poly_LowBits !Array256.initiE 1,2:/# /=.
 congr. congr.
-have rewr_sub : forall (a b : coeff), a + -b = a - b by smt(@Zp).
+have rewr_sub : forall (a b : coeff), a + -b = a - b by smt(@Zq).
 (* do 10!(rewrite rewr_sub). *)
 apply MakeHintImpl_MakeHint_equiv.
 move: Hcs2; rewrite /infnorm_lt !allP => Hcs2.

@@ -6,7 +6,7 @@ from JazzEC require import Ml_dsa_65_avx2 Mldsa_65_prelude.
 
 from Spec require import GFq Rq Parameters MLDSA_W32_Rep.
 
-import Round ZModQ ZpC Zp Zq.
+import Round ZModQ Zq.
 
 require import Array256.
 
@@ -19,7 +19,7 @@ require import Array256.
 (* Spec connection (via poly_MakeHintImpl from Rq.ec):                 *)
 (*   liftu_wpoly res.`1 = poly_MakeHintImpl (lifts_wpoly _high)        *)
 (*                                           (lifts_wpoly _low)         *)
-(*   res.`2 = count (fun i => (liftu_wpoly res.`1).[i] <> Zp.zero)    *)
+(*   res.`2 = count (fun i => (liftu_wpoly res.`1).[i] <> Zq.zero)    *)
 (*                  (iota_ 0 256)                                      *)
 (* ================================================================== *)
 
@@ -43,7 +43,7 @@ lemma polynomial____make_hint_correct
         ==>
         wpoly_urng 2 res.`1 /\
         liftu_wpoly res.`1 = poly_MakeHintImpl (lifts_wpoly _high) (lifts_wpoly _low) /\
-        res.`2 = count (fun i => (liftu_wpoly res.`1).[i] <> Zp.zero) (iota_ 0 256)
+        res.`2 = count (fun i => (liftu_wpoly res.`1).[i] <> Zq.zero) (iota_ 0 256)
     ].
 proof.
 admitted. (*poly  make hint *)
@@ -57,7 +57,7 @@ lemma polynomial____make_hint_ph
         ==>
         wpoly_urng 2 res.`1 /\
         liftu_wpoly res.`1 = poly_MakeHintImpl (lifts_wpoly _high) (lifts_wpoly _low) /\
-        res.`2 = count (fun i => (liftu_wpoly res.`1).[i] <> Zp.zero) (iota_ 0 256)
+        res.`2 = count (fun i => (liftu_wpoly res.`1).[i] <> Zq.zero) (iota_ 0 256)
     ] = 1%r
   by conseq polynomial____make_hint_ll (polynomial____make_hint_correct _h _low _high).
 

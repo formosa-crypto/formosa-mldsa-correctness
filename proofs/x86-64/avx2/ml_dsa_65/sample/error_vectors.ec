@@ -9,7 +9,7 @@ from Spec require import GFq Rq Serialization Conversion Parameters VecMat
                          Symmetric Sampling MLDSA_W32_Rep MLDSA.
 
 import PolyLVec PolyKVec PolyMat.
-import Round ZModQ ZpC Zp Zq PolyReduceZq.
+import Round ZModQ Zq.
 
 (* require import ArrayExtra JWord_extra EclibExtra JWordList. *)
 

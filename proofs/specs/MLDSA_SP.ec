@@ -3,7 +3,7 @@ from Jasmin require import JByte_array JWord.
 
 require import Parameters GFq Rq VecMat Conversion Serialization Symmetric Sampling.
 import PolyLVec PolyKVec PolyMat.
-import Round ZModQ ZpC Zp Zq PolyReduceZq MLDSAParams.
+import Round ZModQ Zq MLDSAParams.
 
 require import MLDSA.
 

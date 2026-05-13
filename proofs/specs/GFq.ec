@@ -8,37 +8,12 @@ clone import ZqRounding as Round with
   op q <- q,
   op n <- n
   proof prime_q by exact prime_q
-  proof gt0_n  by exact gt0_n.
+  proof gt0_n  by exact gt0_n
+  rename "zmod"   as "coeff"
+         "inzmod" as "incoeff"
+         "ZMR"    as "Zq".
 
-import Round.
-import ZModQ ZpC Zp.            (* flattens zmod, asint, inzmod, BigZMod, ... *)
-import PolyReduceZq PolyReduceZp PolyReduce.  (* flattens polyXnD1, polyLX, rcoeff* *)
-
-(* Source-compatibility aliases (the legacy `ConcreteDRing` setup got these *)
-(* via `clone include ZModField` + rename; that doesn't reach the deeply-  *)
-(* nested EC stdlib types, so we re-expose explicitly here.)                *)
-type coeff = zmod.
-op incoeff = inzmod.
-
-(* Source-compat aliases (legacy names from the dilithium-flattened theory). *)
-lemma incoeffK_centered (x : int) :
-  (q + 1) %/ 2 - q <= x => x < (q + 1) %/ 2 => crepr (incoeff x) = x
-  by apply inzmodK_centered.
-
-lemma incoeffM (a b : int) : incoeff (a * b) = incoeff a * incoeff b
-  by apply inzmodM.
-
-lemma incoeffK (z : int) : asint (incoeff z) = z %% q
-  by apply inzmodK.
-
-lemma asintK (x : coeff) : incoeff (asint x) = x
-  by apply asintK.
-
-theory Zq.
-  (* zero/one/asint/incoeff intentionally not re-exported — use top-level    *)
-  (* forms (or Zp.zero / Zp.one) to avoid name-resolution clashes.            *)
-  clone import Zp.ZModpRing as ComRing.
-end Zq.
+import Round ZModQ Zq.
 
 (* Signed representation *)
 
@@ -68,7 +43,7 @@ op MakeHint(z r : coeff) : bool =
 (* Implementation convention: high = w1 = HighBits(w), low = r0+ct0 = LowBits(w)-cs2+ct0.
    Computes whether adding low to high*2*gamma2 changes the high bits. *)
 op MakeHintImpl(high low : coeff) : bool =
-  MakeHint (Zp.zero - low) (incoeff (asint high * 2 * gamma2) + low).
+  MakeHint (Zq.zero - low) (incoeff (asint high * 2 * gamma2) + low).
 
 op UseHint(h : bool, r : coeff) : coeff = 
     let m = (q-1) %/ (2*gamma2) in
@@ -86,7 +61,7 @@ op UseHint(h : bool, r : coeff) : coeff =
 lemma MakeHintImpl_MakeHint_equiv (w cs2 ct0 : coeff) :
     `|cs2| <= Beta =>
     MakeHintImpl (incoeff (HighBits w)) (incoeff (LowBits w) - cs2 + ct0) =
-    MakeHint (Zp.zero - ct0) (w - cs2 + ct0).
+    MakeHint (Zq.zero - ct0) (w - cs2 + ct0).
 proof. admit. qed. (* FIXME: PY *)
 
 (* Coefficient-level synchronization for the bz norm check:

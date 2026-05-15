@@ -810,7 +810,7 @@ apply (round_unique alpha (r + z) (round alpha r - inzmod alpha)
    by  have := divzK alpha (asint (round alpha r)); smt().
   apply dvdz_modzD => [ |].
   + exact round_is_multiple.
-  admit. (* TODO: alpha %| asint(inzmod(-alpha)) — needs alpha%|q-1 in centered Zp *)
+    by rewrite /(%|) /#. 
 - rewrite addE -inzmodN.
   rewrite [_ ( _ (-alpha))]inzmodK.
   rewrite modzDmr modz_small.
@@ -1089,20 +1089,15 @@ by apply HP.
 qed.
 
 lemma abs_polyXN (p : polyXnD1) : `|-p| = `|p|.
-proof. admit. qed.
-(* Intended proof — currently can't close because `ring` (or `opprK` under
-   any name I could find) does not reduce `-(-p) = p` on polyXnD1 in this
-   context, and I don't understand why the polyXnD1 ring instance isn't
-   discharging this:
-
    have step : forall (q : polyXnD1), `|-q| <= `|q|.
    - move=> q; apply inf_norm_le; first exact ge0_inf_norm_p.
      move=> i Hi; rewrite -rcoeffN -abs_zpN; exact inf_norm_poly_ler.
    have Hle := step p.
    have Hge := step (-p).
-   have eq_pp : - - p = p by ring.   <-- this step fails
-   rewrite eq_pp in Hge.
-   smt(). *)
+   have eq_pp : - - p = p by ring.   
+   have := Hge;rewrite eq_pp.
+   smt().
+qed.
 
 lemma inf_norm_triangle (x y : polyXnD1) :
   `|x + y| <= `|x| + `|y|.
@@ -1367,7 +1362,7 @@ rewrite polyLXE; first smt(size_mkseq).
 exact nth_mkseq.
 qed.
 
-(*
+
 lemma poly_high2_low2P d r :
   1 <= d =>
   2 ^ d < q =>
@@ -1381,7 +1376,6 @@ rewrite poly_highbits2_correct //.
 rewrite poly_lowbits2_correct //.
 exact high2_low2P.
 qed.
-*)
 
 lemma poly_rm_high2 d r :
   1 <= d =>

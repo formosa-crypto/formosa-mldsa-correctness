@@ -4,9 +4,6 @@
 [submodule "submodules/easycrypt"]
 	path = submodules/easycrypt
 	url = https://github.com/EasyCrypt/easycrypt.git
-[submodule "submodules/dilithium"]
-	path = submodules/dilithium
-	url = ssh://git@codeberg.org/loutr/jasmin-dilithium.git
 [submodule "submodules/jasmin-compiler"]
 	path = submodules/jasmin-compiler
 	url = https://gitlab.com/jasmin-lang/jasmin-compiler

@@ -74,7 +74,18 @@ rewrite /cmod /=.
 apply (cmod_to_mod_injective _ _ d) => //; 2: smt().
 + rewrite /mod_to_cmod; case (x %% d <= d %/ 2) => Hc /=.
   - by smt().
-  by smt().
+  case (d %% 2 = 0) => ?; 1: by smt().
+  (* d odd: x %% d cannot equal d %/ 2 + 1, because from Hdvd + Hlo + Hhi
+     x %% d equals either x0 (if 0 <= x0) or x0 + d (otherwise), and
+     d %/ 2 + 1 = (d+1)/2 lies in neither range. *)
+  have Hne : x %% d <> d %/ 2 + 1; last by smt().
+  have -> : x %% d = x0 %% d by smt(eqz_mod_dvd modz_small).
+  case (0 <= x0) => Hsgn.
+    + have -> : x0 %% d = x0 by apply modz_small; smt().
+      by smt().
+    have -> : x0 %% d = x0 + d; last by smt().
+    have <- := modz_small (x0 + d) d;1: smt().
+    smt(modzDl). 
 rewrite mod_to_cmodK; first 2 by rewrite /mod_to_cmod; case (x %% d <= d %/ 2); smt().
 suff: (x - (cmod_to_mod x0 d)) %/ d = x %/ d /\ (cmod_to_mod x0 d) = x %% d by smt().
 apply euclideUl; last by smt().

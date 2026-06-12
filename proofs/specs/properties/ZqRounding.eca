@@ -8,12 +8,11 @@ op n : int.
 axiom gt0_n : 0 < n.
 
 clone import PolyReduceZpCenteredField as ZModQ with
-  op ZMR.p <= q,
+  op ZMF.p <= q,
   op PolyReduce.n <- n
-proof prime_p     by exact prime_q,
-      ZMR.ge2_p   by smt(prime_q gt1_prime),
+proof ZMF.prime_p by exact prime_q,
       PolyReduce.gt0_n by exact gt0_n.
-import ZMR PolyReduce.
+import ZMF PolyReduce.
 
 (* -------------------------------------------------------------------- *)
 (* Inlined "image" predicate (was in dilithium/proofs/utils/Supplementary). *)
@@ -169,7 +168,7 @@ suff: asint (round alpha x) <> q - 1 by smt(rg_asint).
 rewrite /round /lowbits /=.
 case (q - alpha %/ 2 <= asint x) => ?.
 - (* corner case always rounds to 0 *)
-  have ->: x - x = ZMR.zero by ring.
+  have ->: x - x = ZMF.zero by ring.
   by rewrite zeroE => /#.
 (* normal x's won't reach; lowbits too small and whatnot. *)
 (* x < q - alpha %/ 2, and x0 <= alpha %/ 2 *)
@@ -933,7 +932,7 @@ have {alpha_not_halfq} {rg_alpha} rg_alpha: 2 <= alpha < q %/ 2 by smt().
 rewrite {1} (round_lowP alpha r).
 rewrite /usehint_round /=.
 case h => [is_h|not_h]; first last.
-- have ->: (round alpha r + lowbits alpha r - (round alpha r + ZMR.zero)) = lowbits alpha r.
+- have ->: (round alpha r + lowbits alpha r - (round alpha r + ZMF.zero)) = lowbits alpha r.
   + by ring.
   smt(lowbits_small).
 case (0 < crepr (lowbits alpha r)) => ?.

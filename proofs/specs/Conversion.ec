@@ -81,8 +81,8 @@ rewrite initiE 1:/# (nth_map witness) /=.
 + rewrite BitChunking.size_chunk /=; 1: smt(ilog_ge0 param_sets).
   rewrite size_BytesToBits Hs /= /#.
 pose x := (BitChunking.chunk (ilog 2 (Eta + Eta) + 1) (BytesToBits v)).
-suff : 0 <= BitsToInteger (nth witness<:bool list> x k) <= 2*Eta
-  by smt(@Zq incoeffK_centered gamma2_bound param_sets).
+suff : 0 <= BitsToInteger (nth witness<:bool list> x k) <= 2*Eta.
++ rewrite -incoeffK_centered;  smt(abs_zp_small gamma2_bound param_sets).
 split; first by rewrite /BitsToInteger; smt(BS2Int.bs2int_ge0).
 by move => _; apply Hval; smt().
 qed.

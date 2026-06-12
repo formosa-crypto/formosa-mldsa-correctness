@@ -11,7 +11,7 @@ clone import ZqRounding as Round with
   proof gt0_n  by exact gt0_n
   rename "zmod"   as "coeff"
          "inzmod" as "incoeff"
-         "ZMR"    as "Zq".
+         "ZMF"    as "Zq".
 
 import Round ZModQ Zq.
 

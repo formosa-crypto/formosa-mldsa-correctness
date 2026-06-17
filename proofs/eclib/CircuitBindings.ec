@@ -372,6 +372,7 @@ abstract theory BSA.
   realize get_setP by smt(A.get_setE).
   realize eqP      by smt(A.tP).
   realize get_out  by smt(A.get_out).
+  realize oflistP by smt(A.get_of_list).
 end BSA.
 
 (* ==================================================================== *)

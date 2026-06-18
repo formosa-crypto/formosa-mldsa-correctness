@@ -7,13 +7,17 @@ ECJOBS    ?= 3
 ECRUNTEST ?= $(EASYCRYPT) runtest -jobs $(ECJOBS) $(ECFLAGS)
 
 # --------------------------------------------------------------------
-PHONY: default check clean
+PHONY: default check extract clean
 
 # --------------------------------------------------------------------
 default: check
 
 # --------------------------------------------------------------------
-check:
+extract:
+	$(MAKE) -C proofs/x86-64/avx2/ml_dsa_65
+
+# --------------------------------------------------------------------
+check: extract
 	$(ECRUNTEST) config/tests.config all
 
 # --------------------------------------------------------------------

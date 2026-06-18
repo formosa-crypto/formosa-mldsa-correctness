@@ -520,7 +520,7 @@ wp; ecall (A2avx2.absorb_avx2_h (to_list seed) extra 31 136).
 wp; ecall (A32avx2.absorb_avx2_h [<:W8.t>] seed 0 136).
 wp; call (state_init_avx2_h 136).
 auto => |> st0 ? [st1 x2] ??; split; 1: by smt(Array32.size_to_list).
-move => ? [st2 x3] /= -> /=; split; 1: by rewrite /absorb_spec_avx2  stavx2_from_st25K.
+move => ? [st2 x3] /= -> /=; split; 1: by rewrite  stavx2_from_st25K.
 by move => ->; rewrite !stavx2_from_st25K.
 qed.
 
@@ -567,7 +567,7 @@ wp.
 ecall (A64avx2.absorb_avx2_h [<:W8.t>] rho_prime 0 136).
 wp; call (state_init_avx2_h 136).
 auto => |> st0 ? [st1 x2] ??; split; 1: by smt(Array64.size_to_list).
-move => ? [st2 x3] /= -> /=; split; 1: by rewrite /absorb_spec_avx2 stavx2_from_st25K.
+move => ? [st2 x3] /= -> /=; split; 1: by rewrite stavx2_from_st25K.
 move => ->; rewrite !stavx2_from_st25K /=;do !congr.
 apply (eq_from_nth witness); 1: by rewrite size_to_list /=.
 move => i; rewrite size_to_list /= => ib.

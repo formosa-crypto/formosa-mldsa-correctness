@@ -313,7 +313,7 @@ seq 0 1 : (#pre /\
               randomness{2}
               message_representative{2}
               seed_for_mask{2}).
-  wp; skip => |> &1 &2 <- *; rewrite /H_rhopp /Hmu.
+  wp; skip => |> &1 &2 <- *; rewrite /H_rhopp.
   rewrite !Bytes64.of_listK ?Keccak1600_Spec.size_SHAKE256 //;1,2: by rewrite size_take // size_drop // BytesSK.size_to_list /#.
   rewrite Bytes32.of_listK; 1: by rewrite size_take // size_drop // BytesSK.size_to_list /#.
   rewrite BytesSK.of_listK; 1: by rewrite size_to_list /#.

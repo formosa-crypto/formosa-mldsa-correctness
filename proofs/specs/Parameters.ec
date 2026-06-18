@@ -44,14 +44,14 @@ lemma beta_gamma2_lt : Beta < gamma2 by smt(param_sets).
 
 lemma ub_d : tau * 2 ^ d <= 2 * gamma2.
 proof.
-by have  H /=:=param_sets;elim H => /=;rewrite /q /d /=;
+by have  H /=:=param_sets;elim H => /=;rewrite /=;
   move => [#] ->?? -> * /=;do 12!(rewrite expr_pred //=);rewrite expr1 => /=.
 qed.
 
 lemma beta_gamma1_lt : Beta < gamma1.
 proof.
 by rewrite /Beta;
- have  H /=:=param_sets;elim H => /=;rewrite /q /d /=;
+ have  H /=:=param_sets;elim H => /=;rewrite /=;
   move => [#] ->?->??? -> * /=;do 18!(rewrite expr_pred //=);rewrite expr1 => /=.
 qed.
 

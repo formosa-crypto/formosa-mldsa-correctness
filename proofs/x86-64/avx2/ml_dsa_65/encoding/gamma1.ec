@@ -75,7 +75,7 @@ have -> : p.[(8 * i + j) %/ (l + 1)] = v by smt().
 move: h => @/wpoly_srng /array256_allP /(_ v _) //= /=.
 + rewrite /to_list /mkseq mapP; exists ((i * 8 + j) %/ gamma1_bits); smt(mem_iota).
 move => h.
-rewrite incoeffK_centered 1,2:/# /W32_sub truncateu_32_20E get_bits2w 1:/#.
+rewrite incoeffK_centered 1,2:/# truncateu_32_20E get_bits2w 1:/#.
 rewrite nth_take 1,2:/# w2bits_int2bsE.
 have  -> := BS2Int.int2bs_cat 20 32 (to_uint (W32.of_int 524288 - v)) _;1:smt().
 rewrite /IntegerToBits nth_cat ifT;1: by rewrite BS2Int.size_int2bs /#.
@@ -85,7 +85,7 @@ have := (W32.of_uintK (gamma1 - to_sint v)).
 rewrite modz_small;1:by smt(pow2_64).
 move => <-; rewrite -W32.of_intD';congr.
 rewrite W32.of_intN;congr.
-rewrite /to_sint /smod /=.
+rewrite /=.
 case (2147483648 <= to_uint v) => ?;last by smt(W32.to_uintK pow2_32).
 move : h; rewrite /to_sint /smod ifT /#.
 congr;rewrite to_uint_eq of_uintK /=;smt(W32.to_uint_cmp pow2_32).
@@ -164,7 +164,7 @@ lemma gamma1_decode_lane_sint (c : W20.t) :
     W32.to_sint (gamma1_decode_to_polynomial_lane c) = gamma1 - W20.to_uint c.
 have gamma1_val := mldsa65_gamma1.
 have Hc := W20.to_uint_cmp c.
-rewrite /gamma1_decode_to_polynomial_lane /W32_sub /zeroextu32.
+rewrite /gamma1_decode_to_polynomial_lane /zeroextu32.
 have := W32.to_sintK_small (gamma1 - W20.to_uint c).
 have /= /#:= W20.to_uint_cmp .
 qed.
@@ -191,7 +191,7 @@ rewrite (nth_map []) /=.
   rewrite /BytesToBits.
   rewrite (EclibExtra.size_flatten' 8);1: by smt(mapP W8.size_w2bits).
   by rewrite size_map size_to_list /= /#.
-congr; rewrite  /gamma1_decode_to_polynomial_lane /W32_sub.
+congr; rewrite  /gamma1_decode_to_polynomial_lane.
 rewrite ilog_gamma1 /= /zeroextu32.
 rewrite nth_chunk // 1:/#.
 + rewrite /BytesToBits.
@@ -314,7 +314,7 @@ wp; ecall (gamma1_encode_polynomial (Array256.init (fun (i_0 : int) => _a.[i * 2
 auto => /> &hr ?? Hrng H ?;do split.
 + move : Hrng; rewrite /wpolylvec_srng /wpoly_srng !allP /=  => Hrng ii iib.
   have := Hrng i{hr} _; 1:smt().
-  rewrite allP /= /encode_input_unflatten initiE 1:/# /= => Hrngj.
+  rewrite allP /= initiE 1:/# /= => Hrngj.
   have := Hrngj ii _; 1:smt().
   rewrite initiE 1:/# /= initiE 1:/# /= nth_sub 1:/# /#.
 move => ? rr Hrr; do split;1,2: smt().

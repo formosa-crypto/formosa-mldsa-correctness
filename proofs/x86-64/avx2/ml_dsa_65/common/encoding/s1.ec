@@ -50,7 +50,7 @@ wp; ecall (error_polynomial_encode (Array256.init (fun (i_0 : int) => _a.[i * 25
 auto => /> &hr ?? Hrng H Hval ?;  do split;1:smt().  
 + move : Hrng; rewrite /wpolylvec_srng /wpoly_srng !allP /=  => Hrng ii iib.
   have := Hrng i{hr} _; 1:smt().
-  rewrite allP /= /input_unflatten initiE 1:/# /= => Hrngj.
+  rewrite allP /= initiE 1:/# /= => Hrngj.
   have := Hrngj ii _; 1:smt().
   by rewrite initiE 1:/# /= initiE 1:/# /= nth_sub 1:/# /#.
   
@@ -71,7 +71,7 @@ have -> : k = i{hr} by smt().
       (fun (i_0 : int) => if 128 * i{hr} <= i_0 < 128 * i{hr} + 128 then rr.[i_0 - 128 * i{hr}] else encoded{hr}.[i_0]))).[i{hr}]  =
     (rr); last first.
   + have <- := Array128.to_listK witness rr;rewrite Hrr mapiE 1:/# /=;congr;congr.
-    rewrite /lifts_wpolylvec mapiE 1:/#;congr;rewrite /input_unflatten initiE 1:/# /=.
+    rewrite /lifts_wpolylvec mapiE 1:/#;congr;rewrite initiE 1:/# /=.
     rewrite tP => kk kkb; rewrite !initiE 1,2:/# /= nth_sub /#.
 
 rewrite initiE 1:/# /= tP => ii iib.
@@ -168,7 +168,7 @@ have -> : k = i{hr} by smt().
         (Array1280.init
            (fun (i_0 : int) => if i{hr} * n <= i_0 < i{hr} * n + n then rr.[i_0 - i{hr} * n] else s1{hr}.[i_0])))).[i{hr}]  =
       (lifts_wpoly rr); last first.
-    + rewrite Hrr mapiE 1:/# /=;congr;congr;rewrite /input_unflatten initiE 1:/# /= tP => ii iib.
+    + rewrite Hrr mapiE 1:/# /=;congr;congr;rewrite initiE 1:/# /= tP => ii iib.
       by rewrite initiE 1:/# get_of_list 1:/# /= nth_sub /#.
     rewrite mapiE 1:/# /= initiE 1:/# /= tP => ii iib.
     rewrite !mapiE 1,2:/# /= initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.

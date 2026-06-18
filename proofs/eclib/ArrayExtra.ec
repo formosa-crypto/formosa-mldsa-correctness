@@ -9,11 +9,11 @@ lemma all_tolist ['a] (p : 'a -> bool) (a : 'a Array256.t) :
    
 lemma all_imply ['a] (p q : 'a -> bool) (s : 'a Array256.t) :
   (forall x, p x => q x) => all p s => all q s
-  by rewrite /all !allP /to_list /mkseq /= => H x Hx;smt(mapP).
+  by rewrite /all !allP /= => H x Hx;smt(mapP).
 
 lemma array256_mapE ['a 'b] (f : 'a -> 'b) (a : 'a Array256.t) :
   Array256.to_list (Array256.map f a) = List.map f (Array256.to_list a).
-  rewrite /all /to_list /mkseq /= -{1}map_comp /(\o) /=.
+  rewrite /to_list /mkseq /= -{1}map_comp /(\o) /=.
   apply (eq_from_nth witness);1: by rewrite !size_map.
   move => i;rewrite !size_map size_iota /max /= => ib.
   rewrite !(nth_map witness) /=;1,2:smt(size_map size_iota).

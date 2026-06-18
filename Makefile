@@ -2,8 +2,9 @@
 
 # --------------------------------------------------------------------
 EASYCRYPT ?= easycrypt
-ECFLAGS   ?= 
-ECRUNTEST ?= $(EASYCRYPT) runtest $(ECFLAGS)
+ECFLAGS   ?=
+ECJOBS    ?= 3
+ECRUNTEST ?= $(EASYCRYPT) runtest -jobs $(ECJOBS) $(ECFLAGS)
 
 # --------------------------------------------------------------------
 PHONY: default check clean

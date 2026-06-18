@@ -134,22 +134,22 @@ move=>  @/SimpleBitUnpack /=; rewrite tP => i ib.
 rewrite initiE 1://  /liftu_wpoly mapiE 1:// /= (nth_map []) /=.
 + rewrite size_chunk ilog_b_t1 /= 1:/#.
 + rewrite /BytesToBits (EclibExtra.size_flatten' 8);1: by smt(mapP W8.size_w2bits).
-  by rewrite size_map size_to_list /= /b_t1 /#.
+  by rewrite size_map size_to_list /= /#.
 congr.
 rewrite initiE 1:/# /= /zeroextu32 of_uintK /= modz_small;1: by have /= /#:=W10.to_uint_cmp.
 rewrite /W10.to_uint /BitsToInteger;congr.
 apply (eq_from_nth false).
 + rewrite size_nth_chunk ilog_b_t1  /= 1:/# 2:/#.
 + rewrite /BytesToBits (EclibExtra.size_flatten' 8);1: by smt(mapP W8.size_w2bits).
-  by rewrite size_map size_to_list /= /b_t1 /#.
+  by rewrite size_map size_to_list /= /#.
 move => kk.
 rewrite size_nth_chunk ilog_b_t1  /= 1:/#.
 + rewrite /BytesToBits (EclibExtra.size_flatten' 8);1: by smt(mapP W8.size_w2bits).
-  by rewrite size_map size_to_list /= /b_t1 /#.
+  by rewrite size_map size_to_list /= /#.
 move => kkb.
 rewrite (nth_chunk 10) 1,2:/#.
 + rewrite /BytesToBits (EclibExtra.size_flatten' 8);1: by smt(mapP W8.size_w2bits).
-  by rewrite size_map size_to_list /= /b_t1 /#.
+  by rewrite size_map size_to_list /= /#.
 rewrite initiE 1:/# /= nth_take 1,2:/# /= nth_drop 1,2:/# /= /BytesToBits.
 rewrite (nth_flatten false 8);1: by rewrite allP => x /=; rewrite mapP => Hx;elim Hx;smt(W8.size_w2bits).
 rewrite (nth_map witness);1:smt(Array320.size_to_list).
@@ -199,7 +199,7 @@ move=> &hr <- decoded Hdecoded.
 split.
 - by rewrite Hdecoded SimpleBitUnpack_liftE ~-1://.
 - rewrite /wpoly_urng Hdecoded allP => w Hw /=.
-  rewrite initiE 1:/# /= /BS_W32_W10_U.zeroextu32 of_uintK /= modz_small /b_t1 /=.
+  rewrite initiE 1:/# /= /BS_W32_W10_U.zeroextu32 of_uintK /= modz_small /=.
   + by have /= /#:= W10.to_uint_cmp.
   + by have /= /#:= W10.to_uint_cmp.
 qed.
@@ -235,7 +235,7 @@ wp; ecall (t1_encode_polynomial (Array256.init (fun (i_0 : int) => _a.[j * 256 +
 auto => /> &hr ?? Hrng H ?;do split;1:smt().
 + move : Hrng; rewrite /wpolykvec_urng /wpoly_urng !allP /=  => Hrng i ib.
   have := Hrng j{hr} _; 1:smt().
-  rewrite allP /= /input_unflatten initiE 1:/# /= => Hrngj.
+  rewrite allP /= initiE 1:/# /= => Hrngj.
   have := Hrngj i _; 1:smt().
   rewrite initiE 1:/# /= initiE 1:/# /= nth_sub 1:/# /#.
 move => ?? rr Hrr; do split;1,2: smt().
@@ -255,7 +255,7 @@ have -> : k = j{hr} by smt().
       (fun (i : int) => if j{hr} * 320 <= i < j{hr} * 320 + 320 then rr.[i - j{hr} * 320] else encoded{hr}.[i]))).[j{hr}]  =
     (rr); last first.
   + have <- := Array320.to_listK witness rr;rewrite Hrr mapiE 1:/# /=;congr;congr.
-    rewrite /liftu_wpolykvec mapiE 1:/#;congr;rewrite /input_unflatten initiE 1:/# /=.
+    rewrite /liftu_wpolykvec mapiE 1:/#;congr;rewrite initiE 1:/# /=.
     rewrite tP => kk kkb; rewrite !initiE 1,2:/# /= nth_sub /#.
 
 rewrite initiE 1:/# /= tP => ii iib.

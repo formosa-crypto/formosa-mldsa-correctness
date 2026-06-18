@@ -46,7 +46,7 @@ lemma SimpleBitPack_liftE (p : wpoly) :
              (i0 * 8 + j) %% 4]))).
 proof.
 move=> h @/SimpleBitPack; (pose l := ilog 2 _) => /=.
-have := ilog_b_w1; rewrite /bits_w1 /= => ?.
+have := ilog_b_w1; rewrite /= => ?.
 have ? : size
    (flatten (map (fun (x : W32.t) => IntegerToBits (asint (incoeff (to_uint x))) (l + 1)) (to_list p))) = 256*4.
 +  rewrite  (size_flatten_ctt (l+1)).
@@ -72,7 +72,7 @@ move: h => @/wpoly_urng /array256_allP /(_ v _) //= /=.
 move => h.
 rewrite incoeffK truncateu_32_4E get_bits2w 1:/#.
 rewrite nth_take 1,2:/#.
-rewrite /IntegerToBits w2bits_int2bsE /l ilog_b_w1 /bitlenqm1md /= (modz_small _ q) 1:/# /BS2Int.int2bs.
+rewrite /IntegerToBits w2bits_int2bsE /l ilog_b_w1 /= (modz_small _ q) 1:/# /BS2Int.int2bs.
 by rewrite !nth_mkseq 1,2:/# /= /#.
 qed.
 
@@ -203,7 +203,7 @@ wp; ecall (commitment_encode_polynomial (Array256.init (fun (i_0 : int) => _a.[i
 auto => /> &hr ?? Hrng H ?;do split.
 + move : Hrng; rewrite /wpolykvec_urng /wpoly_urng !allP /=  => Hrng ii iib.
   have := Hrng i{hr} _; 1:smt().
-  rewrite allP /= /input_unflatten initiE 1:/# /= => Hrngj.
+  rewrite allP /= initiE 1:/# /= => Hrngj.
   have := Hrngj ii _; 1:smt().
   rewrite initiE 1:/# /= initiE 1:/# /= nth_sub 1:/# /#.
 move => ? rr Hrr; do split;1,2: smt().
@@ -223,7 +223,7 @@ have -> : k = i{hr} by smt().
       (fun (ii : int) => if i{hr} * 128 <= ii < i{hr} * 128 + 128 then rr.[ii - i{hr} * 128] else encoded_commitment{hr}.[ii]))).[i{hr}]  =
     (rr); last first.
   + have <- := Array128.to_listK witness rr;rewrite Hrr mapiE 1:/# /=;congr;congr.
-    rewrite /liftu_wpolykvec mapiE 1:/#;congr;rewrite /input_unflatten initiE 1:/# /=.
+    rewrite /liftu_wpolykvec mapiE 1:/#;congr;rewrite initiE 1:/# /=.
     rewrite tP => kk kkb; rewrite !initiE 1,2:/# /= nth_sub /#.
 
 rewrite initiE 1:/# /= tP => ii iib.

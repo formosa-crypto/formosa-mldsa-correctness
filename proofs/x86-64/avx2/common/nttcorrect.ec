@@ -58,7 +58,7 @@ hint simplify truncateu32_256E.
 lemma truncateu128_256E (w : W256.t) : truncateu128 w = w \bits128 0.
 proof.
 apply: W128.ext_eq=> i rgi; rewrite bits128iE //=.
-rewrite /truncateu32 of_intwE rgi /= /W128.int_bit.
+rewrite of_intwE rgi /= /W128.int_bit.
 rewrite modz_pow2_div ~-1://# modz_dvd.
 - by rewrite -{1}[2]expr1 dvdz_exp2l /#.
 - by rewrite -b2i_get /#.

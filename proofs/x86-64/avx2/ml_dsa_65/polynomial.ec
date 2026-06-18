@@ -90,8 +90,8 @@ conseq (: polynomial = _a /\ threshold_vector = W256.of_int (_threshold - 1) /\
 + move => &1 [#] ? <- ? + ?; rewrite /wpoly_srng iotaredE /(\sle) !of_sintK /smod !allP /=;smt(mem_iota).
 
 move => &hr [#] Hdij <- Ht Hr ? zf  -> /=.
-rewrite /wpoly_infnorm /wpoly_srng /check_inf_norm_circuit !allP /SETcc;
-split; rewrite iotaredE /TEST_32 /= => H4.
+rewrite /check_inf_norm_circuit !allP /SETcc;
+split; rewrite iotaredE /= => H4.
 + rewrite ifF /=.
   + rewrite /(\slt) /= !of_sintK /= /smod /=.
     move => x; rewrite mem_iota => ?.

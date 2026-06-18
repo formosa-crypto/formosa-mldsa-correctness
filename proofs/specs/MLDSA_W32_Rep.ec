@@ -182,7 +182,7 @@ lemma wpolylvec_infnorm_liftE (b : int) (pw : wpolylvec) :
     wpolylvec_infnorm_lt b pw => PolyLVec.infnorm_lt (lifts_wpolylvec pw) b.
 proof.
 move => Hb.
-rewrite /wpolylvec_infnorm_lt /wpolylvec_srng /polylvec_infnorm_lt /lifts_wpolylvec allP /= => H.
+rewrite /wpolylvec_infnorm_lt /wpolylvec_srng /lifts_wpolylvec allP /= => H.
 rewrite /infnorm_lt allP => i; rewrite mem_iota /= => Hi.
 rewrite allP => k; rewrite mem_iota /= => Hk.
 rewrite mapiE 1:/# /= mapiE 1:/# /=.
@@ -290,7 +290,7 @@ lemma wpolykvec_infnorm_liftE (b : int) (pw : wpolykvec) :
     wpolykvec_infnorm_lt b pw => PolyKVec.infnorm_lt (lifts_wpolykvec pw) b.
 proof.
 move => Hb.
-rewrite /wpolykvec_infnorm_lt /wpolykvec_srng /polykvec_infnorm_lt /lifts_wpolykvec allP /= => H.
+rewrite /wpolykvec_infnorm_lt /wpolykvec_srng /lifts_wpolykvec allP /= => H.
 rewrite /infnorm_lt allP => i; rewrite mem_iota /= => Hi.
 rewrite allP => k; rewrite mem_iota /= => Hk.
 rewrite mapiE 1:/# /= mapiE 1:/# /=.

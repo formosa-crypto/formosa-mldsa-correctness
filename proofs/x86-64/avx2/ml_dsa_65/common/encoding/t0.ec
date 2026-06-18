@@ -74,7 +74,7 @@ have -> : p.[(8 * i + j) %/ (l + 1)] = v by smt().
 move: h => @/wpoly_srng /array256_allP /(_ v _) //= /=.
 + rewrite /to_list /mkseq mapP; exists ((i * 8 + j) %/ d); smt(mem_iota).
 move => h. 
-rewrite incoeffK_centered 1,2:/# /W32_sub truncateu_32_13E get_bits2w 1:/#.
+rewrite incoeffK_centered 1,2:/# truncateu_32_13E get_bits2w 1:/#.
 rewrite nth_take 1,2:/# w2bits_int2bsE.
 have  -> := BS2Int.int2bs_cat 13 32 (to_uint (W32.of_int dpow - v)) _;1:smt().
 rewrite /IntegerToBits nth_cat ifT;1: by rewrite BS2Int.size_int2bs /#.
@@ -167,7 +167,7 @@ rewrite (nth_map []) /=.
   rewrite /BytesToBits. 
   rewrite (EclibExtra.size_flatten' 8);1: by smt(mapP W8.size_w2bits).
   by rewrite size_map size_to_list /= /#.
-congr; rewrite  /t0_decode_to_polynomial_lane /W32_sub.
+congr; rewrite  /t0_decode_to_polynomial_lane.
 rewrite ilog_dpow /= /zeroextu32. 
 rewrite nth_chunk // 1:/#.
 + rewrite /BytesToBits. 
@@ -312,7 +312,7 @@ have -> : k = i{hr} by smt().
         (Array1536.init
            (fun (i_0 : int) => if i{hr} * n <= i_0 < i{hr} * n + n then rr.[i_0 - i{hr} * n] else t0{hr}.[i_0])))).[i{hr}]  =
       (lifts_wpoly rr); last first.
-    + rewrite Hrr mapiE 1:/# /=;congr;congr;rewrite /input_unflatten initiE 1:/# /= tP => ii iib.
+    + rewrite Hrr mapiE 1:/# /=;congr;congr;rewrite initiE 1:/# /= tP => ii iib.
       by rewrite initiE 1:/# get_of_list 1:/# /= nth_sub /#.
     rewrite mapiE 1:/# /= initiE 1:/# /= tP => ii iib.
     rewrite !mapiE 1,2:/# /= initiE 1:/# /= nth_sub 1:/# initiE 1:/# /= /#.
@@ -365,7 +365,7 @@ while (0 <= j <= 6 /\ t0 = _a /\
 wp; ecall (t0_encode_polynomial (Array256.init (fun (i : int) => t0.[n * j + i]))).
 auto => /> &hr ?? H H0 ?; split.
 + move : (H j{hr} _); 1:smt().
-  rewrite /decoded_unflatten initiE 1:/# /= /wpoly_srng !allP /= => Hbnd ii iib /=.
+  rewrite initiE 1:/# /= /wpoly_srng !allP /= => Hbnd ii iib /=.
   rewrite initiE 1:/# /=.
   move : (Hbnd ii iib).
   by rewrite get_of_list // nth_sub //. 
@@ -386,7 +386,7 @@ have -> : k = j{hr} by smt().
     rr)); last first.
   + have <-:= (Array416.to_listK witness rr).
     rewrite Hrr mapiE 1:/# /=; congr;congr;rewrite  mapiE 1:/# /= initiE 1:/# /=;congr;rewrite tP => ??;rewrite get_of_list 1:/# /= initiE 1:/# /= nth_sub /#.
-    rewrite /encoded_unflatten initiE 1:/# /= tP => i ib.
+    rewrite initiE 1:/# /= tP => i ib.
 by rewrite get_of_list // nth_sub // initiE 1:/# /= /#. 
 qed.
 

@@ -21,6 +21,7 @@ bind circuit
     VPMULL_16u16 <- "VPMULL_16u16",
     VPSUB_16u16 <- "VPSUB_16u16",
     VPSUB_8u32 <- "VPSUB_8u32",
+    VPADD_8u32 <- "VPADD_8u32",
     VPADD_16u16 <- "VPADD_16u16",
     VPADD_32u8     <-   "VPADD_32u8",
 

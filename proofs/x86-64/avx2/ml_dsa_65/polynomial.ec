@@ -173,7 +173,35 @@ lemma polynomial__add_correct
         wpoly_srng (A + B) (A + B) res
     ].
 proof.
-admitted. (* poly add correct *)
+proc => /=.
+proc change ^while.1 : { lhs <- if (0 <= offset*8 <= 32*256-256) then BSWAS_256u32_256.sliceget lhs_pointer (offset*8) else get256_direct (WArray1024.init32 (fun (i_0:int) => lhs_pointer.[i_0])) offset; }.
++ auto => /> &2.
+  case (0 <= offset{2} * 8 <= 7936); last by auto.
+  by move => Ha _ _ _; rewrite -BSWAS_256u32_256_slicegetE 1:/#.
+proc change ^while.2 : { rhs <- if (0 <= offset*8 <= 32*256-256) then BSWAS_256u32_256.sliceget rhs_pointer (offset*8) else get256_direct (WArray1024.init32 (fun (i_0:int) => rhs_pointer.[i_0])) offset; }.
++ auto => /> &2.
+  case (0 <= offset{2} * 8 <= 7936); last by auto.
+  by move => Ha _ _ _; rewrite -BSWAS_256u32_256_slicegetE 1:/#.
+proc change ^while.4 : { sum_pointer <- if (0 <= offset*8 <= 32*256-256) then BSWAS_256u32_256.sliceset sum_pointer (offset*8) sum else Array256.init (get32 (set256_direct (WArray1024.init32 (fun (i_0:int) => sum_pointer.[i_0])) offset sum)); }.
++ auto => /> &2.
+  case (0 <= offset{2} * 8 <= 7936); last by auto.
+  by move => Ha _ _ _; rewrite BSWAS_256u32_256_slicesetE 1:/#.
+unroll for ^while.
+wp 128.
+conseq (: sum_pointer = _sum /\ lhs_pointer = _lhs /\ rhs_pointer = _rhs /\ wpoly_srng A A _lhs /\ wpoly_srng B B _rhs /\ A + B < 2^31 ==> sum_pointer = BSWA_256u32.init (fun (i:int) => _lhs.[i] + _rhs.[i])); last by circuit.
+move => &hr [# _ _ _ HsA HsB Hab] p0 ->.
+move: HsA HsB; rewrite /wpoly_srng !allP => HsA HsB.
+split.
++ apply Array256.tP => i Hi.
+  rewrite /lifts_wpoly /BSWA_256u32.init mapiE 1:/# /= initiE 1:/# /= poly_addE 1:/# !mapiE 1,2:/# /=.
+  have /= HA := HsA i Hi. have /= HB := HsB i Hi.
+  rewrite to_sintD_small 1:/#.
+  by rewrite incoeffD.
++ move => k kb.
+  have /= HA := HsA k kb. have /= HB := HsB k kb.
+  rewrite /BSWA_256u32.init initiE 1:/# /=.
+  by rewrite to_sintD_small 1:/#; smt().
+qed.
 
 lemma polynomial__add_ph
       (_sum : W32.t Array256.t) (_lhs : W32.t Array256.t) (_rhs : W32.t Array256.t)
@@ -248,7 +276,23 @@ lemma polynomial____zero_correct (_a : W32.t Array256.t) :
         wpoly_srng 0 0 res
     ].
 proof.
-admitted. (* poly zero correct *)
+proc => /=.
+proc change ^while.1 : { polynomial <- if (0 <= offset*8 <= 32*256-256)
+                                       then BSWAS_256u32_256.sliceset polynomial (offset*8) zero_u256
+                                       else Array256.init (get32 (set256_direct (WArray1024.init32 (fun (i_0 : int) => polynomial.[i_0])) offset zero_u256)); }.
++ auto => /> &2.
+  case (0 <= offset{2} * 8 <= 7936); last by auto.
+  by move => ?; rewrite BSWAS_256u32_256_slicesetE /#.
+unroll for ^while.
+cfold 1.
+wp 32.
+conseq (: polynomial = _a ==> polynomial = BSWA_256u32.init (fun (_:int) => W32.zero)); last by circuit.
+move => &hr _ p0 ->; split.
++ by move => i Hi; rewrite /BSWA_256u32.init initiE 1:/#.
++ rewrite /wpoly_srng /BSWA_256u32.init allP => k kb /=.
+  rewrite initiE 1:/# /=.
+  by rewrite /to_sint /smod /=.
+qed.
 
 lemma polynomial____zero_ph (_a : W32.t Array256.t) :
     phoare [ M.polynomial____zero :

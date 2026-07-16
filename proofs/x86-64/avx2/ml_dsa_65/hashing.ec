@@ -10,6 +10,16 @@ import Round ZModQ Zq.
 
 require import Array2 Array26 Array32 Array48 Array64 Array66 Array128 Array136 Array768 Array1952.
 require import WArray2 Array7 WArray32 WArray48 WArray64 WArray66 WArray128 WArray136 WArray208 WArray768 WArray1952.
+require import ArrayWords2W8 ArrayAccessCastW8_2W8 ArrayAccessCastW16_2W8 ArrayAccessCastW32_2W8 ArrayAccessCastW64_2W8 ArrayAccessCastW128_2W8 ArrayAccessCastW256_2W8.
+require import ArrayWords66W8 ArrayAccessCastW8_66W8 ArrayAccessCastW16_66W8 ArrayAccessCastW32_66W8 ArrayAccessCastW64_66W8 ArrayAccessCastW128_66W8 ArrayAccessCastW256_66W8.
+require import ArrayWords32W8 ArrayAccessCastW8_32W8 ArrayAccessCastW16_32W8 ArrayAccessCastW32_32W8 ArrayAccessCastW64_32W8 ArrayAccessCastW128_32W8 ArrayAccessCastW256_32W8.
+require import ArrayWords48W8 ArrayAccessCastW8_48W8 ArrayAccessCastW16_48W8 ArrayAccessCastW32_48W8 ArrayAccessCastW64_48W8 ArrayAccessCastW128_48W8 ArrayAccessCastW256_48W8.
+require import ArrayWords64W8 ArrayAccessCastW8_64W8 ArrayAccessCastW16_64W8 ArrayAccessCastW32_64W8 ArrayAccessCastW64_64W8 ArrayAccessCastW128_64W8 ArrayAccessCastW256_64W8.
+require import ArrayWords128W8 ArrayAccessCastW8_128W8 ArrayAccessCastW16_128W8 ArrayAccessCastW32_128W8 ArrayAccessCastW64_128W8 ArrayAccessCastW128_128W8 ArrayAccessCastW256_128W8.
+require import ArrayWords136W8 ArrayAccessCastW8_136W8 ArrayAccessCastW16_136W8 ArrayAccessCastW32_136W8 ArrayAccessCastW64_136W8 ArrayAccessCastW128_136W8 ArrayAccessCastW256_136W8.
+require import ArrayWords768W8 ArrayAccessCastW8_768W8 ArrayAccessCastW16_768W8 ArrayAccessCastW32_768W8 ArrayAccessCastW64_768W8 ArrayAccessCastW128_768W8 ArrayAccessCastW256_768W8.
+require import ArrayWords1952W8 ArrayAccessCastW8_1952W8 ArrayAccessCastW16_1952W8 ArrayAccessCastW32_1952W8 ArrayAccessCastW64_1952W8 ArrayAccessCastW128_1952W8 ArrayAccessCastW256_1952W8.
+require import XArray2 XArray32 XArray64 XArray66 XArray128.
 from CryptoSpecs require import JWordList.
 
 (****************************************************************************)
@@ -44,70 +54,140 @@ from Keccak require import Keccak1600_updstate_avx2.
 clone KeccakArrayAvx2 as A2avx2
  with op _ASIZE <- 2,
       theory A <- Array2,
-      theory WA <- WArray2
+      theory WA <- WArray2,
+      theory RW.AWr   <- ArrayWords2W8,
+      theory RW.AC8   <- ArrayAccessCastW8_2W8,
+      theory RW.AC16  <- ArrayAccessCastW16_2W8,
+      theory RW.AC32  <- ArrayAccessCastW32_2W8,
+      theory RW.AC64  <- ArrayAccessCastW64_2W8,
+      theory RW.AC128 <- ArrayAccessCastW128_2W8,
+      theory RW.AC256 <- ArrayAccessCastW256_2W8
       proof _ASIZE_ge0 by done
       proof _ASIZE_u64 by done.
 
 clone KeccakArrayAvx2 as A32avx2
  with op _ASIZE <- 32,
       theory A <- Array32,
-      theory WA <- WArray32
+      theory WA <- WArray32,
+      theory RW.AWr   <- ArrayWords32W8,
+      theory RW.AC8   <- ArrayAccessCastW8_32W8,
+      theory RW.AC16  <- ArrayAccessCastW16_32W8,
+      theory RW.AC32  <- ArrayAccessCastW32_32W8,
+      theory RW.AC64  <- ArrayAccessCastW64_32W8,
+      theory RW.AC128 <- ArrayAccessCastW128_32W8,
+      theory RW.AC256 <- ArrayAccessCastW256_32W8
       proof _ASIZE_ge0 by done
       proof _ASIZE_u64 by done.
 
 clone KeccakArrayAvx2 as A48avx2
  with op _ASIZE <- 48,
       theory A <- Array48,
-      theory WA <- WArray48
+      theory WA <- WArray48,
+      theory RW.AWr   <- ArrayWords48W8,
+      theory RW.AC8   <- ArrayAccessCastW8_48W8,
+      theory RW.AC16  <- ArrayAccessCastW16_48W8,
+      theory RW.AC32  <- ArrayAccessCastW32_48W8,
+      theory RW.AC64  <- ArrayAccessCastW64_48W8,
+      theory RW.AC128 <- ArrayAccessCastW128_48W8,
+      theory RW.AC256 <- ArrayAccessCastW256_48W8
       proof _ASIZE_ge0 by done
       proof _ASIZE_u64 by done.
 
 clone KeccakArrayAvx2 as A64avx2
  with op _ASIZE <- 64,
       theory A <- Array64,
-      theory WA <- WArray64
+      theory WA <- WArray64,
+      theory RW.AWr   <- ArrayWords64W8,
+      theory RW.AC8   <- ArrayAccessCastW8_64W8,
+      theory RW.AC16  <- ArrayAccessCastW16_64W8,
+      theory RW.AC32  <- ArrayAccessCastW32_64W8,
+      theory RW.AC64  <- ArrayAccessCastW64_64W8,
+      theory RW.AC128 <- ArrayAccessCastW128_64W8,
+      theory RW.AC256 <- ArrayAccessCastW256_64W8
       proof _ASIZE_ge0 by done
       proof _ASIZE_u64 by done.
 
 clone KeccakArrayAvx2 as A128avx2
  with op _ASIZE <- 128,
       theory A <- Array128,
-      theory WA <- WArray128
+      theory WA <- WArray128,
+      theory RW.AWr   <- ArrayWords128W8,
+      theory RW.AC8   <- ArrayAccessCastW8_128W8,
+      theory RW.AC16  <- ArrayAccessCastW16_128W8,
+      theory RW.AC32  <- ArrayAccessCastW32_128W8,
+      theory RW.AC64  <- ArrayAccessCastW64_128W8,
+      theory RW.AC128 <- ArrayAccessCastW128_128W8,
+      theory RW.AC256 <- ArrayAccessCastW256_128W8
       proof _ASIZE_ge0 by done
       proof _ASIZE_u64 by done.
 
 clone KeccakArrayAvx2 as A136avx2
  with op _ASIZE <- 136,
       theory A <- Array136,
-      theory WA <- WArray136
+      theory WA <- WArray136,
+      theory RW.AWr   <- ArrayWords136W8,
+      theory RW.AC8   <- ArrayAccessCastW8_136W8,
+      theory RW.AC16  <- ArrayAccessCastW16_136W8,
+      theory RW.AC32  <- ArrayAccessCastW32_136W8,
+      theory RW.AC64  <- ArrayAccessCastW64_136W8,
+      theory RW.AC128 <- ArrayAccessCastW128_136W8,
+      theory RW.AC256 <- ArrayAccessCastW256_136W8
       proof _ASIZE_ge0 by done
       proof _ASIZE_u64 by done.
 
 clone KeccakArrayAvx2 as A768avx2
  with op _ASIZE <- 768,
       theory A <- Array768,
-      theory WA <- WArray768
+      theory WA <- WArray768,
+      theory RW.AWr   <- ArrayWords768W8,
+      theory RW.AC8   <- ArrayAccessCastW8_768W8,
+      theory RW.AC16  <- ArrayAccessCastW16_768W8,
+      theory RW.AC32  <- ArrayAccessCastW32_768W8,
+      theory RW.AC64  <- ArrayAccessCastW64_768W8,
+      theory RW.AC128 <- ArrayAccessCastW128_768W8,
+      theory RW.AC256 <- ArrayAccessCastW256_768W8
       proof _ASIZE_ge0 by done
       proof _ASIZE_u64 by done.
 
 clone KeccakArrayAvx2 as A1952avx2
  with op _ASIZE <- 1952,
       theory A <- Array1952,
-      theory WA <- WArray1952
+      theory WA <- WArray1952,
+      theory RW.AWr   <- ArrayWords1952W8,
+      theory RW.AC8   <- ArrayAccessCastW8_1952W8,
+      theory RW.AC16  <- ArrayAccessCastW16_1952W8,
+      theory RW.AC32  <- ArrayAccessCastW32_1952W8,
+      theory RW.AC64  <- ArrayAccessCastW64_1952W8,
+      theory RW.AC128 <- ArrayAccessCastW128_1952W8,
+      theory RW.AC256 <- ArrayAccessCastW256_1952W8
       proof _ASIZE_ge0 by done
       proof _ASIZE_u64 by done.
 
 clone KeccakUpdstateAvx2 as A64updstate
  with op _ASIZE <- 64,
       theory A <- Array64,
-      theory WA <- WArray64
+      theory WA <- WArray64,
+      theory RW.AWr   <- ArrayWords64W8,
+      theory RW.AC8   <- ArrayAccessCastW8_64W8,
+      theory RW.AC16  <- ArrayAccessCastW16_64W8,
+      theory RW.AC32  <- ArrayAccessCastW32_64W8,
+      theory RW.AC64  <- ArrayAccessCastW64_64W8,
+      theory RW.AC128 <- ArrayAccessCastW128_64W8,
+      theory RW.AC256 <- ArrayAccessCastW256_64W8
       proof _ASIZE_ge0 by done
       proof _ASIZE_u64 by done.
 
 clone KeccakUpdstateAvx2 as A66updstate
  with op _ASIZE <- 66,
       theory A <- Array66,
-      theory WA <- WArray66
+      theory WA <- WArray66,
+      theory RW.AWr   <- ArrayWords66W8,
+      theory RW.AC8   <- ArrayAccessCastW8_66W8,
+      theory RW.AC16  <- ArrayAccessCastW16_66W8,
+      theory RW.AC32  <- ArrayAccessCastW32_66W8,
+      theory RW.AC64  <- ArrayAccessCastW64_66W8,
+      theory RW.AC128 <- ArrayAccessCastW128_66W8,
+      theory RW.AC256 <- ArrayAccessCastW256_66W8
       proof _ASIZE_ge0 by done
       proof _ASIZE_u64 by done.
 
@@ -228,10 +308,7 @@ module K = {
     state <- witness;
     state <@ Keccak1600_Jazz.M.__state_init_avx2 ();
     (state,  _0) <@ A64avx2.MM.__absorb_avx2 (state, 0, rho_prime, 0, 136);
-    ds <-
-    (Array2.init
-    (WArray2.get8
-    (WArray2.set16 (WArray2.init8 (fun i => ds.[i])) 0 domain_separator)));
+    ds <- (ArrayAccessCastW16_2W8.set_cast ds 0 domain_separator);
     (state,  _1) <@ A2avx2.MM.__absorb_avx2 (state, 64, ds, 31, 136);
     state <@ Keccak1600_Jazz.M._keccakf1600_avx2 (state);
     return state;
@@ -340,14 +417,14 @@ module K = {
     var state:W256.t Array7.t;
     block <- witness;
     state <- witness;
-    copied_32_bytes <- (get256_direct (WArray32.init8 (fun i => k.[i])) 0);
-    block <- (Array128.init (WArray128.get8 (WArray128.set256_direct (WArray128.init8 (fun i => block.[i])) 0 copied_32_bytes)));
-    copied_32_bytes <- (get256_direct (WArray32.init8 (fun i => randomness.[i])) 0);
-    block <- (Array128.init (WArray128.get8 (WArray128.set256_direct (WArray128.init8 (fun i => block.[i])) 32 copied_32_bytes)));
-    copied_32_bytes <- (get256_direct (WArray64.init8 (fun i => message_representative.[i])) 0);
-    block <- (Array128.init (WArray128.get8 (WArray128.set256_direct (WArray128.init8 (fun i => block.[i])) 64 copied_32_bytes)));
-    copied_32_bytes <- (get256_direct (WArray64.init8 (fun i => message_representative.[i])) 32);
-    block <- (Array128.init (WArray128.get8 (WArray128.set256_direct (WArray128.init8 (fun i => block.[i])) 96 copied_32_bytes)));
+    copied_32_bytes <- (ArrayAccessCastW256_32W8.get_cast_direct k 0);
+    block <- (ArrayAccessCastW256_128W8.set_cast_direct block 0 copied_32_bytes);
+    copied_32_bytes <- (ArrayAccessCastW256_32W8.get_cast_direct randomness 0);
+    block <- (ArrayAccessCastW256_128W8.set_cast_direct block 32 copied_32_bytes);
+    copied_32_bytes <- (ArrayAccessCastW256_64W8.get_cast_direct message_representative 0);
+    block <- (ArrayAccessCastW256_128W8.set_cast_direct block 64 copied_32_bytes);
+    copied_32_bytes <- (ArrayAccessCastW256_64W8.get_cast_direct message_representative 32);
+    block <- (ArrayAccessCastW256_128W8.set_cast_direct block 96 copied_32_bytes);
     state <@ shake256_absorb_128(block);
     seed_for_mask <@ squeeze_64_bytes(seed_for_mask, state);
     return seed_for_mask;
@@ -373,19 +450,13 @@ module K = {
     prefix <- witness;
     state <- witness;
     copied_32_bytes <-
-    (get256_direct (WArray64.init8 (fun i => verification_key_hash.[i])) 0);
+    (ArrayAccessCastW256_64W8.get_cast_direct verification_key_hash 0);
     prefix <-
-    (Array66.init
-    (WArray66.get8
-    (WArray66.set256_direct (WArray66.init8 (fun i => prefix.[i])) 0
-    copied_32_bytes)));
+    (ArrayAccessCastW256_66W8.set_cast_direct prefix 0 copied_32_bytes);
     copied_32_bytes <-
-    (get256_direct (WArray64.init8 (fun i => verification_key_hash.[i])) 32);
+    (ArrayAccessCastW256_64W8.get_cast_direct verification_key_hash 32);
     prefix <-
-    (Array66.init
-    (WArray66.get8
-    (WArray66.set256_direct (WArray66.init8 (fun i => prefix.[i])) 32
-    copied_32_bytes)));
+    (ArrayAccessCastW256_66W8.set_cast_direct prefix 32 copied_32_bytes);
     prefix.[64] <- (W8.of_int 0);
     prefix.[65] <- (truncateu8 (W64.of_int context_size));
     rate64 <- 17;
@@ -571,7 +642,7 @@ move => ? [st2 x3] /= -> /=; split; 1: by rewrite stavx2_from_st25K.
 move => ->; rewrite !stavx2_from_st25K /=;do !congr.
 apply (eq_from_nth witness); 1: by rewrite size_to_list /=.
 move => i; rewrite size_to_list /= => ib.
-by rewrite initiE 1:/# get8_set16_directE //= /#.
+by rewrite set_cast16_2W8E 1:/# /#.
 qed.
 
 lemma shake256_absorb_66_ll: islossless K.shake256_absorb_66.
@@ -985,20 +1056,20 @@ wp; ecall (A66updstate.update_updstate_avx2_h [] prefix len state).
 wp; ecall (init_updstate_avx2_h state rate64 trailb).
 wp; skip => />.
 move=> &hr Hctx Hmsg Hctx_bnd Hmsg_bnd.
-pose prefix_built := (Array66.init (get8 (set256_direct (WArray66.init8 ("_.[_]" (Array66.init (get8 (set256_direct (WArray66.init8 ("_.[_]" witness<:W8.t Array66.t>)) 0 (get256_direct (WArray64.init8 ("_.[_]" _vk_hash)) 0)))))) 32 (get256_direct (WArray64.init8 ("_.[_]" _vk_hash)) 32)))).[64 <- zero].[65 <- truncateu8 (W64.of_int (size _ctx))].
+pose prefix_built := (ArrayAccessCastW256_66W8.set_cast_direct (ArrayAccessCastW256_66W8.set_cast_direct witness<:W8.t Array66.t> 0 (ArrayAccessCastW256_64W8.get_cast_direct _vk_hash 0)) 32 (ArrayAccessCastW256_64W8.get_cast_direct _vk_hash 32)).[64 <- zero].[65 <- truncateu8 (W64.of_int (size _ctx))].
 have prefix_first66 :
   take 66 (to_list prefix_built)
     = to_list _vk_hash ++ [W8.zero; truncateu8 (W64.of_int (size _ctx))].
 + apply (eq_from_nth witness); 1: by rewrite size_cat size_to_list size_take // size_to_list /=.
   move => i; rewrite size_take // size_to_list /= => ib.
   rewrite nth_take 1,2:/# nth_cat size_to_list /=.
-  rewrite /prefix_built !get_setE // initiE 1:/# /=.
-  case (i < 64) => Hi64.
-  + rewrite ifF 1:/# ifF 1:/# /=.
-    case (i < 32) => Hi32.
-    + by rewrite ifF 1:/# /= /get8 initiE //= initiE //= /set256_direct initiE 1:/# /= ifT 1:/# /get256_direct pack32bE 1:/# initiE 1:/# /= initiE 1:/#.
-    + by rewrite ifT 1:/# /get256_direct pack32bE 1:/# initiE 1:/# /= initiE 1:/#.
-  by smt().
+  rewrite /prefix_built !get_setE 1,2:/#.
+  case (i < 64) => Hi64; last by smt().
+  rewrite ifF 1:/# ifF 1:/#.
+  rewrite set_cast256_66W8E 1,2,3:/#.
+  case (32 <= i < 64) => Hi32.
+  + by rewrite get_cast256_64W8E 1,2,3:/# ifT 1:/# /#.
+  + by rewrite ifF 1:/# set_cast256_66W8E 1,2,3:/# ifT 1:/# get_cast256_64W8E 1,2,3:/# /#.
 (* sub prefix_built 0 66 = the first 66 bytes of prefix_built. *)
 have prefix_sub66 :
   sub prefix_built 0 66 = take 66 (to_list prefix_built).
@@ -1145,20 +1216,20 @@ congr; congr;congr;  apply (eq_from_nth witness).
   move => i; rewrite size_to_list /= => Hi.
   rewrite !nth_cat !size_to_list !size_cat !size_to_list.
   case (i < 32) => Hi32.
-  + rewrite ifT 1:/#.
-    rewrite /get256_direct /set256_direct /get8 /pack32_t /(\bits8) wordP => k kb.
-    by rewrite !initiE 1:/# /= !initiE 1:/# /= !initiE 1..3:/# /= ifF 1:/# ifF 1:/# !initiE 1..3:/# /= ifF 1:/# initiE 1:/# initiE 1:/# initiE 1:/# /= ifT 1:/# initiE 1:/# /= initiE 1:/# /= initiE 1:/# initiE 1:/# /#.
+  + (* i < 32: from k[i] via set_cast at offset 0 *)
+    rewrite set_cast256_128W8E 1,2,3:/# ifF 1:/# set_cast256_128W8E 1,2,3:/# ifF 1:/# set_cast256_128W8E 1,2,3:/# ifF 1:/# set_cast256_128W8E 1,2,3:/# ifT 1:/# get_cast256_32W8E 1,2,3:/#.
+    by rewrite ifT 1:/# get_to_list /#.
   case (i < 64) => Hi64.
-  + (* 32 <= i < 64: from randomness[i-32] via set256_direct at offset 32 — ifF(96) ifF(64) ifT(32) *)
-    rewrite /get256_direct /set256_direct /get8 /pack32_t /(\bits8) wordP => k kb.
-    by rewrite !initiE 1:/# /= !initiE 1:/# /= !initiE 1..3:/# /= ifF 1:/# ifF 1:/# !initiE 1..3:/# /= ifT 1:/# initiE 1:/# /= initiE 1:/# /= initiE 1:/# initiE 1:/# /#.
+  + (* 32 <= i < 64: from randomness[i-32] via set_cast at offset 32 *)
+    rewrite set_cast256_128W8E 1,2,3:/# ifF 1:/# set_cast256_128W8E 1,2,3:/# ifF 1:/# set_cast256_128W8E 1,2,3:/# ifT 1:/# get_cast256_32W8E 1,2,3:/#.
+    by rewrite ifT 1:/# get_to_list /#.
   case (i < 96) => Hi96.
-  + (* 64 <= i < 96: from mu[i-64] via set256_direct at offset 64 — ifF(96) ifT(64) *)
-    rewrite /get256_direct /set256_direct /get8 /pack32_t /(\bits8) wordP => k kb.
-    by rewrite !initiE 1:/# /= !initiE 1:/# /= !initiE 1..3:/# /= ifF 1:/# !initiE 1..3:/# /= ifT 1:/# initiE 1:/# /= initiE 1:/# /= initiE 1:/# initiE 1:/# /#.
-  + (* 96 <= i < 128: from mu[i-64] via set256_direct at offset 96 — ifT(96) *)
-    rewrite /get256_direct /set256_direct /get8 /pack32_t /(\bits8) wordP => k kb.
-    rewrite !initiE 1:/# /= !initiE 1:/# /= !initiE 1..3:/# /= ifT 1:/# initiE 1:/# /= initiE 1:/# /= ifF 1:/# initiE 1:/# /= initiE 1:/# /#.
+  + (* 64 <= i < 96: from mu[i-64] via set_cast at offset 64 *)
+    rewrite set_cast256_128W8E 1,2,3:/# ifF 1:/# set_cast256_128W8E 1,2,3:/# ifT 1:/# get_cast256_64W8E 1,2,3:/#.
+    by rewrite ifF 1:/# get_to_list /#.
+  + (* 96 <= i < 128: from mu[i-64] via set_cast at offset 96 *)
+    rewrite set_cast256_128W8E 1,2,3:/# ifT 1:/# get_cast256_64W8E 1,2,3:/#.
+    by rewrite ifF 1:/# get_to_list /#.
 qed.
 
 lemma K_derive_seed_for_mask_ll : islossless K.derive_seed_for_mask.

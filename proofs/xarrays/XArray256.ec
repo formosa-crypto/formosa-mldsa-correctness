@@ -88,7 +88,21 @@ clone BSWAS as BSWAS_256u32_256 with
   proof le_size by done.
 
 require import WArray1024 BitEncoding.
+require import ArrayAccessCastW256_256W32 ArrayWords256W32.
+require import XArrayAccessCast.
 import Array256 BitChunking.
+
+(* validation: the generic bridge instantiated for u32/256 *)
+clone import XArrayAccessCast as X256u32 with
+      op sizeWB <- 4,
+      op sizeWS <- 32,
+      op sizeB  <- 256,
+  theory WB     <- W32  { rename "_XX" as "_32" },
+  theory WS     <- W256 { rename "_XX" as "_256" },
+  theory A      <- Array256,
+  theory AW     <- ArrayWords256W32,
+  theory AC     <- ArrayAccessCastW256_256W32
+  proof rg_sizeWB by done, rg_sizeWS by done, gt0_sizeB by done, le_slice by done.
 
 lemma BSWAS_256u32_256_slicesetE (t : W32.t Array256.t) o (s : W256.t) :
   0 <= (o*8) <= 32 * 256 - 256 =>    
@@ -123,5 +137,23 @@ lemma BSWAS_256u32_256_slicegetE o (p : W32.t Array256.t):
   + rewrite allP /= => x; rewrite mapP => He; elim He;smt(W32.size_w2bits).
   rewrite (nth_map witness); 1: by rewrite size_to_list; smt().
   by rewrite get_to_list get_w2bits /#.
- qed. 
+ qed.
+
+(* -------------------------------------------------------------------- *)
+(* warray-model element lemmas: expressed directly against the extracted *)
+(* ArrayAccessCastW256_256W32 ops (no bridge through get256_direct).      *)
+(* -------------------------------------------------------------------- *)
+
+(* element lemmas as thin wrappers over the generic bridge X256u32 (from
+   the XArrayAccessCast clone above): the fresh BS sliceget/sliceset coincide
+   definitionally with the shared BSWAS_256u32_256, so these are one-liners. *)
+lemma get_cast_slicegetE o (p : W32.t Array256.t):
+    0 <= o*8 <= 256*32-256 =>
+     ArrayAccessCastW256_256W32.get_cast_direct p o = BSWAS_256u32_256.sliceget p (o * 8).
+proof. by move => H; rewrite X256u32.get_castE 1:/#. qed.
+
+lemma set_cast_slicesetE (t : W32.t Array256.t) o (s : W256.t) :
+  0 <= o*8 <= 32*256-256 =>
+   ArrayAccessCastW256_256W32.set_cast_direct t o s = BSWAS_256u32_256.sliceset t (o*8) s.
+proof. by move => H; rewrite X256u32.set_castE 1:/#. qed.
   

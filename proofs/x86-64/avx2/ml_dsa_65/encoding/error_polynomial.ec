@@ -13,6 +13,7 @@ import Round ZModQ Zq.
 from CryptoSpecs require import JWord_extra EclibExtra JWordList.
 
 require import XArray256 XArray128 XWord4 ArrayExtra.
+require import ArrayAccessCastW256_256W32 ArrayAccessCastW256_128W8 ArrayAccessCastW128_128W8.
 
 lemma truncateu_32_4E (w : W32.t) : BS_W32_W4_U.truncateu4 w = W4.bits2w (take 4 (W32.w2bits w)).
 proof.
@@ -123,59 +124,59 @@ proc change 5 : { eta_0 <- zeroextu256 temp; }.
 
 proc change ^while.1 : { c0 <- if (0 <= input_offset*8 <= 32*256-256)
                                 then BSWAS_256u32_256.sliceget polynomial (input_offset*8)
-                                else get256_direct (WArray1024.init32 (fun (i_0 : int) => polynomial.[i_0])) input_offset ;}.
+                                else ArrayAccessCastW256_256W32.get_cast_direct polynomial input_offset ;}.
                 + auto => /> &2.
                   case (0 <= input_offset{2} * 8 <= 7936); last by auto.
-                  by move => ?; rewrite BSWAS_256u32_256_slicegetE /#.
+                  by move => ?; rewrite get_cast_slicegetE /#.
 proc change ^while.4 : { c1 <- if (0 <= input_offset*8 <= 32*256-256)
                                 then BSWAS_256u32_256.sliceget polynomial (input_offset*8)
-                                else get256_direct (WArray1024.init32 (fun (i_0 : int) => polynomial.[i_0])) input_offset ;}.
+                                else ArrayAccessCastW256_256W32.get_cast_direct polynomial input_offset ;}.
                 + auto => /> &2.
                   case (0 <= input_offset{2} * 8 <= 7936); last by auto.
-                  by move => ?; rewrite BSWAS_256u32_256_slicegetE /#.
+                  by move => ?; rewrite get_cast_slicegetE /#.
 proc change ^while.7 : { c2 <- if (0 <= input_offset*8 <= 32*256-256)
                                 then BSWAS_256u32_256.sliceget polynomial (input_offset*8)
-                                else get256_direct (WArray1024.init32 (fun (i_0 : int) => polynomial.[i_0])) input_offset ;}.
+                                else ArrayAccessCastW256_256W32.get_cast_direct polynomial input_offset ;}.
                 + auto => /> &2.
                   case (0 <= input_offset{2} * 8 <= 7936); last by auto.
-                  by move => ?; rewrite BSWAS_256u32_256_slicegetE /#.
+                  by move => ?; rewrite get_cast_slicegetE /#.
 proc change ^while.10 : { c3 <- if (0 <= input_offset*8 <= 32*256-256)
                                  then BSWAS_256u32_256.sliceget polynomial (input_offset*8)
-                                 else get256_direct (WArray1024.init32 (fun (i_0 : int) => polynomial.[i_0])) input_offset ;}.
+                                 else ArrayAccessCastW256_256W32.get_cast_direct polynomial input_offset ;}.
                 + auto => /> &2.
                   case (0 <= input_offset{2} * 8 <= 7936); last by auto.
-                  by move => ?; rewrite BSWAS_256u32_256_slicegetE /#.
+                  by move => ?; rewrite get_cast_slicegetE /#.
 proc change ^while.13 : { c4 <- if (0 <= input_offset*8 <= 32*256-256)
                                  then BSWAS_256u32_256.sliceget polynomial (input_offset*8)
-                                 else get256_direct (WArray1024.init32 (fun (i_0 : int) => polynomial.[i_0])) input_offset ;}.
+                                 else ArrayAccessCastW256_256W32.get_cast_direct polynomial input_offset ;}.
                 + auto => /> &2.
                   case (0 <= input_offset{2} * 8 <= 7936); last by auto.
-                  by move => ?; rewrite BSWAS_256u32_256_slicegetE /#.
+                  by move => ?; rewrite get_cast_slicegetE /#.
 proc change ^while.16 : { c5 <- if (0 <= input_offset*8 <= 32*256-256)
                                  then BSWAS_256u32_256.sliceget polynomial (input_offset*8)
-                                 else get256_direct (WArray1024.init32 (fun (i_0 : int) => polynomial.[i_0])) input_offset ;}.
+                                 else ArrayAccessCastW256_256W32.get_cast_direct polynomial input_offset ;}.
                 + auto => /> &2.
                   case (0 <= input_offset{2} * 8 <= 7936); last by auto.
-                  by move => ?; rewrite BSWAS_256u32_256_slicegetE /#.
+                  by move => ?; rewrite get_cast_slicegetE /#.
 proc change ^while.19 : { c6 <- if (0 <= input_offset*8 <= 32*256-256)
                                  then BSWAS_256u32_256.sliceget polynomial (input_offset*8)
-                                 else get256_direct (WArray1024.init32 (fun (i_0 : int) => polynomial.[i_0])) input_offset ;}.
+                                 else ArrayAccessCastW256_256W32.get_cast_direct polynomial input_offset ;}.
                 + auto => /> &2.
                   case (0 <= input_offset{2} * 8 <= 7936); last by auto.
-                  by move => ?; rewrite BSWAS_256u32_256_slicegetE /#.
+                  by move => ?; rewrite get_cast_slicegetE /#.
 proc change ^while.22 : { c7 <- if (0 <= input_offset*8 <= 32*256-256)
                                  then BSWAS_256u32_256.sliceget polynomial (input_offset*8)
-                                 else get256_direct (WArray1024.init32 (fun (i_0 : int) => polynomial.[i_0])) input_offset ;}.
+                                 else ArrayAccessCastW256_256W32.get_cast_direct polynomial input_offset ;}.
                 + auto => /> &2.
                   case (0 <= input_offset{2} * 8 <= 7936); last by auto.
-                  by move => ?; rewrite BSWAS_256u32_256_slicegetE /#.
+                  by move => ?; rewrite get_cast_slicegetE /#.
 
 proc change ^while.36 : {encoded <- if (0 <= output_offset*8 <= 8*128-256)
                                      then BSWAS_128u8_256.sliceset encoded (output_offset*8) c0
-                                     else Array128.init (get8 (set256_direct (WArray128.init8 (fun (i_0 : int) => encoded.[i_0])) output_offset c0));}.
+                                     else ArrayAccessCastW256_128W8.set_cast_direct encoded output_offset c0;}.
                + auto => /> &2.
                  case (0 <= output_offset{2} * 8 <= 768); last by auto.
-                 by move => ?; rewrite BSWAS_128u8_256_slicesetE /#.
+                 by move => ?; rewrite -set_cast256_128W8_slicesetE /#.
 
 unroll for ^while.
 cfold 8.
@@ -286,16 +287,16 @@ proc change 5 : { eta_0 <- zeroextu256 temp; }.
   by have -> /= : (i %% 128 %/ 64) = 1 by smt().
 proc change ^while.1 : { bytes <- if (0 <= input_offset*8 <= 8*128-128)
                                    then BSWAS_128u8_128.sliceget encoded (input_offset*8)
-                                   else get128_direct (WArray128.init8 (fun (i_0 : int) => encoded.[i_0])) input_offset ;}.
+                                   else ArrayAccessCastW128_128W8.get_cast_direct encoded input_offset ;}.
                 + auto => /> &2.
                   case (0 <= input_offset{2} * 8 <= 896); last by auto.
-                  by move => ?; rewrite -BSWAS_128u8_128_slicegetE /#.
+                  by move => ?; rewrite -get_cast128_128W8_slicegetE /#.
 proc change ^while.^while.7 : {decoded <- if (0 <= output_offset*8 <= 32*256-256)
                                             then BSWAS_256u32_256.sliceset decoded (output_offset*8) coefficients
-                                            else Array256.init (get32 (set256_direct (WArray1024.init32 (fun (i_0 : int) => decoded.[i_0])) output_offset coefficients));}.
+                                            else ArrayAccessCastW256_256W32.set_cast_direct decoded output_offset coefficients;}.
                + auto => /> &2.
                  case (0 <= output_offset{2} * 8 <= 7936); last by auto.
-                 by move => ?; rewrite BSWAS_256u32_256_slicesetE /#.
+                 by move => ?; rewrite -set_cast_slicesetE /#.
 
 swap 10 1.
 unroll for ^while.

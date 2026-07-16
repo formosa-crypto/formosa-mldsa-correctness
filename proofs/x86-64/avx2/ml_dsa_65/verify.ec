@@ -7,6 +7,7 @@ from JazzEC require import Ml_dsa_65_avx2 Mldsa_65_prelude Matrix_A Hashing
                            Common_ntt Common_modular Common_invert_ntt Rounding.
 
 require import CircuitBindings Bindings XArray48.
+require import ArrayAccessCastW128_48W8.
 
 from Spec require import GFq Rq Serialization Conversion Parameters VecMat
                          Symmetric Sampling MLDSA_W32_Rep MLDSA.
@@ -43,28 +44,28 @@ have hh : hoare [ M.__compare_commitment_hashes :
 + proc => /=.
   proc change 2 : { lhs_bytes <- if (0 <=  offset * 8 <= 48*8-128)
                                   then BSWAS_48u8_128.sliceget lhs (offset * 8)
-                                  else get128_direct (WArray48.init8 (fun i => lhs.[i])) (offset); }.
+                                  else ArrayAccessCastW128_48W8.get_cast_direct lhs (offset); }.
   + auto => /> &2.
     case (0 <= offset{2} * 8 <= 256); last  by auto.
-    by move => ?; rewrite -BSWAS_48u8_128_slicegetE /#.
+    by move => ?; rewrite -get_cast128_48W8_slicegetE /#.
   proc change 3 : { rhs_bytes <- if (0 <=  offset * 8 <= 48*8-128)
                                   then BSWAS_48u8_128.sliceget rhs ( offset * 8)
-                                  else get128_direct (WArray48.init8 (fun i => rhs.[i])) (offset); }.
+                                  else ArrayAccessCastW128_48W8.get_cast_direct rhs (offset); }.
   + auto => /> &2.
     case (0 <= offset{2} * 8 <= 256); last by auto.
-    by move => ?; rewrite -BSWAS_48u8_128_slicegetE /#.
+    by move => ?; rewrite -get_cast128_48W8_slicegetE /#.
   proc change ^while.1 : { lhs_bytes <- if (0 <= offset * 8 <= 48*8-128)
                                          then BSWAS_48u8_128.sliceget lhs (offset * 8)
-                                         else get128_direct (WArray48.init8 (fun i => lhs.[i])) (offset); }.
+                                         else ArrayAccessCastW128_48W8.get_cast_direct lhs (offset); }.
   + auto => /> &2.
     case (0 <= offset{2} * 8 <= 256); last by auto.
-    by move => ?; rewrite -BSWAS_48u8_128_slicegetE /#.
+    by move => ?; rewrite -get_cast128_48W8_slicegetE /#.
   proc change ^while.2 : { rhs_bytes <- if (0 <= offset * 8 <= 48*8-128)
                                          then BSWAS_48u8_128.sliceget rhs (offset * 8)
-                                         else get128_direct (WArray48.init8 (fun i => rhs.[i])) (offset); }.
+                                         else ArrayAccessCastW128_48W8.get_cast_direct rhs (offset); }.
   + auto => /> &2.
     case (0 <= offset{2} * 8 <= 256); last by auto.
-    by move => ?; rewrite -BSWAS_48u8_128_slicegetE /#.
+    by move => ?; rewrite -get_cast128_48W8_slicegetE /#.
   cfold 1;unroll for ^while.
   cfold 12.
   wp 12.
@@ -221,7 +222,7 @@ ecall (polynomial____shift_coefficients_left_correct t1_element).
 ecall (t1_decode_polynomial
          (Array320.Array320.init
             (fun j => t1_encoded.[(q_bits - d) * n %/ 8 * i + j]))).
-auto => /> &hr Hi1 Hi2 Hch_rng Hhints_rng Haz_rng Hdone Hguard.
+auto => |> &hr Hi1 Hi2 Hch_rng Hhints_rng Haz_rng Hdone Hguard Ht1blk.
 move => result Hliftu_t1 Hurng_t1 Hurng_t1_1024 result0 Hto_sint_shift Hsrng_shift.
 (* ntt's pre: wpoly_ntt_irng result0 via bridge from wpoly_srng (q-1) (q-1) *)
 split; first by apply wpoly_srng_ntt_irng.
@@ -233,10 +234,7 @@ move => _ _ result2 Hlifts_pmmar Hsrng_pmmar.
 (* subtract's pre: wpoly_srng on az slice + arithmetic bound *)
 split.
 + split; last by smt(mldsa65_lvec).
-  have /= Hslice := kvec_slice_eq _az (i{hr} * n) _ _; 1,2: smt().
-  have Hdiv : i{hr} * n %/ n = i{hr} by smt().
-  move: Hslice; rewrite Hdiv => Hslice.
-  rewrite -Hslice.
+  rewrite (get_sub256_kvecE _az (i{hr} * n) _ _); 1,2: smt(mldsa65_kvec).
   by move: Haz_rng; rewrite /wpolykvec_srng KArray.allP => H; apply H; smt(mldsa65_kvec).
 move => _ _ result3 Hlifts_sub Hsrng_sub result4 Hlifts_red Hsrng_red.
 (* invert_ntt's pre: wpoly_intt_irng via widening + bridge *)
@@ -250,17 +248,14 @@ split; first by apply (wpoly_srng_widen _ invntt_obound invntt_obound (q-1) (q-1
 move => _ result6 Hlifts_caddq Hurng_caddq.
 (* use_hints' pre: wpoly_urng 2 hints slice *)
 split.
-+ have /= Hslice_h := kvec_slice_eq _hints (i{hr} * n) _ _; 1,2: smt().
-  have Hdiv_h : i{hr} * n %/ n = i{hr} by smt().
-  move: Hslice_h; rewrite Hdiv_h => Hslice_h.
-  rewrite -Hslice_h.
++ rewrite (get_sub256_kvecE _hints (i{hr} * n) _ _); 1,2: smt(mldsa65_kvec).
   by move: Hhints_rng; rewrite /wpolykvec_urng KArray.allP => H; apply H; smt(mldsa65_kvec).
 move => _ result7 Hliftu_useh Hurng_useh.
 (* Final goal: invariant at i+1 *)
 split; 1: smt().
 move => k Hk_lo Hk_hi.
 have /= Hwb :=
-  kvec_unflatten256_writeback_iE commitment{hr} result7 (i{hr} * n) k _ _;
+  kvec_unflatten256_set_subE commitment{hr} result7 (i{hr} * n) k _ _;
   1,2: smt(mldsa65_kvec).
 rewrite Hwb.
 case (k = i{hr}) => Hki.
@@ -286,7 +281,7 @@ case (k = i{hr}) => Hki.
   congr; congr.
   + (* lifts_wpoly az_slice = (lifts_wpolykvec ...).[i] *)
     rewrite /lifts_wpolykvec mapiE; 1: smt(mldsa65_kvec).
-    congr; by rewrite -kvec_slice_eq; smt().
+    congr; rewrite (get_sub256_kvecE _az (i{hr} * n) _ _); 1,2: smt(mldsa65_kvec); by rewrite Hnnd.
   (* Remaining: basemul _ch (ntt (lifts result0))
        = (&-) ((ntt_smul _ch (nttv (smul t1_spec (incoeff 2^d)))).[i])  *)
   (* Wait — need to match against the FULL (&-) term *)
@@ -445,7 +440,7 @@ seq 1 1 : (#pre /\
       wpolymat_urng (mat_unflatten256 matrix_A{2}) q).
   + ecall{1} (ExpandA_correct rho{1}).
     ecall{2} (matrix_A_correct (Array32.init (fun i => verification_key{2}.[i]))).
-    auto => |> &1 &2 ??????????? rr0 -> ?;congr.
+    auto => |> &1 &2 ???????????? rr0 -> ?;congr.
     apply Bytes32.tP => k kb.
     do 2!(rewrite Bytes32.get_of_list //).
     rewrite get_to_list initiE 1:/# /=.
@@ -560,7 +555,7 @@ split; first exact (wpolylvec_ntt_orng_bmul_irng _ Horng_s).
 move => _ result4 Hlift_amulz Hsrng_amulz.
 have [Hr1z [Hh_lift Hh_urng]] := Hh_some_case Hh_some.
 split; first exact Hh_urng.
-move => _ result5 Hreconstruct.
+move => _ _ result5 Hreconstruct.
 rewrite Hreconstruct Hh_lift.
 congr; congr.
 rewrite /signer_commitment_spec Hlift_amulz Hlift_s_ntt Hlift_chal.

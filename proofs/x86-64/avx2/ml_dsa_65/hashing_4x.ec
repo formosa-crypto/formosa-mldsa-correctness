@@ -10,6 +10,12 @@ import Round ZModQ Zq.
 
 require import Array2 Array4 Array32 Array64 Array136 Array168.
 require import WArray2 WArray32 WArray64 WArray136 WArray168.
+require import XArray2.
+require import ArrayWords2W8 ArrayAccessCastW8_2W8 ArrayAccessCastW16_2W8 ArrayAccessCastW32_2W8 ArrayAccessCastW64_2W8 ArrayAccessCastW128_2W8 ArrayAccessCastW256_2W8.
+require import ArrayWords32W8 ArrayAccessCastW8_32W8 ArrayAccessCastW16_32W8 ArrayAccessCastW32_32W8 ArrayAccessCastW64_32W8 ArrayAccessCastW128_32W8 ArrayAccessCastW256_32W8.
+require import ArrayWords64W8 ArrayAccessCastW8_64W8 ArrayAccessCastW16_64W8 ArrayAccessCastW32_64W8 ArrayAccessCastW64_64W8 ArrayAccessCastW128_64W8 ArrayAccessCastW256_64W8.
+require import ArrayWords136W8 ArrayAccessCastW8_136W8 ArrayAccessCastW16_136W8 ArrayAccessCastW32_136W8 ArrayAccessCastW64_136W8 ArrayAccessCastW128_136W8 ArrayAccessCastW256_136W8.
+require import ArrayWords168W8 ArrayAccessCastW8_168W8 ArrayAccessCastW16_168W8 ArrayAccessCastW32_168W8 ArrayAccessCastW64_168W8 ArrayAccessCastW256_168W8.
 
 (****************************************************************************)
 (* Clone KeccakArrayAvx2x4 for each array size used in hashing_4x.jinc     *)
@@ -36,35 +42,69 @@ equiv keccakf1600_avx2x4_eq:
 clone KeccakArrayAvx2x4 as A2avx2x4
  with op _ASIZE <- 2,
       theory A <- Array2,
-      theory WA <- WArray2
+      theory WA <- WArray2,
+      theory RW.AWr   <- ArrayWords2W8,
+      theory RW.AC8   <- ArrayAccessCastW8_2W8,
+      theory RW.AC16  <- ArrayAccessCastW16_2W8,
+      theory RW.AC32  <- ArrayAccessCastW32_2W8,
+      theory RW.AC64  <- ArrayAccessCastW64_2W8,
+      theory RW.AC128 <- ArrayAccessCastW128_2W8,
+      theory RW.AC256 <- ArrayAccessCastW256_2W8
       proof _ASIZE_ge0 by done
       proof _ASIZE_u64 by done.
 
 clone KeccakArrayAvx2x4 as A32avx2x4
  with op _ASIZE <- 32,
       theory A <- Array32,
-      theory WA <- WArray32
+      theory WA <- WArray32,
+      theory RW.AWr   <- ArrayWords32W8,
+      theory RW.AC8   <- ArrayAccessCastW8_32W8,
+      theory RW.AC16  <- ArrayAccessCastW16_32W8,
+      theory RW.AC32  <- ArrayAccessCastW32_32W8,
+      theory RW.AC64  <- ArrayAccessCastW64_32W8,
+      theory RW.AC128 <- ArrayAccessCastW128_32W8,
+      theory RW.AC256 <- ArrayAccessCastW256_32W8
       proof _ASIZE_ge0 by done
       proof _ASIZE_u64 by done.
 
 clone KeccakArrayAvx2x4 as A64avx2x4
  with op _ASIZE <- 64,
       theory A <- Array64,
-      theory WA <- WArray64
+      theory WA <- WArray64,
+      theory RW.AWr   <- ArrayWords64W8,
+      theory RW.AC8   <- ArrayAccessCastW8_64W8,
+      theory RW.AC16  <- ArrayAccessCastW16_64W8,
+      theory RW.AC32  <- ArrayAccessCastW32_64W8,
+      theory RW.AC64  <- ArrayAccessCastW64_64W8,
+      theory RW.AC128 <- ArrayAccessCastW128_64W8,
+      theory RW.AC256 <- ArrayAccessCastW256_64W8
       proof _ASIZE_ge0 by done
       proof _ASIZE_u64 by done.
 
 clone KeccakArrayAvx2x4 as A136avx2x4
  with op _ASIZE <- 136,
       theory A <- Array136,
-      theory WA <- WArray136
+      theory WA <- WArray136,
+      theory RW.AWr   <- ArrayWords136W8,
+      theory RW.AC8   <- ArrayAccessCastW8_136W8,
+      theory RW.AC16  <- ArrayAccessCastW16_136W8,
+      theory RW.AC32  <- ArrayAccessCastW32_136W8,
+      theory RW.AC64  <- ArrayAccessCastW64_136W8,
+      theory RW.AC128 <- ArrayAccessCastW128_136W8,
+      theory RW.AC256 <- ArrayAccessCastW256_136W8
       proof _ASIZE_ge0 by done
       proof _ASIZE_u64 by done.
 
 clone KeccakArrayAvx2x4 as A168avx2x4
  with op _ASIZE <- 168,
       theory A <- Array168,
-      theory WA <- WArray168
+      theory WA <- WArray168,
+      theory RW.AWr   <- ArrayWords168W8,
+      theory RW.AC8   <- ArrayAccessCastW8_168W8,
+      theory RW.AC16  <- ArrayAccessCastW16_168W8,
+      theory RW.AC32  <- ArrayAccessCastW32_168W8,
+      theory RW.AC64  <- ArrayAccessCastW64_168W8,
+      theory RW.AC256 <- ArrayAccessCastW256_168W8
       proof _ASIZE_ge0 by done
       proof _ASIZE_u64 by done.
 
@@ -118,26 +158,10 @@ module K = {
     d3 <- witness;
     state <@ Keccak1600_Jazz.M.__state_init_avx2x4 (state);
     (state,  _0) <@ A32avx2x4.MM.__absorb_bcast_avx2x4 (state, 0, rho, 0, 168);
-    d0 <-
-    (Array2.init
-    (WArray2.get8
-    (WArray2.set16 (WArray2.init8 (fun i => d0.[i])) 0 domain_separators.[0])
-    ));
-    d1 <-
-    (Array2.init
-    (WArray2.get8
-    (WArray2.set16 (WArray2.init8 (fun i => d1.[i])) 0 domain_separators.[1])
-    ));
-    d2 <-
-    (Array2.init
-    (WArray2.get8
-    (WArray2.set16 (WArray2.init8 (fun i => d2.[i])) 0 domain_separators.[2])
-    ));
-    d3 <-
-    (Array2.init
-    (WArray2.get8
-    (WArray2.set16 (WArray2.init8 (fun i => d3.[i])) 0 domain_separators.[3])
-    ));
+    d0 <- (ArrayAccessCastW16_2W8.set_cast d0 0 domain_separators.[0]);
+    d1 <- (ArrayAccessCastW16_2W8.set_cast d1 0 domain_separators.[1]);
+    d2 <- (ArrayAccessCastW16_2W8.set_cast d2 0 domain_separators.[2]);
+    d3 <- (ArrayAccessCastW16_2W8.set_cast d3 0 domain_separators.[3]);
     (state,  _1) <@ A2avx2x4.MM.__absorb_avx2x4 (state, 32, d0, d1, d2, d3, 31, 168);
     return state;
   }
@@ -160,21 +184,13 @@ module K = {
     state <@ Keccak1600_Jazz.M.__state_init_avx2x4 (state);
     (state,  _0) <@ A64avx2x4.MM.__absorb_bcast_avx2x4 (state, 0, rho_prime, 0, 136);
     t <- starting_domain_separator;
-    d0 <-
-    (Array2.init
-    (WArray2.get8 (WArray2.set16 (WArray2.init8 (fun i => d0.[i])) 0 t)));
+    d0 <- (ArrayAccessCastW16_2W8.set_cast d0 0 t);
     t <- (t + (W16.of_int 1));
-    d1 <-
-    (Array2.init
-    (WArray2.get8 (WArray2.set16 (WArray2.init8 (fun i => d1.[i])) 0 t)));
+    d1 <- (ArrayAccessCastW16_2W8.set_cast d1 0 t);
     t <- (t + (W16.of_int 1));
-    d2 <-
-    (Array2.init
-    (WArray2.get8 (WArray2.set16 (WArray2.init8 (fun i => d2.[i])) 0 t)));
+    d2 <- (ArrayAccessCastW16_2W8.set_cast d2 0 t);
     t <- (t + (W16.of_int 1));
-    d3 <-
-    (Array2.init
-    (WArray2.get8 (WArray2.set16 (WArray2.init8 (fun i => d3.[i])) 0 t)));
+    d3 <- (ArrayAccessCastW16_2W8.set_cast d3 0 t);
     (state,  _1) <@ A2avx2x4.MM.__absorb_avx2x4 (state, 64, d0, d1, d2, d3, 31, 136);
     return state;
   }
@@ -242,10 +258,10 @@ hoare shake128_absorb_34_4x_h' _rho _ds :
  : arg.`2 = _rho /\ arg.`3 = _ds
  ==>
    absorb_spec_avx2x4 168 31
-     (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds.[0]))))
-      (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds.[1]))))
-      (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0_ds.[2]))))
-      (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds.[3]))))
+     (to_list _rho ++ to_list _ds.[0])
+      (to_list _rho ++ to_list _ds.[1])
+      (to_list _rho ++ to_list _ds.[2])
+      (to_list _rho ++ to_list _ds.[3])
      res.
 proof.
 proc.
@@ -253,7 +269,9 @@ ecall (A2avx2x4.absorb_avx2x4_h (to_list _rho) (to_list _rho) (to_list _rho) (to
 wp.
 ecall (A32avx2x4.absorb_bcast_avx2x4_h [<:W8.t>] [<:W8.t>] [<:W8.t>] [<:W8.t>] state rho 0 168).
 wp; call (state_init_avx2x4_h 168).
-by auto => |>;smt(Array32.size_to_list).
+auto => |>; rewrite !to_list_set_cast16.
+have E : forall (w : W16.t), to_list w = [w \bits8 0; w \bits8 1] by move => w; rewrite /to_list /=.
+by rewrite !E; smt(Array32.size_to_list).
 qed.
 
 lemma shake128_absorb_34_4x_ll : islossless K.shake128_absorb_34_4x.
@@ -271,10 +289,10 @@ phoare shake128_absorb_34_4x_ph' _rho _ds :
  : arg.`2 = _rho /\ arg.`3 = _ds
  ==>
    absorb_spec_avx2x4 168 31
-     (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds.[0]))))
-      (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds.[1]))))
-      (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0_ds.[2]))))
-      (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds.[3]))))
+     (to_list _rho ++ to_list _ds.[0])
+      (to_list _rho ++ to_list _ds.[1])
+      (to_list _rho ++ to_list _ds.[2])
+      (to_list _rho ++ to_list _ds.[3])
      res
  ] = 1%r.
 proof.
@@ -286,10 +304,10 @@ phoare shake128_absorb_34_4x_ph _rho _ds :
  : arg.`2 = _rho /\ arg.`3 = _ds
  ==>
    absorb_spec_avx2x4 168 31
-     (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds.[0]))))
-      (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds.[1]))))
-      (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0_ds.[2]))))
-      (to_list _rho ++ to_list (Array2.init (get8 (set16_direct (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds.[3]))))
+     (to_list _rho ++ to_list _ds.[0])
+      (to_list _rho ++ to_list _ds.[1])
+      (to_list _rho ++ to_list _ds.[2])
+      (to_list _rho ++ to_list _ds.[3])
      res
  ] = 1%r.
 proof.
@@ -301,10 +319,10 @@ hoare shake256_absorb_66_4x_h' _rho_prime _ds0 :
  : arg.`2 = _rho_prime /\ arg.`3 = _ds0
  ==>
    absorb_spec_avx2x4 136 31
-     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds0))))
-     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness))  0 (_ds0 + W16.one)))))
-     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness))  0 (_ds0 + (W16.of_int 2))))))
-     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness))  0 (_ds0 + (W16.of_int 3))))))
+     (to_list _rho_prime ++ to_list _ds0)
+     (to_list _rho_prime ++ to_list (_ds0 + W16.one))
+     (to_list _rho_prime ++ to_list (_ds0 + (W16.of_int 2)))
+     (to_list _rho_prime ++ to_list (_ds0 + (W16.of_int 3)))
      res.
 proof.
 proc.
@@ -312,7 +330,9 @@ ecall (A2avx2x4.absorb_avx2x4_h (to_list _rho_prime) (to_list _rho_prime) (to_li
 wp.
 ecall (A64avx2x4.absorb_bcast_avx2x4_h [<:W8.t>] [<:W8.t>] [<:W8.t>] [<:W8.t>] state rho_prime 0 136).
 wp; call (state_init_avx2x4_h 136).
-auto => |> r0 ? r1 Hinit ?; rewrite size_to_list /#.
+auto => |> r0 ? r1 Hinit ?; rewrite !to_list_set_cast16.
+have E : forall (w : W16.t), to_list w = [w \bits8 0; w \bits8 1] by move => w; rewrite /to_list /=.
+by rewrite !E size_to_list /#.
 qed.
 
 lemma shake256_absorb_66_4x_ll : islossless K.shake256_absorb_66_4x.
@@ -330,10 +350,10 @@ phoare shake256_absorb_66_4x_ph' _rho_prime _ds0 :
  : arg.`2 = _rho_prime /\ arg.`3 = _ds0
  ==>
    absorb_spec_avx2x4 136 31
-     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds0))))
-     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness))  0 (_ds0 + W16.one)))))
-     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness))  0 (_ds0 + (W16.of_int 2))))))
-     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness))  0 (_ds0 + (W16.of_int 3))))))
+     (to_list _rho_prime ++ to_list _ds0)
+     (to_list _rho_prime ++ to_list (_ds0 + W16.one))
+     (to_list _rho_prime ++ to_list (_ds0 + (W16.of_int 2)))
+     (to_list _rho_prime ++ to_list (_ds0 + (W16.of_int 3)))
      res
  ] = 1%r.
 proof.
@@ -345,10 +365,10 @@ phoare shake256_absorb_66_4x_ph _rho_prime _ds0 :
  : arg.`2 = _rho_prime /\ arg.`3 = _ds0
  ==>
    absorb_spec_avx2x4 136 31
-     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness)) 0 _ds0))))
-     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness))  0 (_ds0 + W16.one)))))
-     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness))  0 (_ds0 + (W16.of_int 2))))))
-     (to_list _rho_prime ++ to_list (Array2.init (WArray2.get8 (WArray2.set16 (WArray2.init8 (Array2."_.[_]" witness))  0 (_ds0 + (W16.of_int 3))))))
+     (to_list _rho_prime ++ to_list _ds0)
+     (to_list _rho_prime ++ to_list (_ds0 + W16.one))
+     (to_list _rho_prime ++ to_list (_ds0 + (W16.of_int 2)))
+     (to_list _rho_prime ++ to_list (_ds0 + (W16.of_int 3)))
      res
  ] = 1%r.
 proof.

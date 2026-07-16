@@ -49,24 +49,22 @@ clone BSWAS as BSWAS_16u8_128 with
 
 
 require import WArray16 BitEncoding.
+require import ArrayAccessCastW128_16W8 ArrayWords16W8.
+require import XArrayAccessCastByte.
 import Array16 BitChunking.
 
-lemma BSWAS_16u8_128_slicesetE (t : W8.t Array16.t) o (s : W128.t) :
-  0 <= (o*8) <= 8 * 16 - 128 =>    
-   BSWAS_16u8_128.sliceset t (o*8) s =
-      Array16.init (get8 (set128_direct (WArray16.init8 (fun (i_0 : int) => t.[i_0])) o s)).
-proof. 
-move => Ho.
-rewrite tP => k kb.
-rewrite wordP => i ib;rewrite initiE 1:/# /=.
-have //= := BSWAS_16u8_128.BVA_asliceset_Top_CircuitBindings_BSWAS_WB_t_Top_CircuitBindings_BSWAS_WS_t_Top_CircuitBindings_BSWAS_A_t.bvaslicesetP t (o*8) s _ (k*8+i) _;1,2:by smt().
-rewrite (nth_flatten false 8).
-+ rewrite allP /= => x; rewrite mapP => He; elim He;smt(W8.size_w2bits).
-rewrite (nth_map witness); 1: by rewrite size_to_list; smt().
-rewrite get_to_list get_w2bits (: (k * 8 + i) %/ 8 = k) 1:/# (: (k * 8 + i) %% 8 = i) 1:/# => -> .
-rewrite (nth_flatten false 8).
-+ rewrite allP /= => x; rewrite mapP => He; elim He;smt(W8.size_w2bits).
-rewrite (nth_map witness); 1: by rewrite size_to_list; smt().
-rewrite get_w2bits get_to_list /get8 /set128_direct initiE 1:/# /= /(\bits8) initiE 1:/# /=.
-by smt(W8.initiE).
-qed.
+(* generic byte bridge instantiated for u8/128 (W128 <-> a W8 Array16;
+   here the slice is the whole array, so only offset 0 is valid) *)
+clone import XArrayAccessCastByte as X16u8_128 with
+      op sizeWS <- 16,
+      op sizeB  <- 16,
+  theory WS     <- W128 { rename "_XX" as "_128" },
+  theory A      <- Array16,
+  theory AW     <- ArrayWords16W8,
+  theory AC     <- ArrayAccessCastW128_16W8
+  proof rg_sizeWS by done, gt0_sizeB by done, le_slice by done.
+
+lemma set_cast128_16W8_slicesetE (t : W8.t Array16.t) o (s : W128.t) :
+  0 <= o*8 <= 8*16-128 =>
+   ArrayAccessCastW128_16W8.set_cast_direct t o s = BSWAS_16u8_128.sliceset t (o*8) s.
+proof. by move => H; rewrite X16u8_128.set_castE 1:/#. qed.

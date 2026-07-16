@@ -45,18 +45,21 @@ clone BSWAS as BSWAS_48u8_128 with
   proof le_size by done.
 
 require import WArray48 BitEncoding.
+require import ArrayAccessCastW128_48W8 ArrayWords48W8.
+require import XArrayAccessCastByte.
 import Array48 BitChunking.
 
-lemma BSWAS_48u8_128_slicegetE o (p : W8.t Array48.t):
-    0 <= o*8 <= 48*8-128 =>
-     get128_direct (WArray48.init8 (fun (i_0 : int) => p.[i_0])) o = BSWAS_48u8_128.sliceget p (o * 8).
-proof.
-move => Ho.
-rewrite /get128_direct /pack16_t;apply W128.wordP => k kb.
-have //= := BSWAS_48u8_128.BVA_asliceget_Top_CircuitBindings_BSWAS_WB_t_Top_CircuitBindings_BSWAS_WS_t_Top_CircuitBindings_BSWAS_A_t.bvaslicegetP p (o * 8) _; 1: by smt().
-move => -> //; rewrite initiE 1:/# /= initiE 1:/# /= initiE 1:/# /=.
-rewrite nth_take 1,2:/# nth_drop 1,2:/#  (nth_flatten false 8).
-+ rewrite allP /= => x; rewrite mapP => He; elim He;smt(W8.size_w2bits).
-rewrite (nth_map witness); 1: by rewrite size_to_list; smt().
-by rewrite get_to_list get_w2bits /#.
-qed.
+(* generic byte bridge instantiated for u8/128 (W128 read from a W8 Array48) *)
+clone import XArrayAccessCastByte as X48u8_128 with
+      op sizeWS <- 16,
+      op sizeB  <- 48,
+  theory WS     <- W128 { rename "_XX" as "_128" },
+  theory A      <- Array48,
+  theory AW     <- ArrayWords48W8,
+  theory AC     <- ArrayAccessCastW128_48W8
+  proof rg_sizeWS by done, gt0_sizeB by done, le_slice by done.
+
+lemma get_cast128_48W8_slicegetE o (p : W8.t Array48.t) :
+  0 <= o*8 <= 48*8-128 =>
+   ArrayAccessCastW128_48W8.get_cast_direct p o = BSWAS_48u8_128.sliceget p (o*8).
+proof. by move => H; rewrite X48u8_128.get_castE 1:/#. qed.

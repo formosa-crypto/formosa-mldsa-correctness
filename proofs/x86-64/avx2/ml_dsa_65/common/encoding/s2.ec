@@ -47,7 +47,7 @@ while (0 <= i <= 6 /\ s2 = _a /\ wpolykvec_srng (kvec_unflatten256 _a) Eta Eta  
              by rewrite mapiE 1:/# /= H 1:/# mapiE 1:/# /=.
            + by rewrite /valid_s2_bytes => i ib; apply H1; smt().
 wp; ecall (error_polynomial_encode (Array256.init (fun (i_0 : int) => _a.[i * 256 + i_0]))).
-auto => /> &hr ?? Hrng H Hval ?; do split; 1: smt().
+auto => /> &hr ?? Hrng H Hval ?; do split; 1: by rewrite /get_sub (mulzC n i{hr}); smt().
 + move : Hrng; rewrite /wpolykvec_srng /wpoly_srng !allP /=  => Hrng ii iib.
   have := Hrng i{hr} _; 1:smt().
   rewrite allP /= initiE 1:/# /= => Hrngj.

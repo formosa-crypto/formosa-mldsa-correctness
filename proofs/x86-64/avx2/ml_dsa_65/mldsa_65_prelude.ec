@@ -3,6 +3,8 @@ require import AllCore List IntDiv RealExp StdBigop.
 from Spec require import GFq Rq Serialization Conversion Parameters VecMat MLDSA_W32_Rep.
 
 from JazzEC require import Array320 Array416 Array1280 Array640 Array1536 Array768 Array256 Array128 Array1920 Array3200 Array7680 Array2496.
+from JazzEC require import SubArray256_1536.
+from JazzEC require import SubArray256_1280.
 
 import LArray KArray.
 
@@ -163,6 +165,27 @@ case (k = base %/ 256) => Heq /=.
 qed.
 
 (* -------------------------------------------------------------------- *)
+(* Principled bridges: the high-level warray extraction ops              *)
+(* SubArray256_1536.{get,set}_sub expressed against the kvec_unflatten256 *)
+(* block view, so higher-level proofs reason with these (folded) rather   *)
+(* than unfolding to base init/if semantics.                              *)
+(* -------------------------------------------------------------------- *)
+
+(** the k-th block read: get_sub at a 256-aligned offset is the k-th component. *)
+lemma get_sub256_kvecE (v : 'a Array1536.t) (base : int) :
+  base %% 256 = 0 => 0 <= base %/ 256 < kvec =>
+  SubArray256_1536.get_sub v base = (kvec_unflatten256 v).[base %/ 256].
+proof. by move => Hmod Hk; rewrite /get_sub (kvec_slice_eq v base Hmod Hk). qed.
+
+(** the k-th block write: unflattening a set_sub gives the written poly at
+    component base/256 and the original elsewhere. *)
+lemma kvec_unflatten256_set_subE (arr : 'a Array1536.t) (f : 'a Array256.t) (base k : int) :
+  base %% 256 = 0 => 0 <= k < kvec =>
+  (kvec_unflatten256 (SubArray256_1536.set_sub arr base f)).[k] =
+  if k = base %/ 256 then f else (kvec_unflatten256 arr).[k].
+proof. by move => Hmod Hk; rewrite /set_sub (kvec_unflatten256_writeback_iE arr f base k Hmod Hk). qed.
+
+(* -------------------------------------------------------------------- *)
 (* lvec (L=5) slice / writeback helpers — mirrors kvec versions above    *)
 (* -------------------------------------------------------------------- *)
 
@@ -197,6 +220,12 @@ case (k = base %/ 256) => Heq /=.
 + have -> : (base <= 256 * k + j && 256 * k + j < base + 256) = false by smt().
   by rewrite lvec_unflatten256iE 1:/# /#.
 qed.
+
+lemma lvec_unflatten256_set_subE (arr : 'a Array1280.t) (f : 'a Array256.t) (base k : int) :
+  base %% 256 = 0 => 0 <= k < lvec =>
+  (lvec_unflatten256 (SubArray256_1280.set_sub arr base f)).[k] =
+  if k = base %/ 256 then f else (lvec_unflatten256 arr).[k].
+proof. by move => Hmod Hk; rewrite /set_sub (lvec_unflatten256_writeback_iE arr f base k Hmod Hk). qed.
 
 (* -------------------------------------------------------------------- *)
 (* Matrix row slice: a 1280-wide row of a flat Array7680 matrix equals  *)

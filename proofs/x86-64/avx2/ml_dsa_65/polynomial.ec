@@ -11,6 +11,7 @@ from Spec require import GFq Rq Parameters MLDSA_W32_Rep Symmetric Serialization
 import Round ZModQ Zq.
 
 require import XArray256 Array256.
+require import ArrayAccessCastW256_256W32.
 
 require import WArray1024.
 
@@ -68,10 +69,10 @@ seq 2 : (#pre /\ threshold_vector = W256.of_int (_threshold - 1)).
 
 proc change ^while.1 : { coefficients <- if (0 <= offset*8 <= 32*256-256)
                                          then BSWAS_256u32_256.sliceget polynomial (offset*8)
-                                         else get256_direct (WArray1024.init32 (fun i => polynomial.[i])) offset; }.
+                                         else ArrayAccessCastW256_256W32.get_cast_direct polynomial offset; }.
                 + auto => /> &2.
                   case (0 <= offset{2} * 8 <= 7936); last by auto.
-                  by move => ?; rewrite BSWAS_256u32_256_slicegetE /#.
+                  by move => ?; rewrite get_cast_slicegetE /#.
 
 wp 7.
 proc change 7 : { zf <- msb_mask = W32.zero; }.
@@ -174,18 +175,18 @@ lemma polynomial__add_correct
     ].
 proof.
 proc => /=.
-proc change ^while.1 : { lhs <- if (0 <= offset*8 <= 32*256-256) then BSWAS_256u32_256.sliceget lhs_pointer (offset*8) else get256_direct (WArray1024.init32 (fun (i_0:int) => lhs_pointer.[i_0])) offset; }.
+proc change ^while.1 : { lhs <- if (0 <= offset*8 <= 32*256-256) then BSWAS_256u32_256.sliceget lhs_pointer (offset*8) else ArrayAccessCastW256_256W32.get_cast_direct lhs_pointer offset; }.
 + auto => /> &2.
   case (0 <= offset{2} * 8 <= 7936); last by auto.
-  by move => Ha _ _ _; rewrite -BSWAS_256u32_256_slicegetE 1:/#.
-proc change ^while.2 : { rhs <- if (0 <= offset*8 <= 32*256-256) then BSWAS_256u32_256.sliceget rhs_pointer (offset*8) else get256_direct (WArray1024.init32 (fun (i_0:int) => rhs_pointer.[i_0])) offset; }.
+  by move => Ha _ _ _; rewrite -get_cast_slicegetE 1:/#.
+proc change ^while.2 : { rhs <- if (0 <= offset*8 <= 32*256-256) then BSWAS_256u32_256.sliceget rhs_pointer (offset*8) else ArrayAccessCastW256_256W32.get_cast_direct rhs_pointer offset; }.
 + auto => /> &2.
   case (0 <= offset{2} * 8 <= 7936); last by auto.
-  by move => Ha _ _ _; rewrite -BSWAS_256u32_256_slicegetE 1:/#.
-proc change ^while.4 : { sum_pointer <- if (0 <= offset*8 <= 32*256-256) then BSWAS_256u32_256.sliceset sum_pointer (offset*8) sum else Array256.init (get32 (set256_direct (WArray1024.init32 (fun (i_0:int) => sum_pointer.[i_0])) offset sum)); }.
+  by move => Ha _ _ _; rewrite -get_cast_slicegetE 1:/#.
+proc change ^while.4 : { sum_pointer <- if (0 <= offset*8 <= 32*256-256) then BSWAS_256u32_256.sliceset sum_pointer (offset*8) sum else ArrayAccessCastW256_256W32.set_cast_direct sum_pointer offset sum; }.
 + auto => /> &2.
   case (0 <= offset{2} * 8 <= 7936); last by auto.
-  by move => Ha _ _ _; rewrite BSWAS_256u32_256_slicesetE 1:/#.
+  by move => Ha _ _ _; rewrite -set_cast_slicesetE 1:/#.
 unroll for ^while.
 wp 128.
 conseq (: sum_pointer = _sum /\ lhs_pointer = _lhs /\ rhs_pointer = _rhs /\ wpoly_srng A A _lhs /\ wpoly_srng B B _rhs /\ A + B < 2^31 ==> sum_pointer = BSWA_256u32.init (fun (i:int) => _lhs.[i] + _rhs.[i])); last by circuit.
@@ -279,10 +280,10 @@ proof.
 proc => /=.
 proc change ^while.1 : { polynomial <- if (0 <= offset*8 <= 32*256-256)
                                        then BSWAS_256u32_256.sliceset polynomial (offset*8) zero_u256
-                                       else Array256.init (get32 (set256_direct (WArray1024.init32 (fun (i_0 : int) => polynomial.[i_0])) offset zero_u256)); }.
+                                       else ArrayAccessCastW256_256W32.set_cast_direct polynomial offset zero_u256; }.
 + auto => /> &2.
   case (0 <= offset{2} * 8 <= 7936); last by auto.
-  by move => ?; rewrite BSWAS_256u32_256_slicesetE /#.
+  by move => ?; rewrite -set_cast_slicesetE /#.
 unroll for ^while.
 cfold 1.
 wp 32.

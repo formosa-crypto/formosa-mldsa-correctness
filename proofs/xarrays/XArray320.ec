@@ -48,38 +48,26 @@ clone BSWAS as BSWAS_320u8_128 with
   proof le_size by done.
 
 require import WArray320 BitEncoding.
+require import ArrayAccessCastW128_320W8 ArrayWords320W8.
+require import XArrayAccessCastByte.
 import Array320 BitChunking.
 
-lemma BSWAS_320u8_128_slicesetE (t : W8.t Array320.t) o (s : W128.t) :
-  0 <= (o*8) <= 8 * 320 - 128 =>
-   BSWAS_320u8_128.sliceset t (o*8) s =
-      Array320.init (get8 (set128_direct (WArray320.init8 (fun (i_0 : int) => t.[i_0])) o s)).
-proof.
-move => Ho.
-rewrite tP => k kb.
-rewrite wordP => i ib;rewrite initiE 1:/# /=.
-have //= := BSWAS_320u8_128.BVA_asliceset_Top_CircuitBindings_BSWAS_WB_t_Top_CircuitBindings_BSWAS_WS_t_Top_CircuitBindings_BSWAS_A_t.bvaslicesetP t (o*8) s _ (k*8+i) _;1,2:by smt().
-rewrite (nth_flatten false 8).
-+ rewrite allP /= => x; rewrite mapP => He; elim He;smt(W8.size_w2bits).
-rewrite (nth_map witness); 1: by rewrite size_to_list; smt().
-rewrite get_to_list get_w2bits (: (k * 8 + i) %/ 8 = k) 1:/# (: (k * 8 + i) %% 8 = i) 1:/# => -> .
-rewrite (nth_flatten false 8).
-+ rewrite allP /= => x; rewrite mapP => He; elim He;smt(W8.size_w2bits).
-rewrite (nth_map witness); 1: by rewrite size_to_list; smt().
-rewrite get_w2bits get_to_list /get8 /set128_direct initiE 1:/# /= /(\bits8) initiE 1:/# /=.
-by smt(W8.initiE).
-qed.
+(* generic byte bridge instantiated for u8/128 (W128 <-> a W8 Array320) *)
+clone import XArrayAccessCastByte as X320u8_128 with
+      op sizeWS <- 16,
+      op sizeB  <- 320,
+  theory WS     <- W128 { rename "_XX" as "_128" },
+  theory A      <- Array320,
+  theory AW     <- ArrayWords320W8,
+  theory AC     <- ArrayAccessCastW128_320W8
+  proof rg_sizeWS by done, gt0_sizeB by done, le_slice by done.
 
-lemma BSWAS_320u8_128_slicegetE o (p : W8.t Array320.t):
-    0 <= o*8 <= 320*8-128 =>
-     get128_direct (WArray320.init8 (fun (i_0 : int) => p.[i_0])) o = BSWAS_320u8_128.sliceget p (o * 8).
-  proof.
-  move => Ho.
-  rewrite /get128_direct /pack16_t;apply W128.wordP => k kb.
-  have //= := BSWAS_320u8_128.BVA_asliceget_Top_CircuitBindings_BSWAS_WB_t_Top_CircuitBindings_BSWAS_WS_t_Top_CircuitBindings_BSWAS_A_t.bvaslicegetP p (o * 8) _; 1: by smt().
-  move => -> //; rewrite initiE 1:/# /= initiE 1:/# /= initiE 1:/# /=.
-  rewrite nth_take 1,2:/# nth_drop 1,2:/#  (nth_flatten false 8).
-  + rewrite allP /= => x; rewrite mapP => He; elim He;smt(W8.size_w2bits).
-  rewrite (nth_map witness); 1: by rewrite size_to_list; smt().
-  by rewrite get_to_list get_w2bits /#.
- qed.
+lemma get_cast128_320W8_slicegetE o (p : W8.t Array320.t) :
+  0 <= o*8 <= 320*8-128 =>
+   ArrayAccessCastW128_320W8.get_cast_direct p o = BSWAS_320u8_128.sliceget p (o*8).
+proof. by move => H; rewrite X320u8_128.get_castE 1:/#. qed.
+
+lemma set_cast128_320W8_slicesetE (t : W8.t Array320.t) o (s : W128.t) :
+  0 <= o*8 <= 8*320-128 =>
+   ArrayAccessCastW128_320W8.set_cast_direct t o s = BSWAS_320u8_128.sliceset t (o*8) s.
+proof. by move => H; rewrite X320u8_128.set_castE 1:/#. qed.

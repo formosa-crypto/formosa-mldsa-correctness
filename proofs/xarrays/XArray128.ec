@@ -65,7 +65,29 @@ clone BSWAS as BSWAS_128u8_128 with
   proof le_size by done.
 
 require import WArray128 BitEncoding.
+require import ArrayAccessCastW256_128W8 ArrayAccessCastW128_128W8 ArrayWords128W8.
+require import XArrayAccessCastByte.
 import Array128 BitChunking.
+
+(* generic byte bridge instantiated for u8/256 (W256 into a W8 Array128) *)
+clone import XArrayAccessCastByte as X128u8_256 with
+      op sizeWS <- 32,
+      op sizeB  <- 128,
+  theory WS     <- W256 { rename "_XX" as "_256" },
+  theory A      <- Array128,
+  theory AW     <- ArrayWords128W8,
+  theory AC     <- ArrayAccessCastW256_128W8
+  proof rg_sizeWS by done, gt0_sizeB by done, le_slice by done.
+
+(* generic byte bridge instantiated for u8/128 (W128 read from a W8 Array128) *)
+clone XArrayAccessCastByte as X128u8_128 with
+      op sizeWS <- 16,
+      op sizeB  <- 128,
+  theory WS     <- W128 { rename "_XX" as "_128" },
+  theory A      <- Array128,
+  theory AW     <- ArrayWords128W8,
+  theory AC     <- ArrayAccessCastW128_128W8
+  proof rg_sizeWS by done, gt0_sizeB by done, le_slice by done.
 
 lemma BSWAS_128u8_256_slicesetE (t : W8.t Array128.t) o (s : W256.t) :
   0 <= (o*8) <= 8 * 128 - 256 =>
@@ -100,3 +122,37 @@ lemma BSWAS_128u8_128_slicegetE o (p : W8.t Array128.t):
   rewrite (nth_map witness); 1: by rewrite size_to_list; smt().
   by rewrite get_to_list get_w2bits /#.
  qed.
+
+(* -------------------------------------------------------------------- *)
+(* element lemma as a thin wrapper over the generic byte bridge X128u8_256. *)
+(* -------------------------------------------------------------------- *)
+lemma set_cast256_128W8_slicesetE (t : W8.t Array128.t) o (s : W256.t) :
+  0 <= o*8 <= 8*128-256 =>
+   ArrayAccessCastW256_128W8.set_cast_direct t o s = BSWAS_128u8_256.sliceset t (o*8) s.
+proof. by move => H; rewrite X128u8_256.set_castE 1:/#. qed.
+
+(* \bits8 element/byte lemmas for W256 <-> W8 Array128 copies (hashing block). *)
+lemma get_cast256_128W8E (t : W8.t Array128.t) (o j : int) :
+  0 <= o => o + 32 <= 128 => 0 <= j < 32 =>
+   (ArrayAccessCastW256_128W8.get_cast_direct t o) \bits8 j = t.[o + j].
+proof.
+move => ho hos hj; rewrite -X128u8_256.get_cast_bits'SE 1,2,3:/#.
+apply W8.wordP => b hb.
+rewrite bits8iE 1:/# ArrayAccessCastW256_128W8.WSu8.bits'SiE 1:/# /#.
+qed.
+
+lemma set_cast256_128W8E (t : W8.t Array128.t) (o k : int) (s : W256.t) :
+  0 <= o => o + 32 <= 128 => 0 <= k < 128 =>
+   (ArrayAccessCastW256_128W8.set_cast_direct t o s).[k]
+   = if o <= k < o + 32 then s \bits8 (k - o) else t.[k].
+proof.
+move => ho hos hk; rewrite X128u8_256.set_cast_directE 1,2,3:/#.
+case (o <= k < o + 32) => hc; 2:done.
+apply W8.wordP => b hb.
+rewrite ArrayAccessCastW256_128W8.WSu8.bits'SiE 1:/# bits8iE 1:/# /#.
+qed.
+
+lemma get_cast128_128W8_slicegetE o (p : W8.t Array128.t) :
+  0 <= o*8 <= 8*128-128 =>
+   ArrayAccessCastW128_128W8.get_cast_direct p o = BSWAS_128u8_128.sliceget p (o*8).
+proof. by move => H; rewrite X128u8_128.get_castE 1:/#. qed.

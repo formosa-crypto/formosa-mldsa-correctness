@@ -9,7 +9,7 @@ all: ec
 
 
 ec: 
-	env JASMINPATH="Common=$(COMMON):Keccak=$(KECCAK)" $(JASMIN2EC) $(SOURCE)/ml_dsa.jazz --array-model=old -o ml_dsa_65_avx2.ec \
+	env JASMINPATH="Common=$(COMMON):Keccak=$(KECCAK)" $(JASMIN2EC) $(SOURCE)/ml_dsa.jazz --array-model=warray -o ml_dsa_65_avx2.ec \
 	  -f ml_dsa_65_keygen \
 	  -f ml_dsa_65_sign \
 	  -f ml_dsa_65_verify

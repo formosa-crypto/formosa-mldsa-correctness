@@ -263,7 +263,7 @@ seq 6 : (#pre /\
     move: Hs2_bmul; rewrite /wpolykvec_bmul_irng allP => H; apply H; smt(mldsa65_kvec).
   (* ── bmul pre: verifier challenge ── *)
   - by smt(wpoly_ntt_orng_bmul_irng).
-  move => Hbmul_s2 Hbmul_c result [# Hbmul_eq Hbmul_rng].
+  move => _ Hbmul_s2 Hbmul_c result [# Hbmul_eq Hbmul_rng].
   split; 1: by exact (wpoly_bmul_orng_intt_irng result Hbmul_rng).
   move => ?result0 [# Hintt_eq Hintt_rng].
   (* ── subtract pre: w0 slice range — kvec_slice_eq replaces Heq_w0 + allP chain ── *)
@@ -277,12 +277,12 @@ seq 6 : (#pre /\
   + move: Hintt_rng; rewrite/= /wpoly_srng !allP => H j Hj; have := H j Hj;
       smt(mldsa65_gamma1 invntt_obound_fits_for_caddq mldsa65_Eta).
   do split;1..3:by smt(mldsa65_gamma1 mldsa65_gamma2).
-  move => ??? result1 Hr1s Hr1v result2 Hr2s Hr2v.
+  move => _ _ ??? result1 Hr1s Hr1v _ result2 Hr2s Hr2v.
   (* outer = Array1536.init (fun i => if base <= i < base+n then result2.[i-base] else inner.[i])
      inner = Array1536.init (fun i => if base <= i < base+n then result1.[i-base] else w0_minus_cs2{hr}.[i]) *)
   do split.
   - (* Preserve loop invariant for k < base/n:
-       kvec_unflatten256_writeback_iE applied twice eliminates the low-level ifF chain *)
+       kvec_unflatten256_set_subE applied twice eliminates the low-level ifF chain *)
     move => Hinfz.
     have [HH1 HH2] := HH _;1:smt().
     have Hslice_eq : forall k, 0 <= k < base{hr} %/ n =>
@@ -302,13 +302,13 @@ seq 6 : (#pre /\
           else (kvec_unflatten256 (Array1536.init (fun i0 =>
             if base{hr} <= i0 < base{hr} + n then result1.[i0 - base{hr}]
             else w0_minus_cs2{hr}.[i0]))).[k].
-      + by apply kvec_unflatten256_writeback_iE; smt(mldsa65_kvec).
+      + by apply kvec_unflatten256_set_subE; smt(mldsa65_kvec).
       rewrite Hwb2 ifF; 1: smt().
       have Hwb1 : (kvec_unflatten256 (Array1536.init (fun i0 =>
             if base{hr} <= i0 < base{hr} + n then result1.[i0 - base{hr}]
             else w0_minus_cs2{hr}.[i0]))).[k] =
           if k = base{hr} %/ 256 then result1 else (kvec_unflatten256 w0_minus_cs2{hr}).[k].
-      + by apply kvec_unflatten256_writeback_iE; smt(mldsa65_kvec).
+      + by apply kvec_unflatten256_set_subE; smt(mldsa65_kvec).
       by rewrite Hwb1 ifF; smt().
     split; move => k hk1 hk2.
     + have Hk_eq := Hslice_eq k _;1:smt().
@@ -355,7 +355,7 @@ ecall (polynomial____check_infinity_norm_correct
         (gamma2 - Beta)).
 
 auto => |> &hr  ??????? ?H H0 H1 H2 H3; split;1:smt().
-move => ?? rr Ht Hf.
+move => ??? rr Ht Hf.
 case (rr = W64.zero) => Hrr /=.
 + (* norm passed: rr = zero, new_incr = zero, update invariant *)
   do split; 1..3: smt().
@@ -590,7 +590,7 @@ seq 3 : (#pre /\
     rewrite -Heq_t0.
     move: (wpolykvec_ntt_orng_bmul_irng _ Ht0_ntt); rewrite /wpolykvec_bmul_irng allP => H; apply H; smt(mldsa65_kvec).
   - by smt(wpoly_ntt_orng_bmul_irng).
-  move => Hbmul_t0 Hbmul_c result [# Hbmul_eq Hbmul_rng].
+  move => _ Hbmul_t0 Hbmul_c result [# Hbmul_eq Hbmul_rng].
   split; 1: by exact (wpoly_bmul_orng_intt_irng result Hbmul_rng).
   move => ?result0 [# Hintt_eq Hintt_rng].
   move => result1 [# Hred_eq Hred_rng].
@@ -683,7 +683,7 @@ seq 2 : (
       move: Hct0_infnorm; rewrite /wpoly_infnorm_lt /wpoly_srng allP => H.
       by have := H j _; 1: smt(); smt().
     - by smt(mldsa65_gamma2).  (* overflow: (gamma2-Beta-1) + (gamma2-1) < 2^31 *)
-    move => _ _ _ add_result Hadd_eq Hadd_rng.
+    move => _ _ _ _ _ add_result Hadd_eq Hadd_rng.
     do split; 1..3: by smt().
     + (* range of w0mc_plus_ct0 for all k < (base+n)/n *)
       move => k kb ?.
@@ -691,14 +691,14 @@ seq 2 : (
       - (* k < base/n: writeback does not touch column k, use old invariant *)
         have Hmod : base{hr} %% 256 = 0 by smt().
         have Hkvec : 0 <= k < kvec by smt(mldsa65_kvec).
-        have Hwb := kvec_unflatten256_writeback_iE w0_minus_cs2_plus_ct0{hr} add_result base{hr} k Hmod Hkvec.
+        have Hwb := kvec_unflatten256_set_subE w0_minus_cs2_plus_ct0{hr} add_result base{hr} k Hmod Hkvec.
         by rewrite Hwb ifF; smt().
       - (* k = base/n: range comes from Hadd_rng + writeback_iE *)
         have -> : k = base{hr} %/ n by smt().
         rewrite /n.
         have Hmod2 : base{hr} %% 256 = 0 by smt().
         have Hkvec2 : 0 <= base{hr} %/ 256 < kvec by smt(mldsa65_kvec).
-        have Hwb := kvec_unflatten256_writeback_iE w0_minus_cs2_plus_ct0{hr} add_result base{hr} (base{hr} %/ 256) Hmod2 Hkvec2.
+        have Hwb := kvec_unflatten256_set_subE w0_minus_cs2_plus_ct0{hr} add_result base{hr} (base{hr} %/ 256) Hmod2 Hkvec2.
         by rewrite Hwb /=; smt().
     + (* infnorm_lt for new column k = base/n *)
       move => k ??.
@@ -713,7 +713,7 @@ seq 2 : (
       - (* k < base/n: writeback does not touch column k *)
         have Hmod : base{hr} %% 256 = 0 by smt().
         have Hkvec : 0 <= k < kvec by smt(mldsa65_kvec).
-        have Hwb := kvec_unflatten256_writeback_iE w0_minus_cs2_plus_ct0{hr} add_result base{hr} k Hmod Hkvec.
+        have Hwb := kvec_unflatten256_set_subE w0_minus_cs2_plus_ct0{hr} add_result base{hr} k Hmod Hkvec.
         have Hk_eq : (kvec_unflatten256 (Array1536.init (fun i =>
               if base{hr} <= i < base{hr} + n then add_result.[i - base{hr}]
               else w0_minus_cs2_plus_ct0{hr}.[i]))).[k] =
@@ -729,7 +729,7 @@ seq 2 : (
       - (* k = base/n: writeback_iE + Hadd_eq + lifts_wpolykvec_slice + Hct0_eq *)
         have -> : k = base{hr} %/ n by smt().
         rewrite /lifts_wpolykvec mapiE 1:/# /=.
-        rewrite (kvec_unflatten256_writeback_iE _ add_result base{hr} (base{hr} %/ 256)) 1:/#;
+        rewrite (kvec_unflatten256_set_subE _ add_result base{hr} (base{hr} %/ 256)) 1:/#;
                 1:smt(mldsa65_kvec).
         rewrite Hadd_eq (lifts_wpolykvec_slice _w0mc base{hr}) 1:/#; 1:smt(mldsa65_kvec).
         by rewrite Hct0_eq.
@@ -957,7 +957,7 @@ seq 2 : (#pre /\
     have := H (base{hr} %/ n) _; 1: smt(mldsa65_lvec).
     rewrite /wpoly_srng !allP => Hk j jb.
     by have := Hk j _; smt().
-  move => _ _ result Hres_eq Hres_rng.
+  move => _ _ _ _ _ result Hres_eq Hres_rng.
   (* The writeback slice (init (fun i => (init ...).[base+i])) simplifies to result *)
   have Hwb_slice : (Array256.init (fun i =>
       (Array1280.init (fun i0 =>
@@ -971,12 +971,12 @@ seq 2 : (#pre /\
     + move => k kb Hlt.
       have Hmod : base{hr} %% 256 = 0 by smt().
       have Hlvec : 0 <= k < lvec by smt(mldsa65_lvec).
-      have /= Hwb := lvec_unflatten256_writeback_iE signer_response{hr} result base{hr} k Hmod Hlvec.
+      have /= Hwb := lvec_unflatten256_set_subE signer_response{hr} result base{hr} k Hmod Hlvec.
       by rewrite Hwb ifF; smt().
     + move => k kb Hlt.
       have Hmod : base{hr} %% 256 = 0 by smt().
       have Hlvec : 0 <= k < lvec by smt(mldsa65_lvec).
-      have /= Hwb := lvec_unflatten256_writeback_iE signer_response{hr} result base{hr} k Hmod Hlvec.
+      have /= Hwb := lvec_unflatten256_set_subE signer_response{hr} result base{hr} k Hmod Hlvec.
       have Hk_eq : (lvec_unflatten256 (Array1280.init (fun i =>
             if base{hr} <= i < base{hr} + n then result.[i - base{hr}]
             else signer_response{hr}.[i]))).[k] =
@@ -1003,7 +1003,7 @@ ecall (polynomial____check_infinity_norm_correct
 auto => |> &hr *; do split.
 + rewrite /(`<<`) mldsa65_gamma1 /= /#.
 + rewrite /(`<<`) mldsa65_gamma1 /= /#.
-move => ?? rr Hpass Hfail.
+move => ??? rr Hpass Hfail.
 case (rr = W64.zero) => Hrr /=.
 + (* norm passed: rr = zero, update invariant *)
   do split; 1..3: by smt().
@@ -1259,7 +1259,7 @@ seq 3 : (#pre /\
       by apply kvec_slice_eq; smt(mldsa65_kvec).
     rewrite -Heq.
     by move: Hw; rewrite /wpolykvec_urng KArray.allP => H; apply H; smt(mldsa65_kvec).
-  move => ? ? result Hres_eq Hres_cnt.
+  move => ? ? ? ? ? result Hres_eq Hres_cnt.
   (* writeback slice reads back as result.`1 *)
   have Hwb_slice : (Array256.init (fun i =>
       (Array1536.init (fun i0 =>
@@ -1284,12 +1284,12 @@ have Hfork : forall k, 0 <= k < base{hr} %/ n =>
   move => k kb Hlt.
   have /= Hmod : base{hr} %% 256 = 0 by smt().
   have Hkvec : 0 <= k < kvec by smt(mldsa65_kvec).
-  have /= Hwb := kvec_unflatten256_writeback_iE hint_0{hr} result.`1 base{hr} k Hmod Hkvec.
+  have /= Hwb := kvec_unflatten256_set_subE hint_0{hr} result.`1 base{hr} k Hmod Hkvec.
   by rewrite Hwb ifF; smt().
 + move => Hzero k Hk0 Hklt.
   have /= Hmod : base{hr} %% 256 = 0 by smt().
   have Hkvec : 0 <= k < kvec by smt(mldsa65_kvec).
-  have /= Hwb := kvec_unflatten256_writeback_iE hint_0{hr} result.`1 base{hr} k Hmod Hkvec.
+  have /= Hwb := kvec_unflatten256_set_subE hint_0{hr} result.`1 base{hr} k Hmod Hkvec.
   by rewrite Hwb ifF;smt().
 
 auto => /> &hr ???????????Hcount H??; split. 

@@ -73,10 +73,10 @@ while (0 <= i <= 6 /\
   + by rewrite /wpolykvec_srng allP => k kb; have [_ ?] := Hdone k _; smt().
 wp; ecall (polynomial__reduce32_correct
              (Array256.init (fun j => vector.[(i * 256) + j]))).
-auto => /> &hr Hi1 Hi2 Hprocessed Huntouched Hguard result Hlifts Hrng; do split; 1,2: smt().
+auto => /> &hr Hi1 Hi2 Hprocessed Huntouched Hguard Hgetsub result Hlifts Hrng; do split; 1,2: smt().
 + (* Processed components: k < i + 1 *)
   move => k ? Hk.
-  have /= Hwb := kvec_unflatten256_writeback_iE vector{hr} result (i{hr} * 256) k _ _;
+  have /= Hwb := kvec_unflatten256_set_subE vector{hr} result (i{hr} * 256) k _ _;
     1,2: smt().
   case (k = i{hr}) => Hki.
   + (* New component k = i *)
@@ -90,7 +90,7 @@ auto => /> &hr Hi1 Hi2 Hprocessed Huntouched Hguard result Hlifts Hrng; do split
     by have := Hprocessed k _; smt().
 + (* Untouched components: k >= i + 1 *)
   move => k ? Hk.
-  have /= Hwb := kvec_unflatten256_writeback_iE vector{hr} result (i{hr} * 256) k _ _;
+  have /= Hwb := kvec_unflatten256_set_subE vector{hr} result (i{hr} * 256) k _ _;
     1,2: smt().
   rewrite Hwb ifF; 1: smt().
   by have := Huntouched k _; smt().
@@ -158,9 +158,9 @@ auto => /> &hr Hi1 Hi2 Hrng_pre Hprocessed Huntouched Hguard; split.
   have -> : i{hr} * n %/ n = i{hr} by smt().
   rewrite (Huntouched i{hr} _); 1: smt().
   by move: Hrng_pre; rewrite /wpolykvec_ntt_irng KArray.allP => H; apply H; smt().
-+ move => _ result Hlifts Hrng; do split; 1,2: smt().
++ move => _ _ result Hlifts Hrng; do split; 1,2: smt().
   + move => k ? Hk.
-    have /= Hwb := kvec_unflatten256_writeback_iE vector{hr} result (i{hr} * 256) k _ _;
+    have /= Hwb := kvec_unflatten256_set_subE vector{hr} result (i{hr} * 256) k _ _;
       1,2: smt().
     case (k = i{hr}) => Hki.
     + subst k; rewrite Hwb ifT; 1: smt().
@@ -171,7 +171,7 @@ auto => /> &hr Hi1 Hi2 Hrng_pre Hprocessed Huntouched Hguard; split.
     + rewrite Hwb ifF; 1: smt().
       by have := Hprocessed k _; smt().
   + move => k ? Hk.
-    have /= Hwb := kvec_unflatten256_writeback_iE vector{hr} result (i{hr} * 256) k _ _;
+    have /= Hwb := kvec_unflatten256_set_subE vector{hr} result (i{hr} * 256) k _ _;
       1,2: smt().
     rewrite Hwb ifF; 1: smt().
     by have := Huntouched k _; smt().
@@ -241,9 +241,9 @@ auto => /> &hr Hi1 Hi2 Hrng_pre Hprocessed Huntouched Hguard; split.
   have -> : i{hr} * n %/ n = i{hr} by smt().
   rewrite (Huntouched i{hr} _); 1: smt().
   by move: Hrng_pre; rewrite /wpolykvec_intt_irng KArray.allP => H; apply H; smt().
-+ move => _ result Hlifts Hrng; do split; 1,2: smt().
++ move => _ _ result Hlifts Hrng; do split; 1,2: smt().
   + move => k ? Hk.
-    have /= Hwb := kvec_unflatten256_writeback_iE vector{hr} result (i{hr} * 256) k _ _;
+    have /= Hwb := kvec_unflatten256_set_subE vector{hr} result (i{hr} * 256) k _ _;
       1,2: smt().
     case (k = i{hr}) => Hki.
     + subst k; rewrite Hwb ifT; 1: smt().
@@ -254,7 +254,7 @@ auto => /> &hr Hi1 Hi2 Hrng_pre Hprocessed Huntouched Hguard; split.
     + rewrite Hwb ifF; 1: smt().
       by have := Hprocessed k _; smt().
   + move => k ? Hk.
-    have /= Hwb := kvec_unflatten256_writeback_iE vector{hr} result (i{hr} * 256) k _ _;
+    have /= Hwb := kvec_unflatten256_set_subE vector{hr} result (i{hr} * 256) k _ _;
       1,2: smt().
     rewrite Hwb ifF; 1: smt().
     by have := Huntouched k _; smt().
@@ -339,9 +339,9 @@ split.
   - have /= <- := kvec_slice_eq _rhs (256 * i{hr}) _ _; 1,2: smt().
     by move: Hsrng_rhs; rewrite /wpolykvec_srng allP => H; apply H; smt().
 + (* Postcondition: update invariant *)
-  move => _ _ result Hlifts Hrng; do split; 1,2: smt().
+  move => _ _ _ _ _ result Hlifts Hrng; do split; 1,2: smt().
   move => k ? Hk.
-  have /= Hwb := kvec_unflatten256_writeback_iE sum{hr} result (256 * i{hr}) k _ _;
+  have /= Hwb := kvec_unflatten256_set_subE sum{hr} result (256 * i{hr}) k _ _;
     1,2: smt().
   case (k = i{hr}) => Hki.
   + (* New component k = i *)
@@ -426,10 +426,10 @@ split.
   rewrite (Huntouched (i{hr} * n %/ n)); 1: smt().
   by move: Hsrng_v; rewrite /wpolykvec_srng allP => H;
      have := H (i{hr} * n %/ n) _; smt(mldsa65_kvec).
-move => _ result Hlifts Hurng; do split; 1,2: smt().
+move => _ _ result Hlifts Hurng; do split; 1,2: smt().
 + (* Processed components: k < i + 1 *)
   move => k ? Hk.
-  have /= Hwb := kvec_unflatten256_writeback_iE vector{hr} result (i{hr} * 256) k _ _;
+  have /= Hwb := kvec_unflatten256_set_subE vector{hr} result (i{hr} * 256) k _ _;
     1,2: smt().
   case (k = i{hr}) => Hki.
   + (* New component k = i *)
@@ -443,7 +443,7 @@ move => _ result Hlifts Hurng; do split; 1,2: smt().
     by have := Hprocessed k _; smt().
 + (* Untouched components: k >= i + 1 *)
   move => k ? Hk.
-  have /= Hwb := kvec_unflatten256_writeback_iE vector{hr} result (i{hr} * 256) k _ _;
+  have /= Hwb := kvec_unflatten256_set_subE vector{hr} result (i{hr} * 256) k _ _;
     1,2: smt().
   rewrite Hwb ifF; 1: smt().
   by have := Huntouched k _; smt().
@@ -532,12 +532,12 @@ auto => /> &hr Hi1 Hi2 Hurng Hdone Hguard; split.
   have -> : i{hr} * n %/ n = i{hr} by smt().
   by move: Hurng; rewrite /wpolykvec_urng KArray.allP => H; apply H; smt().
 + (* Post: invariant at i+1 *)
-  move => _ result H_low_eq H_low_rng H_high_eq H_high_rng; split; 1: smt().
+  move => _ _ _ _ result H_low_eq H_low_rng H_high_eq H_high_rng; split; 1: smt().
   move => k ? Hk.
   have /= Hwb_low :=
-    kvec_unflatten256_writeback_iE low{hr} result.`1 (i{hr} * 256) k _ _; 1,2: smt().
+    kvec_unflatten256_set_subE low{hr} result.`1 (i{hr} * 256) k _ _; 1,2: smt().
   have /= Hwb_high :=
-    kvec_unflatten256_writeback_iE high{hr} result.`2 (i{hr} * 256) k _ _; 1,2: smt().
+    kvec_unflatten256_set_subE high{hr} result.`2 (i{hr} * 256) k _ _; 1,2: smt().
   rewrite Hwb_low Hwb_high.
   case (k = i{hr}) => Hki.
   + (* New component k = i *)
@@ -644,12 +644,12 @@ auto => /> &hr Hi1 Hi2 Hurng Hdone Hguard; split.
   have -> : i{hr} * n %/ n = i{hr} by smt().
   by move: Hurng; rewrite /wpolykvec_urng KArray.allP => H; apply H; smt().
 + (* Post: invariant at i+1 *)
-  move => _ result H_t1_eq H_t1_rng H_t0_eq H_t0_rng; split; 1: smt().
+  move => _ _ _ _ result H_t1_eq H_t1_rng H_t0_eq H_t0_rng; split; 1: smt().
   move => k ? Hk.
   have /= Hwb1 :=
-    kvec_unflatten256_writeback_iE t1{hr} result.`1 (i{hr} * 256) k _ _; 1,2: smt().
+    kvec_unflatten256_set_subE t1{hr} result.`1 (i{hr} * 256) k _ _; 1,2: smt().
   have /= Hwb0 :=
-    kvec_unflatten256_writeback_iE t0{hr} result.`2 (i{hr} * 256) k _ _; 1,2: smt().
+    kvec_unflatten256_set_subE t0{hr} result.`2 (i{hr} * 256) k _ _; 1,2: smt().
   rewrite Hwb1 Hwb0.
   case (k = i{hr}) => Hki.
   + (* New component k = i *)

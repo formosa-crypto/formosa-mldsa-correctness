@@ -87,10 +87,10 @@ auto => /> &hr Hi1 Hi2 Hrng_pre Hprocessed Huntouched Hguard; split.
   rewrite (Huntouched i{hr} _); 1: smt().
   by move: Hrng_pre; rewrite /wpolylvec_ntt_irng LArray.allP => H; apply H; smt().
 + (* Post: invariant at i+1 *)
-  move => _ result Hlifts Hrng; do split; 1,2: smt().
+  move => _ _ result Hlifts Hrng; do split; 1,2: smt().
   + (* Processed components k < i+1 *)
     move => k ? Hk.
-    have /= Hwb := lvec_unflatten256_writeback_iE vector{hr} result (i{hr} * 256) k _ _;
+    have /= Hwb := lvec_unflatten256_set_subE vector{hr} result (i{hr} * 256) k _ _;
       1,2: smt().
     case (k = i{hr}) => Hki.
     + subst k; rewrite Hwb ifT; 1: smt().
@@ -102,7 +102,7 @@ auto => /> &hr Hi1 Hi2 Hrng_pre Hprocessed Huntouched Hguard; split.
       by have := Hprocessed k _; smt().
   + (* Untouched components k >= i+1 *)
     move => k ? Hk.
-    have /= Hwb := lvec_unflatten256_writeback_iE vector{hr} result (i{hr} * 256) k _ _;
+    have /= Hwb := lvec_unflatten256_set_subE vector{hr} result (i{hr} * 256) k _ _;
       1,2: smt().
     rewrite Hwb ifF; 1: smt().
     by have := Huntouched k _; smt().
@@ -239,7 +239,7 @@ split.
     rewrite -Heq_rhs.
     by move: Hbmul_rhs; rewrite /wpolylvec_bmul_irng LArray.allP => H; apply H; smt().
 + (* continuation after pmmar *)
-  move => _ _ product Hbmul_eq Hbmul_rng; split; 1: smt().
+  move => _ _ _ _ product Hbmul_eq Hbmul_rng; split; 1: smt().
   move => Hoverflow result0 Hadd_eq Hadd_rng.
   do split; 1,2: smt().
   + (* lifts: dotp_partial at i+1 *)
@@ -350,11 +350,11 @@ split.
   move: Hmurng; rewrite /wpolymat_urng KLMatrix.allP => Hj.
   by apply (Hj (i{hr}*lvec + l) _); smt().
 + (* Post-call: establish invariant at i+1 *)
-  move => _ aux Haux Hrng.
+  move => _ _ _ aux Haux Hrng.
   do split; 1,2: smt().
   move => k kl ku.
   have /= Hwb :=
-    kvec_unflatten256_writeback_iE out{hr} aux (256 * i{hr}) k _ _; 1,2: smt().
+    kvec_unflatten256_set_subE out{hr} aux (256 * i{hr}) k _ _; 1,2: smt().
   split.
   + (* Lifts equality *)
     rewrite /lifts_wpolykvec mapiE; 1: smt(mldsa65_kvec).

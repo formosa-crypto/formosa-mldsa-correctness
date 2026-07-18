@@ -15,6 +15,7 @@ import Round ZModQ Zq.
 
 require import Array32 Array64 Array128 Array256 Array320 Array416 Array640 Array768 Array1280 Array1536 Array1920 Array1952 Array2496 Array4032 Array7680.
 require import WArray32 WArray1952 WArray4032.
+require import XArray32 XArray768 XArray1952 XArray4032.
 
 require import Bindings.
 require import BitEncoding.
@@ -72,13 +73,8 @@ rewrite (size_flatten_ctt ((ilog 2 (b1 + b2) + 1) * n %/ 8)).
 by rewrite size_map size_to_list mldsa65_kvec /= /#.
 qed.
 
-lemma get256_init_32_8 (a : W8.t Array32.t) k:
-   0 <= k < 32 =>
-    (get256_direct (WArray32.init8 ("_.[_]" a)) 0 \bits8 k) = a.[k].
-move => kb.
-rewrite WArray32.get256E pack32E wordP => i ib.
-rewrite /(\bits8) initiE 1:/# /= initiE 1:/# /= initiE 1:/# /= initiE 1:/# /#.
-qed.
+(* get256_init_32_8 replaced by XArray32.get_cast256_32W8E (used directly at call
+   sites): (get_cast_direct a 0) \bits8 k = a.[0 + k]. *)
 
 require import Array2.
 
@@ -236,7 +232,7 @@ sp;seq 1 1: (#pre /\ liftu_wpolymat (mat_unflatten256 matrix_A{2}) = _A{1} /\
   ecall{2} (matrix_A_correct seed_for_matrix_A{2}).
   auto => /> &1  rr ->?.
   + congr; apply Bytes32.tP => k kb.
-    rewrite Bytes32.get_of_list 1:/# get_to_list initiE 1:/# get_of_list 1:/# nth_cat ifT.
+    rewrite Bytes32.get_of_list 1:/# get_to_list /get_sub initiE 1:/# /= get_of_list 1:/# nth_cat ifT.
     + by rewrite size_cat;smt(Bytes32.size_to_list).
     by rewrite nth_cat ifT;smt(Bytes32.size_to_list).
 
@@ -284,9 +280,7 @@ seq 2 2 : (#pre
   + apply (eq_from_nth witness); 1: by rewrite size_cat Bytes32.size_to_list size_kflatten_SimpleBitPack 1:/# size_to_list /#.
     move => k;rewrite size_cat Bytes32.size_to_list size_kflatten_SimpleBitPack 1:/# /= => Hk.
     rewrite initiE 1:/# /= nth_cat Bytes32.size_to_list; case (k < 32) => ?.
-    + rewrite ifF 1:/# initiE 1:/# /= ifT 1:/# get256_init_32_8 1:/# initiE 1:/# get_of_list 1:/# nth_cat ifT.
-      + by rewrite size_cat Bytes32.size_to_list Bytes64.size_to_list /#.
-      by rewrite nth_cat Bytes32.size_to_list /#.
+    + by rewrite ifF 1:/# set_cast256_1952W8E 1,2,3:/# ifT 1:/# get_cast256_32W8E 1,2,3:/# /get_sub initiE 1:/# /= get_of_list 1:/# nth_cat size_cat Bytes32.size_to_list Bytes64.size_to_list ifT 1:/# nth_cat Bytes32.size_to_list ifT 1:/# Bytes32.get_to_list.
     rewrite ifT 1:/# (nth_flatten witness 320).
     + rewrite allP => x; rewrite mapP => He; elim He => p /= [# ? ->].
       by rewrite size_SimpleBitPack /#.
@@ -331,8 +325,7 @@ seq 2 2 : (#pre
       move => k; rewrite !size_cat !Bytes32.size_to_list size_kflatten_SimpleBitPack //= => ?.
       rewrite initiE 1:/# /= initiE 1:/# /=.
       case (k < 32) => ?.
-      + rewrite ifF 1:/# ifT 1:/# nth_cat ifT 1:/# Bytes32.get_to_list get256_init_32_8 1:/# initiE 1:/# get_of_list 1:/#.
-        by rewrite nth_cat size_cat Bytes32.size_to_list ifT 1:/# nth_cat Bytes32.size_to_list ifT 1:/# Bytes32.get_to_list /#.
+      + by rewrite ifF 1:/# get8_set_cast256_1952W8E 1,2,3:/# ifT 1:/# get_cast256_32W8E 1,2,3:/# /get_sub initiE 1:/# /= get_of_list 1:/# nth_cat Bytes32.size_to_list ifT 1:/# Bytes32.get_to_list nth_cat size_cat Bytes32.size_to_list Bytes64.size_to_list ifT 1:/# nth_cat Bytes32.size_to_list ifT 1:/# Bytes32.get_to_list.
       rewrite ifT 1:/# nth_cat ifF; 1: by rewrite Bytes32.size_to_list  /=.
       move : Hrr3;rewrite kvec_unflatten320iE 1:/# => ->.
       rewrite mapiE 1:/# /= get_of_list 1:/# (nth_flatten witness 320).
@@ -340,12 +333,8 @@ seq 2 2 : (#pre
         by rewrite size_SimpleBitPack /#.
       by rewrite (nth_map witness) /=; rewrite ?size_to_list /#.
     case (i < 32) => ?.
-    + rewrite ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/#. 
-      rewrite /get8 initiE 1:/# initiE 1:/# /= set256E initiE 1:/# /= ifT 1:/# get256_init_32_8 1:/# initiE 1:/# get_of_list 1:/#.
-      rewrite  nth_cat ifT; 1: by rewrite size_cat Bytes32.size_to_list  /#.
-      rewrite nth_cat ifT;1:by rewrite  Bytes32.size_to_list  /#.
-      by rewrite Bytes32.get_to_list /#.
-    by rewrite ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/# get256_init_32_8 1:/# initiE 1:/# /=.
+    + by rewrite ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# get8_set_cast256_4032W8E 1,2,3:/# ifF 1:/# set_cast256_4032W8E 1,2,3:/# ifT 1:/# get_cast256_32W8E 1,2,3:/# /get_sub initiE 1:/# /= get_of_list 1:/# nth_cat size_cat Bytes32.size_to_list Bytes64.size_to_list ifT 1:/# nth_cat Bytes32.size_to_list ifT 1:/# Bytes32.get_to_list.
+    by rewrite ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# get8_set_cast256_4032W8E 1,2,3:/# ifT 1:/# get_cast256_32W8E 1,2,3:/# get_of_list 1:/# Bytes32.get_to_list add0z.
 
 sp 2 0.
 wp; ecall{2} (__compute_t0_t1_ph_ matrix_A{2} s1p{2} s2{2}).

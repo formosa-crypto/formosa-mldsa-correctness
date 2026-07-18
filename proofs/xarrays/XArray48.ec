@@ -63,3 +63,12 @@ lemma get_cast128_48W8_slicegetE o (p : W8.t Array48.t) :
   0 <= o*8 <= 48*8-128 =>
    ArrayAccessCastW128_48W8.get_cast_direct p o = BSWAS_48u8_128.sliceget p (o*8).
 proof. by move => H; rewrite X48u8_128.get_castE 1:/#. qed.
+
+lemma get_cast128_48W8E (t : W8.t Array48.t) (o j : int) :
+  0 <= o => o + 16 <= 48 => 0 <= j < 16 =>
+   (ArrayAccessCastW128_48W8.get_cast_direct t o) \bits8 j = t.[o + j].
+proof.
+move => ho hos hj; rewrite -X48u8_128.get_cast_bits'SE 1,2,3:/#.
+apply W8.wordP => b hb.
+rewrite bits8iE 1:/# ArrayAccessCastW128_48W8.WSu8.bits'SiE 1:/# /#.
+qed.

@@ -17,7 +17,7 @@ import Round ZModQ Zq.
 require import Array2 Array32 Array48 Array64 Array128 Array256
                Array416 Array640 Array768 Array1280 Array1536 Array2496
                Array3309 Array4032 Array7680 WArray5120.
-require import XArray5120 XWord4.
+require import XArray5120 XArray1280 XWord4.
 
 require import BitEncoding.
 from CryptoSpecs require import JWordList.
@@ -294,10 +294,10 @@ seq 0 1 : (#pre /\
   + rewrite size_memread; smt(W64.to_uint_cmp). 
   + rewrite size_memread; smt(W64.to_uint_cmp). 
   + rewrite size_memread; smt(W64.to_uint_cmp). 
-  move => ????; congr;congr;congr.
+  move => ?????; congr;congr;congr.
   + rewrite Bytes64.tP => k kb.
     by rewrite !Bytes64.get_of_list // get_to_list initiE 1:/# /= nth_take 1,2:/# nth_drop 1,2:/# BytesSK.of_listK ?size_to_list /#.
-  by rewrite size_memread; smt(W64.to_uint_cmp). 
+  by congr; congr; smt(W64.to_uintK).
 
 (* ── Step 6: rhopp = H_rhopp _K coins mu (spec simple) ─────────────────
    Spec: rhopp <- H_rhopp _K coins mu *)
@@ -330,7 +330,7 @@ seq 0 1 : (#pre /\
     lifts_wpolylvec (lvec_unflatten256 s1{2}) = s1{1} /\
     wpolylvec_srng (lvec_unflatten256 s1{2}) Eta Eta).
 + ecall{2} (s1_decode_ph (Array640.init (fun i => signing_key{2}.[128 + i]))).
-  auto => |> &1 &2 8? rr Hfun Hrng.
+  auto => |> &1 &2 9? rr Hfun Hrng.
   + rewrite Hfun tP => k kb.
     rewrite initiE 1:/# /= mapiE 1:/# /=;do congr.
     apply (eq_from_nth witness).
@@ -344,7 +344,7 @@ seq 0 1 : (#pre /\
     lifts_wpolykvec (kvec_unflatten256 s2{2}) = s2{1} /\
     wpolykvec_srng (kvec_unflatten256 s2{2}) Eta Eta).
 + ecall{2} (s2_decode_ph (Array768.init (fun i => signing_key{2}.[768 + i]))).
-  auto => |> &1 &2 10? rr Hfun Hrng.
+  auto => |> &1 &2 11? rr Hfun Hrng.
   + rewrite Hfun tP => k kb.
     rewrite initiE 1:/# /= mapiE 1:/# /=;do congr.
     apply (eq_from_nth witness).
@@ -359,7 +359,7 @@ seq 0 1 : (#pre /\
     lifts_wpolykvec (kvec_unflatten256 t0{2}) = t0{1} /\
     wpolykvec_srng (kvec_unflatten256 t0{2}) (dpow-1) dpow).
 + ecall{2} (t0_decode_ph (Array2496.init (fun i => signing_key{2}.[1536 + i]))).
-  auto => |> &1 &2 12? rr Hfun Hrng.
+  auto => |> &1 &2 13? rr Hfun Hrng.
   + rewrite Hfun tP => k kb.
     rewrite initiE 1:/# /= mapiE 1:/# /=;do congr; last 2 by smt().
     apply (eq_from_nth witness).
@@ -500,11 +500,10 @@ while (
               (5120 - j{2}).
      + move => _ z; auto => |> &hr Hj_lo Hj_hi Hj_mod Hcopied Hguard.
        do split; 1,2,3,5: smt().
-       move => i Hi_lo Hi_hi; rewrite Array1280.initiE 1:/# /=.
-       rewrite get32_set256_direct_eq 1,2,3,4:/#.
+       move => i Hi_lo Hi_hi; rewrite Array1280.initiE 1:/# /= get32_set_cast256_1280W32E 1,2,3,4:/#.
        case (j{hr} %/ w1_bits <= i < j{hr} %/ w1_bits + 8) => Hi_region.
-       + rewrite get256_direct_init32_bits32 1,2,3,4:/# /= /#.
-       rewrite get32_init32 1:/# /=; apply Hcopied; smt().
+       + rewrite get_cast256_1280W32E 1,2,3,4:/#; smt().
+       apply Hcopied; smt().
      skip; move => &1 &2 Hj0; split; 1: smt().
      move => j_R mask_as_ntt_R; split; 1: smt().
      move => Hguard_neg [# Hj_lo Hj_hi Hj_mod Hcopied].

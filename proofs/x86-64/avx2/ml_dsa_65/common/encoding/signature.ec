@@ -456,6 +456,7 @@ qed.
 (* ================================================================ *)
 
 require import Array48 Array640 Array1280 Array3200 WArray48 Array3309 WArray3309.
+require import XArray3309 XArray48.
 
 (* --------------------------------------------------------------- *)
 (*                  Lossless Lemmas                                   *)
@@ -514,12 +515,10 @@ seq 1 2 : (#pre /\ sigbytes{1} = to_list ct{1} /\
          forall k, 0<=k<i{2} => nth witness sigbytes{1} k =
             signature{2}.[k]).
   + move => &1;auto => /> &2 ??????H?;do split;1..3:smt().
-    move => k kbl kbh;rewrite initiE 1:/# /=  initiE 1:/#.
-    rewrite WArray3309.get8_set128_directE 1,2:/#.
+    move => k kbl kbh;rewrite initiE 1:/# /=  initiE 1:/# /= get8_set_cast128_3309W8E 1,2,3:/#.
     case (i{2} <= k < i{2} + 16).
-    + by move => ?; rewrite get128E W16u8.pack16bE 1:/# initiE 1:/# /init8 /= WArray48.initiE /#.
-    move => ?; have := H k _;1:smt().
-    rewrite initiE 1:/# => ->;rewrite /get8 initiE /#.
+    + move => ?; rewrite get_cast128_48W8E 1,2,3:/#; smt().
+    by move => ?; rewrite -(H k _) 1:/# initiE 1:/#.
     
   + by move => &1;while (0 <= i <= 48 /\ i %% 16 = 0) (48-i);  auto  => /> /#.
   auto => /> &2 ???;split;1:smt().
@@ -640,12 +639,12 @@ conseq (: _ ==>
     z{1}.[k] = BitUnpack
      (mkseq (fun (ii : int) =>  sigma{1}.[lambda %/ w1_bits +
                640 * k + ii]) 640) (gamma1 - 1) gamma1).
-+ auto => /> z1 Hz1_eq rr0 Hrr0_eq Hrr0_rng; split.
++ auto => /> z1 Hz1_eq Hrecon rr0 Hrr0_eq Hrr0_rng; split.
   + apply (eq_from_nth witness);
      1: by  rewrite size_take 1:/# size_drop 1:/# !size_to_list /= /#.
     move => k; rewrite size_take 1:/# size_drop 1:/# !size_to_list /= => kb.
     rewrite nth_take 1,2:/# nth_drop 1,2:/# get_to_list initiE 1:/#.
-    by rewrite initiE /#.
+    by rewrite /get_sub initiE 1:/#; smt().
   move => H2 rr1 rr2 ? ?; do split.
   + by apply BytesCT.tP => k kb; rewrite !initiE /#.
   + rewrite tP => k kb;  rewrite Hz1_eq 1:/# /= Hrr0_eq mapiE 1:/# /= /lvec_unflatten640.
